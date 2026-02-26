@@ -1,0 +1,619 @@
+{
+  "artifacts": [
+    {
+      "path": "tests/borrow_wave_conformance_report.json",
+      "sha256": "36f762d401a129cce29c738cc4986aa6754e44674f7a3d7a3dfabb79d5702873"
+    },
+    {
+      "path": "tests/competitive_benchmark_report.json",
+      "sha256": "a1d95cd499a1d1db5f0a1047415684e89931671eeb0d48ddf2735b91af8cc290"
+    },
+    {
+      "path": "tests/competitive_scorecard_report.json",
+      "sha256": "33914a2bc53d45d18cadf8a1c86bdc10435f135f645aac3da2aa2e824b4a946f"
+    },
+    {
+      "path": "tests/cross_platform_smoke_report.json",
+      "sha256": "9f0e964e1917ca562a99de70c8a9216000697b9b858284d6a900e9696141cc72"
+    },
+    {
+      "path": "tests/cross_repo_conformance_report.json",
+      "sha256": "75a91b2f8f1db88c094a02e8485718b3122b16213366e15afd93252bf7c76ba1"
+    },
+    {
+      "path": "tests/release_checksum_manifest.sha256",
+      "sha256": "3d95629720b60c3ce03fc30befe5a250b959b7dc044853d8161206bd7ed64c59"
+    },
+    {
+      "path": "tests/release_metadata.json",
+      "sha256": "95f4c09b315b1e5f8d3a6409c0a5fd4bf946adee51d7678c2652a9bbeb568a1b"
+    }
+  ],
+  "builder": "scripts/generate_attestation_artifacts.sh",
+  "generated_at": "2026-02-26T15:44:15Z",
+  "materials": [
+    {
+      "digest": {
+        "sha256": "72787fe893e9763987b13f2ce0b2c0aa39032a634464389a0c9d669998a99dba"
+      },
+      "uri": ".github/workflows/ada-ci.yml"
+    },
+    {
+      "digest": {
+        "sha256": "891484ff3b19029e2bd3db1a7225e7c667c894e1ea6c9cca98597a0a135e5755"
+      },
+      "uri": "Dockerfile.release"
+    },
+    {
+      "digest": {
+        "sha256": "73db137e005b147b118c7eadc059e19576933cf47ba672a63df6964db33ec68c"
+      },
+      "uri": "Makefile"
+    },
+    {
+      "digest": {
+        "sha256": "fa9998749ecbdf4c90699e6b0772902904f7ad733282c5439199fe3a92f203f6"
+      },
+      "uri": "README.md"
+    },
+    {
+      "digest": {
+        "sha256": "0903d7d12037e6dd828a3fd7948b19eb03702cd7bf2157774c130902bf258238"
+      },
+      "uri": "config/anywhere_v1_competitive_baseline.toml"
+    },
+    {
+      "digest": {
+        "sha256": "e5d9b0cf1ee9252ace1a1d5b0110252e2e39979298c551839bc133a65178476b"
+      },
+      "uri": "config/anywhere_v2_competitive_baseline.toml"
+    },
+    {
+      "digest": {
+        "sha256": "a2ee511f9bd8e88f0b2400af411d1bfadbb670bb9a97751fb16d2dec07641233"
+      },
+      "uri": "config/bootstrap.local.env"
+    },
+    {
+      "digest": {
+        "sha256": "a2ee511f9bd8e88f0b2400af411d1bfadbb670bb9a97751fb16d2dec07641233"
+      },
+      "uri": "config/bootstrap_secure_defaults.env"
+    },
+    {
+      "digest": {
+        "sha256": "3bfb27b38f7207a8395df5fe24f3c0af22a25f160a52ae14726a6395106384ba"
+      },
+      "uri": "config/borrow_acceptance_criteria.toml"
+    },
+    {
+      "digest": {
+        "sha256": "6873c348fd9b5c9cb898ce74daa468cba49d008699b2fb11d1479fe3f2b8b0a9"
+      },
+      "uri": "config/borrow_matrix_scintilla_vortex.csv"
+    },
+    {
+      "digest": {
+        "sha256": "a96653b6c76ae883226eecf7b88c791a67bb47fb55c71750845f932e9ed0b91d"
+      },
+      "uri": "config/competitive_scorecards/nullclaw_v2_scorecard.json"
+    },
+    {
+      "digest": {
+        "sha256": "293f645d09a96c9977a0e73165f6a7851bc9eff380eba44e674d07e301f4f0fc"
+      },
+      "uri": "config/competitive_scorecards/openclaw_v2_scorecard.json"
+    },
+    {
+      "digest": {
+        "sha256": "a85cb5ae99f2ec905bbdaf5797af84ce2b9ba8b85241c36a9b25b5f162accdd2"
+      },
+      "uri": "config/competitive_scorecards/zeroclaw_v2_scorecard.json"
+    },
+    {
+      "digest": {
+        "sha256": "3cf227914965dba68c044536763ac997c43cf89b4abd441432ab43727b8ed1a4"
+      },
+      "uri": "config/expansion_targets.toml"
+    },
+    {
+      "digest": {
+        "sha256": "d3be6a22de85808371f9613c172a3671f0ba42c50963db5acc927e9c0cb6d3da"
+      },
+      "uri": "config/feature_gap_matrix.csv"
+    },
+    {
+      "digest": {
+        "sha256": "c4597cc5c88800d3e387f159dbeb94d8f9479900a5b652a7594cc6ca28b0dadb"
+      },
+      "uri": "config/security_slos.toml"
+    },
+    {
+      "digest": {
+        "sha256": "13c9a7597b2d7013baaed2aba8b502c4f016d06a118dc51450d886438c512f20"
+      },
+      "uri": "config/threat_model.toml"
+    },
+    {
+      "digest": {
+        "sha256": "475c6b502a2efaf2e025d01146ee8376af3b7c1abf8214537f83ade0713e7b80"
+      },
+      "uri": "deploy/.DS_Store"
+    },
+    {
+      "digest": {
+        "sha256": "15a054e6a0b437e0c5ec536355378061b5a27704f1676098ef3e7e53c4553ab5"
+      },
+      "uri": "deploy/launchd/com.quasar.claw.plist"
+    },
+    {
+      "digest": {
+        "sha256": "9d6e70caf1b116143546b917c8a3f7ff7ba097e6cd6e00a993a87ded2f9b52f7"
+      },
+      "uri": "deploy/systemd/quasar-claw.service"
+    },
+    {
+      "digest": {
+        "sha256": "ee43e750cf7c867494729dc53bb5201f43beda992ee22f2743461d97c367fa0c"
+      },
+      "uri": "deploy/windows/install-quasar-claw-service.ps1"
+    },
+    {
+      "digest": {
+        "sha256": "402f8e9afd25e646986482aa652d0b22d6e1b95fade8ac78b88158597c2bc2c2"
+      },
+      "uri": "docker-compose.secure.yml"
+    },
+    {
+      "digest": {
+        "sha256": "2d0f9795d999edab9bd6db1176ff442c62f4929a615faf2e61a33cee4fccb3f2"
+      },
+      "uri": "quasar_claw.gpr"
+    },
+    {
+      "digest": {
+        "sha256": "357531d37cf88a7004ce46d0fc4ceec231037cc0f3ad5677d72c22718a0accb0"
+      },
+      "uri": "scripts/.DS_Store"
+    },
+    {
+      "digest": {
+        "sha256": "2d0dbeddc95ed9e6b9d2246704138c3c86693079d3791826c7d36ffb9a09d2b9"
+      },
+      "uri": "scripts/__pycache__/audit_event_log.cpython-314.pyc"
+    },
+    {
+      "digest": {
+        "sha256": "88a66e3e15c2c3b0e747954425ae5199fc7c2fc1d7b53873224cf12058f10d04"
+      },
+      "uri": "scripts/audit_event_log.py"
+    },
+    {
+      "digest": {
+        "sha256": "6dfe1fd2ea343a17e71c2eae6a304d7af757e80012fa1f486380360b03f228b7"
+      },
+      "uri": "scripts/bootstrap_toolchain.sh"
+    },
+    {
+      "digest": {
+        "sha256": "742d73e81f81eb42d1348fb607c45682d43d7696a9ea5456564cd49807511386"
+      },
+      "uri": "scripts/build_multiarch_image.sh"
+    },
+    {
+      "digest": {
+        "sha256": "457530902cb58aff78f268e49116f324eba982084f3dc5e6da08ed7b7f0ae051"
+      },
+      "uri": "scripts/check_audit_event_log.sh"
+    },
+    {
+      "digest": {
+        "sha256": "057ef9b03106fb7379b2f75da8bbc58180d7760c65213f14252dba53b5230231"
+      },
+      "uri": "scripts/check_competitive_baseline.sh"
+    },
+    {
+      "digest": {
+        "sha256": "c00e55f8b78a8f5be13f2897ba04ee5ba045dcd88d23ed5e9bdec3511ad27c40"
+      },
+      "uri": "scripts/check_docker_runtime_bundle.sh"
+    },
+    {
+      "digest": {
+        "sha256": "0d545302c043acbfccff4b6c3a689442a844f48db61f0c62346311f8e4e34624"
+      },
+      "uri": "scripts/check_gateway_doctor.sh"
+    },
+    {
+      "digest": {
+        "sha256": "62e9682a59e48e434a6e00979a4ca3a1a0aded210615de459b41ef07245310ac"
+      },
+      "uri": "scripts/check_operator_console.sh"
+    },
+    {
+      "digest": {
+        "sha256": "21be00440be209a4439fa4c3651b5a0729b66df64085b3d06369f8f7ed3dce49"
+      },
+      "uri": "scripts/check_service_supervisors.sh"
+    },
+    {
+      "digest": {
+        "sha256": "97561f94780863efdf3de40f3aa584a0647254bc2fea8984549002628d8e89bc"
+      },
+      "uri": "scripts/check_toolchain.sh"
+    },
+    {
+      "digest": {
+        "sha256": "09bd87e63796dadc21e0a4039fd441016ab7594fc0a881b9fcdf8ffc42e3912a"
+      },
+      "uri": "scripts/competitive_v2_release_readiness_gate.sh"
+    },
+    {
+      "digest": {
+        "sha256": "2fab72176ccffe109fad2a395817df6de394d4009a9c7ae31a1cdfed51ef71b9"
+      },
+      "uri": "scripts/gateway_doctor.sh"
+    },
+    {
+      "digest": {
+        "sha256": "3dd48b07e6d3aa68f7d76999f7c3721a663a0d670e7dea02b74eb5951f844c0f"
+      },
+      "uri": "scripts/generate_attestation_artifacts.sh"
+    },
+    {
+      "digest": {
+        "sha256": "5636c73bd7426409c1dd03b2e461d4a341be42e36bed580c014d05a11849356d"
+      },
+      "uri": "scripts/generate_competitive_v2_final_report.sh"
+    },
+    {
+      "digest": {
+        "sha256": "51b0fbd6e27c2c90a4ce643036f111ea2b96d10c534bc32aafae833863608a4a"
+      },
+      "uri": "scripts/ingest_nullclaw_benchmarks.sh"
+    },
+    {
+      "digest": {
+        "sha256": "0fdb63c4ba4f9e3968a6f6f2ba9c8bb72b151e81b7d83daeda9820a20e63d2e9"
+      },
+      "uri": "scripts/ingest_zeroclaw_benchmarks.sh"
+    },
+    {
+      "digest": {
+        "sha256": "f6212b6df92bcaa3e8a5d3f21cc021bbb8fc841755bb3358c7a82d0799646c35"
+      },
+      "uri": "scripts/measure_small_infra.sh"
+    },
+    {
+      "digest": {
+        "sha256": "c11ba80fa3bd27b537ca35b7933bfe36e455b33695e80da4d9d5e1be3b3a265b"
+      },
+      "uri": "scripts/release_candidate_gate.sh"
+    },
+    {
+      "digest": {
+        "sha256": "47f7cb28c3207741ca053adceb77f406485035b74417198d03a981c2aa8cf176"
+      },
+      "uri": "scripts/release_check.sh"
+    },
+    {
+      "digest": {
+        "sha256": "79ad7523ed5e17986bae2519073018b64851f59a2bc54e9df95e53718b5e2775"
+      },
+      "uri": "scripts/run_competitive_benchmarks.sh"
+    },
+    {
+      "digest": {
+        "sha256": "b4b010a7b2a6b3c638e27148c42e3ecea230e6dca02b0e3d79b96a0fb282d6b7"
+      },
+      "uri": "scripts/run_competitive_multiarch_benchmarks.sh"
+    },
+    {
+      "digest": {
+        "sha256": "a01e1589ce3312705b52ee81eb61fc0064df296bdd342b9aca2b55f06645539b"
+      },
+      "uri": "scripts/run_container_ci.sh"
+    },
+    {
+      "digest": {
+        "sha256": "4ccc613758f4796d3600ea39251ad3f1a24f69e24bb623edbd05eb3899b08cc3"
+      },
+      "uri": "scripts/run_cross_platform_smoke_suite.sh"
+    },
+    {
+      "digest": {
+        "sha256": "e2dc4d1b658fb59ed9896a7a5e6753fd93a33aa723a328380d96fc331784a2b2"
+      },
+      "uri": "scripts/run_cross_repo_conformance_suite.sh"
+    },
+    {
+      "digest": {
+        "sha256": "78b4ad4e2c4170818d8a84eb27340995165d4dd968d7078e220a93509d70ea07"
+      },
+      "uri": "scripts/run_direct_competitor_harness.sh"
+    },
+    {
+      "digest": {
+        "sha256": "17beff3e9cfb48b0f6e57f5c38da58aaf6f43704d05004c96ef5a153e729a802"
+      },
+      "uri": "scripts/serve_operator_console.sh"
+    },
+    {
+      "digest": {
+        "sha256": "36cd5435b2180dfaacde220ee8a762e912b8dece6f406f9bbc0c6e7fba7930de"
+      },
+      "uri": "scripts/verify_supply_chain_artifacts.sh"
+    },
+    {
+      "digest": {
+        "sha256": "53eda4e045dcbae2a155adad56fa6ada2d2348b6dea3ab9eb845c8b344f8e195"
+      },
+      "uri": "scripts/vulnerability_license_gate.sh"
+    },
+    {
+      "digest": {
+        "sha256": "a12fbb30ddc1321797c2a2a3118f7a9e1d5fed9db3d36837edc54ec1b2018ee4"
+      },
+      "uri": "src/channels-adapters-discord.ads"
+    },
+    {
+      "digest": {
+        "sha256": "1a4f1bacd29021ed6cf6ffeec2c7b15c7f00abdd81ba4f34c623f0f5f4a4db4b"
+      },
+      "uri": "src/channels-adapters-email.ads"
+    },
+    {
+      "digest": {
+        "sha256": "0e6c352306a77c986775fff5964461c2c1be47874ae2af51fe5de517d9cefc01"
+      },
+      "uri": "src/channels-adapters-slack.ads"
+    },
+    {
+      "digest": {
+        "sha256": "7b34d0a39b83b22ea4fdf0c317cfc3ac7e2b3e3719be8ecc5c07fed94ba79239"
+      },
+      "uri": "src/channels-adapters-telegram.ads"
+    },
+    {
+      "digest": {
+        "sha256": "3da7cd19c9bd6ec3d2f8038fb3b29c7c213fcf6084426970fb6aafc539be83e8"
+      },
+      "uri": "src/channels-adapters-whatsapp_bridge.ads"
+    },
+    {
+      "digest": {
+        "sha256": "9c307c5809a03016017b4a8081d12fe525474eeeca22728f5c922c3904de8e67"
+      },
+      "uri": "src/channels-adapters.adb"
+    },
+    {
+      "digest": {
+        "sha256": "dcbea2d86660da0aecace7d2b36019e7b8c38233cba9cd190afc1089a6cc995f"
+      },
+      "uri": "src/channels-adapters.ads"
+    },
+    {
+      "digest": {
+        "sha256": "cffcae26ec2ff50616fb6adbe4615d5ae944d990b7da41ecb8b565509feddabb"
+      },
+      "uri": "src/channels-security.adb"
+    },
+    {
+      "digest": {
+        "sha256": "bc108b9f7991307abf05448a955b37ecf50c6c95faa425ffa0cda4c360068cbe"
+      },
+      "uri": "src/channels-security.ads"
+    },
+    {
+      "digest": {
+        "sha256": "96e88e13e994301f16b5dbecf16f582caa55b8ebbd9080d2c71c323f4a8e33be"
+      },
+      "uri": "src/channels.ads"
+    },
+    {
+      "digest": {
+        "sha256": "4a0e7fa9bed0fbd1b970f57b52b40868b4c91aa0952204b758528087c5a928ea"
+      },
+      "uri": "src/core-agent.adb"
+    },
+    {
+      "digest": {
+        "sha256": "f076dd317a9f5c13d161f70a8e05028148baea0d71b5c53bf3e61ce2270b7e5c"
+      },
+      "uri": "src/core-agent.ads"
+    },
+    {
+      "digest": {
+        "sha256": "b6267b5fca76d2115cb674141c17a9e89f886056357e5d42e5d2969087d6b3da"
+      },
+      "uri": "src/core.ads"
+    },
+    {
+      "digest": {
+        "sha256": "d5f87e527e6f115adb77375b16cc839b70bca54cf5559ea23c7df40ecc93ec7f"
+      },
+      "uri": "src/gateway-auth.adb"
+    },
+    {
+      "digest": {
+        "sha256": "9160050db00e335cb7caccc47a7a23a8dd8683f8ce3ad96db027411b6f8f5d77"
+      },
+      "uri": "src/gateway-auth.ads"
+    },
+    {
+      "digest": {
+        "sha256": "6abbf39503a4114fd7c05ef1e0740ac4a53c53087b277262cf9e61a2c9133969"
+      },
+      "uri": "src/gateway-provider-credentials.adb"
+    },
+    {
+      "digest": {
+        "sha256": "f099b9adcdb874cd837ab2ad0a88f902b53a4244697cee053f3ea979a4329f3e"
+      },
+      "uri": "src/gateway-provider-credentials.ads"
+    },
+    {
+      "digest": {
+        "sha256": "64eda3b8e491831775740041115c1fd0c1624710b7ae660e2ceac715b0b93706"
+      },
+      "uri": "src/gateway-provider-registry.adb"
+    },
+    {
+      "digest": {
+        "sha256": "f3f6f8cc1bcba0073d5e902cda10416d6bbe545efb0ced5929ede25bfe400e65"
+      },
+      "uri": "src/gateway-provider-registry.ads"
+    },
+    {
+      "digest": {
+        "sha256": "25b9ddd1517e4b1ae3b6521e329be2bf54c0511ff3f09732b520317b992d4657"
+      },
+      "uri": "src/gateway-provider-routing.adb"
+    },
+    {
+      "digest": {
+        "sha256": "51de32d98103d8d4b9f371d01552197bc7651253fe25b8080164ab757a6c4e2b"
+      },
+      "uri": "src/gateway-provider-routing.ads"
+    },
+    {
+      "digest": {
+        "sha256": "6affc98e15d23b78b21e85f85cf272d98fd16ae0c60b4f77af81adf361966dc2"
+      },
+      "uri": "src/gateway-provider.ads"
+    },
+    {
+      "digest": {
+        "sha256": "4f5cad200733fd1525091e558fafa20eff116c256ff9eff4a8383854d419dc4b"
+      },
+      "uri": "src/gateway.ads"
+    },
+    {
+      "digest": {
+        "sha256": "36b2de2a4e3825b4086e5c4ba5e2f5c75023942ee44caf6fad1b875c3b96202f"
+      },
+      "uri": "src/main.adb"
+    },
+    {
+      "digest": {
+        "sha256": "d043e74dca0fb8329b6a2f07bfc599e0deab6830f9e344a0adb6b399c80dad86"
+      },
+      "uri": "src/plugins-capabilities.adb"
+    },
+    {
+      "digest": {
+        "sha256": "884162dbd9ab0c676610ad586ad58d4443708376174d09a7a3ae6e9ab5675751"
+      },
+      "uri": "src/plugins-capabilities.ads"
+    },
+    {
+      "digest": {
+        "sha256": "c503b9d79633ce43c0582c40bcc5a6be98033c9a477d99105fe52a59dcf7421f"
+      },
+      "uri": "src/plugins.ads"
+    },
+    {
+      "digest": {
+        "sha256": "8babc95f3ca4f01c34f1194a1def00111322bb168ba95a01e862e3c40d25b2d7"
+      },
+      "uri": "src/runtime-executor.adb"
+    },
+    {
+      "digest": {
+        "sha256": "523ccb13fb9efc9f85b3bb935410e582525eb9838689b53d9cd3a0c48c147ad8"
+      },
+      "uri": "src/runtime-executor.ads"
+    },
+    {
+      "digest": {
+        "sha256": "ae67e8ba565b04d118b2893bf3bb57c0e9f933f6b0125dece7fcdd4ba59c8ae0"
+      },
+      "uri": "src/runtime-memory.adb"
+    },
+    {
+      "digest": {
+        "sha256": "9b77bef58159b22aaf8271baaa6ab6369f54fb24835a479dbf6283492aa4f171"
+      },
+      "uri": "src/runtime-memory.ads"
+    },
+    {
+      "digest": {
+        "sha256": "d9a905491423bc0feb6060c13fe28c4ba19f71ffcc6f37ee2ec947827b2fe1fe"
+      },
+      "uri": "src/runtime.ads"
+    },
+    {
+      "digest": {
+        "sha256": "b95cb8dcd794d57153365e703f3c9b6cf2be57edf9e9a03428d9b43b23096745"
+      },
+      "uri": "src/security-audit.adb"
+    },
+    {
+      "digest": {
+        "sha256": "6cbaae0eca9d8d38fb389547c79c2039a8f8f1148ef8c6c1ef6eac5ec1686baf"
+      },
+      "uri": "src/security-audit.ads"
+    },
+    {
+      "digest": {
+        "sha256": "11a8967f19fd29d1484f9891cbf163fda817c1db3b8294ade1d085f198c58422"
+      },
+      "uri": "src/security-defaults.ads"
+    },
+    {
+      "digest": {
+        "sha256": "1b18f1ed9829ed5df43f54ed66b821cf944d52c2f7dca8befb779ef0e9a308fa"
+      },
+      "uri": "src/security-migration.adb"
+    },
+    {
+      "digest": {
+        "sha256": "d3c79521bde18d89ea69ae248a67a9a8b7cf0116ff333df5857bc70f4789dcc7"
+      },
+      "uri": "src/security-migration.ads"
+    },
+    {
+      "digest": {
+        "sha256": "c78a8ead449f86199d469190b6753cbb42a6699c06c7ffbc8940dad21e8d8a49"
+      },
+      "uri": "src/security-policy.adb"
+    },
+    {
+      "digest": {
+        "sha256": "ce81e9827d8be633a6303632840f82e087d2b18f9181152bf94dfd930fc0c003"
+      },
+      "uri": "src/security-policy.ads"
+    },
+    {
+      "digest": {
+        "sha256": "2148ba6126f3d8420e1fd1d5d9c9c76dbb0567f9c283840c7748ce699ca2bbad"
+      },
+      "uri": "src/security-secrets-crypto.adb"
+    },
+    {
+      "digest": {
+        "sha256": "66e50a7f2dc98d900e9e980ef5bc6b8be93e19bbadf6d31abec709ee337912d2"
+      },
+      "uri": "src/security-secrets-crypto.ads"
+    },
+    {
+      "digest": {
+        "sha256": "1c284a76961f4cc59f1b0c9c4cf3e818e7097d0689e683042aed8fa2fa574973"
+      },
+      "uri": "src/security-secrets.adb"
+    },
+    {
+      "digest": {
+        "sha256": "561de35e90389c8370c631743ca4c1db55cbcd80d13b006f287b9c00845d2a55"
+      },
+      "uri": "src/security-secrets.ads"
+    },
+    {
+      "digest": {
+        "sha256": "20e3a811fb932baa6dbae94e93dfc9a927df363dbdbafe00897e67c205100875"
+      },
+      "uri": "src/security.ads"
+    }
+  ],
+  "source_revision": "workspace-unversioned"
+}

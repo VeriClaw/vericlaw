@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-02-26T15:43:57Z",
+  "overall_status": "pass",
+  "policy": {
+    "fail_on_non_blocking": true
+  },
+  "status_semantics": {
+    "fail": "Suite executed and failed, or required feasibility checks failed.",
+    "pass": "Suite executed successfully.",
+    "skip": "Suite was not executed due to feasibility constraints."
+  },
+  "suites": [
+    {
+      "blocking": true,
+      "blocking_mode": "required",
+      "category": "container",
+      "detail": null,
+      "exit_code": 0,
+      "platform": "linux/amd64",
+      "status": "pass",
+      "suite": "linux-amd64-container-check"
+    },
+    {
+      "blocking": false,
+      "blocking_mode": "non_blocking",
+      "category": "container",
+      "detail": "Container platform linux/arm64 is not feasible in this environment.",
+      "exit_code": 0,
+      "platform": "linux/arm64",
+      "status": "skip",
+      "suite": "linux-arm64-container-check"
+    },
+    {
+      "blocking": false,
+      "blocking_mode": "non_blocking",
+      "category": "container",
+      "detail": "Container platform linux/arm/v7 is not feasible in this environment.",
+      "exit_code": 0,
+      "platform": "linux/arm/v7",
+      "status": "skip",
+      "suite": "linux-arm-v7-container-check"
+    },
+    {
+      "blocking": false,
+      "blocking_mode": "non_blocking",
+      "category": "native",
+      "detail": "Host Ada/SPARK toolchain unavailable; native smoke check skipped.",
+      "exit_code": 0,
+      "platform": "host",
+      "status": "skip",
+      "suite": "native-host-check"
+    },
+    {
+      "blocking": true,
+      "blocking_mode": "required",
+      "category": "security",
+      "detail": null,
+      "exit_code": 0,
+      "platform": "host",
+      "status": "pass",
+      "suite": "gateway-doctor-startup-guard"
+    },
+    {
+      "blocking": true,
+      "blocking_mode": "required",
+      "category": "security",
+      "detail": null,
+      "exit_code": 0,
+      "platform": "host",
+      "status": "pass",
+      "suite": "audit-event-log-security-controls"
+    },
+    {
+      "blocking": true,
+      "blocking_mode": "required",
+      "category": "service",
+      "detail": null,
+      "exit_code": 0,
+      "platform": "host",
+      "status": "pass",
+      "suite": "operator-console-check"
+    },
+    {
+      "blocking": true,
+      "blocking_mode": "required",
+      "category": "security",
+      "detail": null,
+      "exit_code": 0,
+      "platform": "host",
+      "status": "pass",
+      "suite": "docker-runtime-security-profile"
+    },
+    {
+      "blocking": true,
+      "blocking_mode": "required",
+      "category": "service",
+      "detail": null,
+      "exit_code": 0,
+      "platform": "host",
+      "status": "pass",
+      "suite": "service-supervisor-packages"
+    }
+  ],
+  "summary": {
+    "failed_suites": 0,
+    "non_blocking_failed_suites": 0,
+    "passed_suites": 6,
+    "required_failed_suites": 0,
+    "skipped_suites": 3,
+    "total_suites": 9
+  }
+}

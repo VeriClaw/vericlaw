@@ -1,0 +1,11 @@
+channel,allowlist_configured,allowlist_enforced,allowlist_size,candidate_matches,path_has_traversal,targets_forbidden_path,restrict_to_workspace,is_subpath_of_workspace,egress_enabled,url_ssrf_suspected,targets_private_net,targets_local_network,expected_decision
+Discord_Channel,true,false,1,true,false,false,true,true,true,false,false,false,Runtime_Admission_Deny_Allowlist_Not_Enforced
+Discord_Channel,true,true,1,false,false,false,true,true,true,false,false,false,Runtime_Admission_Deny_Channel_Not_Allowlisted
+Slack_Channel,true,true,1,true,true,false,true,true,true,false,false,false,Runtime_Admission_Deny_Path_Traversal
+Slack_Channel,true,true,1,true,false,true,true,true,true,false,false,false,Runtime_Admission_Deny_Forbidden_Path
+Slack_Channel,true,true,1,true,false,false,true,false,true,false,false,false,Runtime_Admission_Deny_Outside_Workspace_Root
+Email_Channel,true,true,1,true,false,false,true,true,false,false,false,false,Runtime_Admission_Deny_URL_Egress_Disabled
+Email_Channel,true,true,1,true,false,false,true,true,true,true,false,false,Runtime_Admission_Deny_URL_SSRF
+Email_Channel,true,true,1,true,false,false,true,true,true,false,true,false,Runtime_Admission_Deny_URL_Private_Network
+Email_Channel,true,true,1,true,false,false,true,true,true,false,false,true,Runtime_Admission_Deny_URL_Local_Network
+Email_Channel,true,true,1,true,false,false,true,true,true,false,false,false,Runtime_Admission_Allow

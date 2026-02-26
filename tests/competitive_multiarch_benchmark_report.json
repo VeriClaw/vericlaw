@@ -1,0 +1,19 @@
+{
+  "benchmark_runs": 1,
+  "binder_mode": null,
+  "build_profile": "edge-speed",
+  "generated_at": "2026-02-26T14:50:35Z",
+  "host_platform": "darwin/arm64",
+  "targets": [
+    {
+      "direct_harness_report": "tests/competitive_direct_benchmark_report_linux_arm64.json",
+      "platform": "linux/arm64",
+      "quasar_report": "tests/competitive_benchmark_report_linux_arm64.json"
+    },
+    {
+      "direct_harness_report": "tests/competitive_direct_benchmark_report_linux_arm_v7.json",
+      "platform": "linux/arm/v7",
+      "quasar_report": "tests/competitive_benchmark_report_linux_arm_v7.json"
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+const securityDefaults = [
+  { control: "Default bind host", value: "127.0.0.1" },
+  { control: "Public bind default", value: "false" },
+  { control: "Pairing required", value: "true" },
+  { control: "Empty allowlist denies all", value: "true" },
+  { control: "Private network egress blocked", value: "true" },
+  { control: "Observability export", value: "none" }
+];
+
+const localDataPaths = {
+  releaseMetadata: "./tests/release_metadata.json",
+  conformanceReport: "./tests/cross_repo_conformance_report.json"
+};
+
+function setSecurityDefaults() {
+  const table = document.getElementById("security-defaults");
+  securityDefaults.forEach((item) => {
+    const row = document.createElement("tr");
+    const controlCell = document.createElement("td");
+    const valueCell = document.createElement("td");
+
+    controlCell.textContent = item.control;
+    valueCell.textContent = item.value;
+    row.append(controlCell, valueCell);
+    table.appendChild(row);
+  });
+}
+
+function setListItems(elementId, values) {
+  const list = document.getElementById(elementId);
+  list.textContent = "";
+  values.forEach((value) => {
+    const li = document.createElement("li");
+    li.textContent = value;
+    list.appendChild(li);
+  });
+}
+
+function normalizeLocalPath(path) {
+  if (!path || typeof path !== "string") {
+    return null;
+  }
+  return path.startsWith("./") ? path : `./${path.replace(/^\/+/, "")}`;
+}
+
+async function fetchLocal(path) {
+  try {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) {
+      return { ok: false, path, error: `HTTP ${response.status}` };
+    }
+    return { ok: true, path, response };
+  } catch (error) {
+    return { ok: false, path, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function loadLocalJson(path) {
+  const result = await fetchLocal(path);
+  if (!result.ok) {
+    return result;
+  }
+  try {
+    return { ok: true, path, data: await result.response.json() };
+  } catch (error) {
+    return { ok: false, path, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function buildTodoSnapshot(releaseMetadataResult) {
+  if (!releaseMetadataResult.ok) {
+    return [
+      `Release metadata unavailable locally (${releaseMetadataResult.path}). Run make release-check to regenerate local artifacts.`,
+      `Local read error: ${releaseMetadataResult.error}`
+    ];
+  }
+
+  const metadata = releaseMetadataResult.data;
+  const checks = Object.entries(metadata.checks || {});
+  const items = [
+    `Release gate: ${metadata.gate || "unknown"} (${metadata.toolchain_mode || "unknown"} mode).`,
+    `Metadata generated at: ${metadata.generated_at || "unknown"}.`
+  ];
+
+  if (checks.length === 0) {
+    items.push("Release metadata contains no local check status entries.");
+    return items;
+  }
+
+  checks.forEach(([check, status]) => {
+    items.push(`Check ${check}: ${status}`);
+  });
+  return items;
+}
+
+async function buildHealthSnapshot(releaseMetadataResult) {
+  const conformancePath = normalizeLocalPath(releaseMetadataResult.data?.artifacts?.conformance_report)
+    || localDataPaths.conformanceReport;
+  let conformanceResult = await loadLocalJson(conformancePath);
+  if (!conformanceResult.ok && conformancePath !== localDataPaths.conformanceReport) {
+    conformanceResult = await loadLocalJson(localDataPaths.conformanceReport);
+  }
+
+  const items = [];
+  if (conformanceResult.ok) {
+    const report = conformanceResult.data;
+    const suites = Array.isArray(report.suites) ? report.suites : [];
+    const passedSuites = suites.filter((suite) => suite.status === "pass").length;
+    const gatewayDoctorSuite = suites.find((suite) => suite.suite === "gateway-doctor-startup-guard");
+    items.push(`Conformance overall: ${report.overall_status || "unknown"} (${passedSuites}/${suites.length} suites passing).`);
+    items.push(`Conformance generated at: ${report.generated_at || "unknown"}.`);
+    if (gatewayDoctorSuite) {
+      items.push(`Gateway doctor startup guard: ${gatewayDoctorSuite.status} (exit ${gatewayDoctorSuite.exit_code}).`);
+    } else {
+      items.push("Gateway doctor startup guard status is missing from the local conformance report.");
+    }
+  } else {
+    items.push(`Conformance report unavailable locally (${conformanceResult.path}). Run make conformance-suite.`);
+    items.push(`Local read error: ${conformanceResult.error}`);
+  }
+
+  const checksumPath = normalizeLocalPath(releaseMetadataResult.data?.artifacts?.checksum_manifest);
+  if (checksumPath) {
+    const checksumResult = await fetchLocal(checksumPath);
+    if (checksumResult.ok) {
+      items.push(`Checksum manifest available: ${checksumPath}.`);
+    } else {
+      items.push(`Checksum manifest missing locally (${checksumPath}). Run make release-check.`);
+      items.push(`Local read error: ${checksumResult.error}`);
+    }
+  } else {
+    items.push("Checksum manifest path is missing from local release metadata.");
+  }
+
+  return items;
+}
+
+async function renderLiveSnapshots() {
+  const releaseMetadataResult = await loadLocalJson(localDataPaths.releaseMetadata);
+  setListItems("todo-snapshot", buildTodoSnapshot(releaseMetadataResult));
+  setListItems("health-snapshot", await buildHealthSnapshot(releaseMetadataResult));
+}
+
+setSecurityDefaults();
+renderLiveSnapshots().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  setListItems("todo-snapshot", [`Unable to read local operator status artifacts. Error: ${message}`]);
+  setListItems("health-snapshot", ["Unable to render local health snapshot due to a local runtime error."]);
+});
+document.getElementById("rendered-at").textContent = new Date().toLocaleString();

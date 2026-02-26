@@ -1,0 +1,51 @@
+{
+  "deployment_maturity": {
+    "multi_arch_image": true,
+    "signed_artifacts": true,
+    "smoke_matrix": 4
+  },
+  "execution_feasibility": {
+    "benchmark_execution_feasible": false,
+    "reason": "zig 0.15.2 unavailable on host; ingested best-available local artifacts",
+    "zig_status": "missing",
+    "zig_version": null
+  },
+  "feature_parity": {
+    "channels": 3,
+    "providers": 3,
+    "tools": 10
+  },
+  "generated_at": "2026-02-26T14:20:04Z",
+  "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
+  "ingest_source": {
+    "nullclaw_ci_workflow": "/Users/eugene/apps/demo/claw-mania/nullclaw/.github/workflows/ci.yml",
+    "nullclaw_readme": "/Users/eugene/apps/demo/claw-mania/nullclaw/README.md",
+    "source_scorecard": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/config/competitive_scorecards/nullclaw_v2_scorecard.json"
+  },
+  "performance": {
+    "binary_size_mb": 0.662,
+    "container_size_mb": 48.0,
+    "dispatch_latency_p95_ms": 14.0,
+    "idle_rss_mb": 1.0,
+    "startup_ms": 8.0,
+    "throughput_ops_per_sec": 78.0
+  },
+  "performance_metric_sources": {
+    "binary_size_mb": "nullclaw README benchmark snapshot (binary row: 678 KB)",
+    "container_size_mb": "fallback from source scorecard due missing local benchmark artifact",
+    "dispatch_latency_p95_ms": "fallback from source scorecard due missing local benchmark artifact",
+    "idle_rss_mb": "nullclaw README benchmark snapshot (RAM row: ~1 MB)",
+    "startup_ms": "nullclaw README benchmark snapshot (startup row: <8 ms at 0.8 GHz)",
+    "throughput_ops_per_sec": "fallback from source scorecard due missing local benchmark artifact"
+  },
+  "project": "nullclaw",
+  "security_non_regression": {
+    "allow_public_bind_default": false,
+    "deny_private_and_local_egress": true,
+    "empty_allowlist_denies_all": true,
+    "encrypt_secrets_at_rest": true,
+    "require_pairing_default": true,
+    "workspace_scope_default": true
+  },
+  "snapshot_id": "competitive-v2-nullclaw-local-ingest"
+}

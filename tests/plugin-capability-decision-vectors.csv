@@ -1,0 +1,6 @@
+signature_state,tool_granted,requested_tool,expected_decision
+unsigned,true,file_read,Tool_Access_Deny_Unsigned_Manifest
+signed_untrusted,true,file_read,Tool_Access_Deny_Untrusted_Key
+signed_trusted,false,file_write,Tool_Access_Deny_Tool_Not_Granted
+signed_trusted,true,command_exec,Tool_Access_Allow
+unsigned,false,network_fetch,Tool_Access_Deny_Unsigned_Manifest

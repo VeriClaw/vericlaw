@@ -1,0 +1,302 @@
+{
+  "baseline_id": "anywhere-v2-freeze-competitive-baselines",
+  "generated_at": "2026-02-26T15:43:35Z",
+  "openclaw_scorecard_only": {
+    "deployment_delta_vs_quasar": {
+      "multi_arch_image": {
+        "openclaw": true,
+        "quasar": true
+      },
+      "signed_artifacts": {
+        "openclaw": true,
+        "quasar": true
+      },
+      "smoke_matrix": {
+        "openclaw": 6,
+        "quasar": 6
+      }
+    },
+    "feature_delta_vs_quasar": {
+      "channels": {
+        "delta_quasar_minus_project": -1,
+        "openclaw": 4,
+        "quasar": 3
+      },
+      "providers": {
+        "delta_quasar_minus_project": -1,
+        "openclaw": 4,
+        "quasar": 3
+      },
+      "tools": {
+        "delta_quasar_minus_project": -2,
+        "openclaw": 14,
+        "quasar": 12
+      }
+    },
+    "note": "OpenClaw is excluded from strict quantitative pass/fail gating and included for scorecard insights only.",
+    "project": "openclaw",
+    "scope": "scorecard_only_non_gating",
+    "security_delta_vs_quasar": {
+      "empty_allowlist_denies_all": {
+        "openclaw": false,
+        "quasar": true
+      },
+      "encrypt_secrets_at_rest": {
+        "openclaw": false,
+        "quasar": true
+      }
+    }
+  },
+  "outcome_summary": {
+    "deployment": {
+      "quasar_deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 6
+      },
+      "status": "pass"
+    },
+    "feature": {
+      "quasar_feature_parity": {
+        "channels": 3,
+        "providers": 3,
+        "tools": 12
+      },
+      "status": "pass"
+    },
+    "openclaw_scorecard_insights": {
+      "feature_counters_where_quasar_trails": [
+        "channels",
+        "providers",
+        "tools"
+      ],
+      "security_controls_where_openclaw_trails": [
+        "empty_allowlist_denies_all",
+        "encrypt_secrets_at_rest"
+      ]
+    },
+    "overall_status": "pass",
+    "performance": {
+      "source": "tests/competitive_regression_gate_report.json",
+      "status": "pass"
+    },
+    "security": {
+      "status": "pass",
+      "strict_peer_mismatches": 0
+    }
+  },
+  "scenario": {
+    "benchmark_runs": 50,
+    "binder_mode": "portable",
+    "build_profile": "edge-speed",
+    "host_platform": "darwin/arm64",
+    "measurement_mode": "container",
+    "platform_mismatch": true,
+    "target_platform": "linux/arm64"
+  },
+  "schema_version": "competitive-v2-final-comparative-report",
+  "scorecard_only_projects": [
+    "openclaw"
+  ],
+  "source_artifacts": {
+    "direct_harness": "tests/competitive_direct_benchmark_report.json",
+    "openclaw_scorecard": "config/competitive_scorecards/openclaw_v2_scorecard.json",
+    "regression": "tests/competitive_regression_gate_report.json",
+    "scorecard": "tests/competitive_scorecard_report.json"
+  },
+  "strict_quantitative_peers": {
+    "deployment": {
+      "peer_comparison": {
+        "nullclaw": {
+          "multi_arch_image": {
+            "nullclaw": true,
+            "quasar": true
+          },
+          "signed_artifacts": {
+            "nullclaw": true,
+            "quasar": true
+          },
+          "smoke_matrix": {
+            "nullclaw": 4,
+            "quasar": 6
+          }
+        },
+        "zeroclaw": {
+          "multi_arch_image": {
+            "quasar": true,
+            "zeroclaw": true
+          },
+          "signed_artifacts": {
+            "quasar": true,
+            "zeroclaw": true
+          },
+          "smoke_matrix": {
+            "quasar": 6,
+            "zeroclaw": 5
+          }
+        }
+      },
+      "quasar_deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 6
+      }
+    },
+    "feature": {
+      "peer_deltas": {
+        "nullclaw": {
+          "channels": {
+            "delta_quasar_minus_project": 0,
+            "nullclaw": 3,
+            "quasar": 3
+          },
+          "providers": {
+            "delta_quasar_minus_project": 0,
+            "nullclaw": 3,
+            "quasar": 3
+          },
+          "tools": {
+            "delta_quasar_minus_project": 2,
+            "nullclaw": 10,
+            "quasar": 12
+          }
+        },
+        "zeroclaw": {
+          "channels": {
+            "delta_quasar_minus_project": 0,
+            "quasar": 3,
+            "zeroclaw": 3
+          },
+          "providers": {
+            "delta_quasar_minus_project": 0,
+            "quasar": 3,
+            "zeroclaw": 3
+          },
+          "tools": {
+            "delta_quasar_minus_project": 1,
+            "quasar": 12,
+            "zeroclaw": 11
+          }
+        }
+      },
+      "quasar_feature_parity": {
+        "channels": 3,
+        "providers": 3,
+        "tools": 12
+      }
+    },
+    "performance": {
+      "gate_status": "pass",
+      "metric_outcomes": [
+        {
+          "direction": "lower_is_better",
+          "metric_id": "startup_ms",
+          "metric_label": "startup_ms",
+          "quasar_value": 1.525,
+          "regression_gate_status": "pass",
+          "strict_peer_comparisons": {
+            "nullclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 0.190625,
+              "value": 8.0
+            },
+            "zeroclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 0.1525,
+              "value": 10.0
+            }
+          }
+        },
+        {
+          "direction": "lower_is_better",
+          "metric_id": "idle_rss_mb",
+          "metric_label": "idle_rss_mb",
+          "quasar_value": 3.473,
+          "regression_gate_status": "pass",
+          "strict_peer_comparisons": {
+            "nullclaw": {
+              "assessment": "quasar_worse",
+              "quasar_to_peer_ratio": 3.473,
+              "value": 1.0
+            },
+            "zeroclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 0.8470731707317074,
+              "value": 4.1
+            }
+          }
+        },
+        {
+          "direction": "lower_is_better",
+          "metric_id": "dispatch_latency_p95_ms",
+          "metric_label": "dispatch_latency_p95_ms",
+          "quasar_value": 1.461,
+          "regression_gate_status": "pass",
+          "strict_peer_comparisons": {
+            "nullclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 0.10435714285714286,
+              "value": 14.0
+            },
+            "zeroclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 0.10902985074626866,
+              "value": 13.4
+            }
+          }
+        },
+        {
+          "direction": "higher_is_better",
+          "metric_id": "throughput_ops_per_sec",
+          "metric_label": "throughput_ops_per_sec",
+          "quasar_value": 896.598,
+          "regression_gate_status": "pass",
+          "strict_peer_comparisons": {
+            "nullclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 11.494846153846153,
+              "value": 78.0
+            },
+            "zeroclaw": {
+              "assessment": "quasar_better",
+              "quasar_to_peer_ratio": 11.207474999999999,
+              "value": 80.0
+            }
+          }
+        }
+      ],
+      "regression_metrics": [
+        "startup_ms",
+        "idle_rss_mb",
+        "dispatch_latency_p95_ms",
+        "throughput_ops_per_sec"
+      ],
+      "source": "pass"
+    },
+    "projects": [
+      "zeroclaw",
+      "nullclaw"
+    ],
+    "scope": "pass_fail_quantitative",
+    "security": {
+      "peer_alignment": {
+        "nullclaw": {
+          "matches_quasar_security_defaults": true,
+          "mismatches": {}
+        },
+        "zeroclaw": {
+          "matches_quasar_security_defaults": true,
+          "mismatches": {}
+        }
+      },
+      "quasar_security_defaults": {
+        "allow_public_bind_default": false,
+        "deny_private_and_local_egress": true,
+        "empty_allowlist_denies_all": true,
+        "encrypt_secrets_at_rest": true,
+        "require_pairing_default": true,
+        "workspace_scope_default": true
+      }
+    }
+  }
+}

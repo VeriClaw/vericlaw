@@ -1,0 +1,23 @@
+services:
+  quasar:
+    image: quasar-claw-lab:secure-local
+    build:
+      context: .
+      dockerfile: Dockerfile.release
+    environment:
+      GATEWAY_BIND_HOST: "127.0.0.1"
+      ALLOW_PUBLIC_BIND: "false"
+      REQUIRE_PAIRING: "true"
+    ports:
+      - "127.0.0.1:8787:8787"
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    restart: "no"

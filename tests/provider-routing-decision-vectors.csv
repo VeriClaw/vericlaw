@@ -1,0 +1,16 @@
+primary_configured,primary_enabled,failover_configured,failover_enabled,long_tail_configured,long_tail_enabled,route_mode,primary_weight,deterministic_slot,expected_decision
+true,true,true,true,true,false,primary_with_failover,,,Route_Allow_Primary
+true,false,true,true,true,false,primary_with_failover,,,Route_Allow_Failover
+true,false,true,false,true,true,primary_with_failover,,,Route_Allow_Long_Tail
+false,false,true,false,false,false,primary_with_failover,,,Route_Deny_No_Provider
+true,true,true,true,true,false,weighted,70,10,Route_Allow_Weighted_Primary
+true,true,true,true,true,false,weighted,30,90,Route_Allow_Weighted_Failover
+true,false,true,true,true,false,weighted,80,5,Route_Allow_Failover
+true,false,true,true,true,false,weighted,30,5,Route_Allow_Failover
+true,true,true,false,true,false,weighted,30,90,Route_Allow_Primary
+true,true,true,true,true,false,weighted,30,30,Route_Allow_Weighted_Failover
+true,false,true,false,true,true,weighted,80,5,Route_Allow_Long_Tail
+true,true,true,true,true,false,weighted,101,0,Route_Error_Invalid_Weight
+true,false,true,false,true,true,weighted,30,90,Route_Allow_Long_Tail
+false,false,true,false,false,false,weighted,60,10,Route_Deny_No_Provider
+true,true,true,true,true,false,weighted,50,100,Route_Error_Invalid_Weight

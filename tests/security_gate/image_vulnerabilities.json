@@ -1,0 +1,115 @@
+{
+  "SchemaVersion": 2,
+  "CreatedAt": "2026-02-26T15:43:55.455601251Z",
+  "ArtifactName": "quasar-claw-lab:v2-readiness-gate",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": {
+      "Family": "debian",
+      "Name": "12.13"
+    },
+    "ImageID": "sha256:37b1a679a3a37b8b10b1733695527e0cd7da161c2e68a596996f726eb62d16c1",
+    "DiffIDs": [
+      "sha256:100031c9cce7b091dd637c1afa21331c3448979cc0953828264b5868ec3f225e",
+      "sha256:ee8c07aa620792b57d8a6b828d85d630e0f6636366bae098b0c7c425a29b546c",
+      "sha256:7c22ece19ec42f6976da965cd5392f881ae64b6fc7a5293d14ac9a3fb252f81e",
+      "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+    ],
+    "RepoTags": [
+      "quasar-claw-lab:v2-readiness-gate"
+    ],
+    "RepoDigests": [
+      "quasar-claw-lab@sha256:37b1a679a3a37b8b10b1733695527e0cd7da161c2e68a596996f726eb62d16c1"
+    ],
+    "ImageConfig": {
+      "architecture": "arm64",
+      "created": "2026-02-26T15:31:46.823940636Z",
+      "history": [
+        {
+          "created": "2026-02-23T00:00:00Z",
+          "created_by": "# debian.sh --arch 'arm64' out/ 'bookworm' '@1771804800'",
+          "comment": "debuerreotype 0.17"
+        },
+        {
+          "created": "2026-02-26T00:55:32Z",
+          "created_by": "ARG DEBIAN_FRONTEND=noninteractive",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2026-02-26T00:55:32Z",
+          "created_by": "RUN |1 DEBIAN_FRONTEND=noninteractive /bin/sh -c apt-get update     \u0026\u0026 apt-get install --yes --no-install-recommends libgnat-12 ca-certificates     \u0026\u0026 rm -rf /var/lib/apt/lists/*     \u0026\u0026 groupadd --system --gid 10001 app     \u0026\u0026 useradd --system --uid 10001 --gid app --home-dir /nonexistent --shell /usr/sbin/nologin app     \u0026\u0026 mkdir -p /app /tmp     \u0026\u0026 chown -R app:app /app /tmp # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2026-02-26T15:31:46Z",
+          "created_by": "COPY /workspace/main /app/quasar-claw # buildkit",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2026-02-26T15:31:46Z",
+          "created_by": "WORKDIR /app",
+          "comment": "buildkit.dockerfile.v0"
+        },
+        {
+          "created": "2026-02-26T15:31:46Z",
+          "created_by": "ENV HOME=/tmp TMPDIR=/tmp XDG_CACHE_HOME=/tmp/.cache XDG_RUNTIME_DIR=/tmp/.runtime",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2026-02-26T15:31:46Z",
+          "created_by": "VOLUME [/tmp]",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2026-02-26T15:31:46Z",
+          "created_by": "USER app:app",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        },
+        {
+          "created": "2026-02-26T15:31:46Z",
+          "created_by": "ENTRYPOINT [\"/app/quasar-claw\"]",
+          "comment": "buildkit.dockerfile.v0",
+          "empty_layer": true
+        }
+      ],
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:100031c9cce7b091dd637c1afa21331c3448979cc0953828264b5868ec3f225e",
+          "sha256:ee8c07aa620792b57d8a6b828d85d630e0f6636366bae098b0c7c425a29b546c",
+          "sha256:7c22ece19ec42f6976da965cd5392f881ae64b6fc7a5293d14ac9a3fb252f81e",
+          "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+        ]
+      },
+      "config": {
+        "Entrypoint": [
+          "/app/quasar-claw"
+        ],
+        "Env": [
+          "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "HOME=/tmp",
+          "TMPDIR=/tmp",
+          "XDG_CACHE_HOME=/tmp/.cache",
+          "XDG_RUNTIME_DIR=/tmp/.runtime"
+        ],
+        "User": "app:app",
+        "Volumes": {
+          "/tmp": {}
+        },
+        "WorkingDir": "/app"
+      }
+    }
+  },
+  "Results": [
+    {
+      "Target": "quasar-claw-lab:v2-readiness-gate (debian 12.13)",
+      "Class": "os-pkgs",
+      "Type": "debian"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+channel,allowlist_size,candidate_matches,limiter_configured,requests_in_window,max_requests,idempotency_key_present,seen_before,expected_decision
+cli,0,true,true,1,10,true,false,Channel_Request_Deny_Allowlist
+webhook,1,true,false,1,10,true,false,Channel_Request_Deny_Rate_Limit
+chat,1,true,true,11,10,true,false,Channel_Request_Deny_Rate_Limit
+chat,1,true,true,1,10,false,false,Channel_Request_Deny_Replay
+cli,1,true,true,1,10,true,false,Channel_Request_Allow

@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-02-26T15:14:28Z",
+  "gate": "hardened-expansion-release",
+  "toolchain_mode": "container",
+  "checks": {
+    "check": "pass",
+    "secrets_test": "pass",
+    "measure_small": "pass",
+    "conformance_suite": "pass",
+    "borrow_wave_conformance_suite": "pass"
+  },
+  "artifacts": {
+    "conformance_report": "tests/cross_repo_conformance_report.json",
+    "borrow_wave_conformance_report": "tests/borrow_wave_conformance_report.json",
+    "checksum_manifest": "tests/release_checksum_manifest.sha256",
+    "checksum_manifest_sha256": "3d95629720b60c3ce03fc30befe5a250b959b7dc044853d8161206bd7ed64c59"
+  }
+}

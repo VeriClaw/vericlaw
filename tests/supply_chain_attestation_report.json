@@ -1,0 +1,9 @@
+{
+  "artifact_count": 7,
+  "attestation_manifest": "tests/attestation_manifest.sha256",
+  "generated_at": "2026-02-26T15:44:15Z",
+  "overall_status": "pass",
+  "provenance": "tests/provenance_attestation.json",
+  "sbom": "tests/sbom.spdx.json",
+  "signed_artifacts": true
+}

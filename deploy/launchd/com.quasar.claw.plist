@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.quasar.claw</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/quasar-claw/bin/quasar-claw</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/opt/quasar-claw</string>
+    <key>UserName</key>
+    <string>quasar</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/var/log/quasar-claw.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/quasar-claw.err.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>GATEWAY_BIND_HOST</key>
+      <string>127.0.0.1</string>
+      <key>ALLOW_PUBLIC_BIND</key>
+      <string>false</string>
+      <key>REQUIRE_PAIRING</key>
+      <string>true</string>
+    </dict>
+  </dict>
+</plist>

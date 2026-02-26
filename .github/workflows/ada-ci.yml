@@ -1,0 +1,127 @@
+name: ada-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-prove:
+    runs-on: ubuntu-latest
+    container:
+      image: alire/gnat:community-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate shell scripts
+        run: >
+          bash -n
+          scripts/check_toolchain.sh
+          scripts/bootstrap_toolchain.sh
+          scripts/run_container_ci.sh
+          scripts/build_multiarch_image.sh
+          scripts/check_operator_console.sh
+          scripts/serve_operator_console.sh
+          scripts/check_docker_runtime_bundle.sh
+          scripts/check_service_supervisors.sh
+          scripts/run_cross_platform_smoke_suite.sh
+          scripts/generate_attestation_artifacts.sh
+          scripts/verify_supply_chain_artifacts.sh
+          scripts/run_competitive_multiarch_benchmarks.sh
+          scripts/check_competitive_baseline.sh
+          scripts/vulnerability_license_gate.sh
+          scripts/release_candidate_gate.sh
+          && ./scripts/bootstrap_toolchain.sh --validate
+      - name: Build and prove gate
+        run: |
+          export PATH=/opt/gnat/bin:$PATH
+          make check
+          make competitive-regression-gate
+          make supply-chain-attest
+          make supply-chain-verify
+      - name: Upload competitive regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: competitive-regression-artifacts
+          path: |
+            tests/competitive_benchmark_report.json
+            tests/competitive_direct_benchmark_report.json
+            tests/competitive_scorecard_report.json
+            tests/competitive_regression_gate_report.json
+
+  container-ci-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        action: [check, conformance-suite]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Run container CI action
+        run: ADA_CONTAINER_PLATFORM=${{ matrix.platform }} ./scripts/run_container_ci.sh ${{ matrix.action }}
+
+  cross-platform-smoke-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Run expanded smoke matrix
+        run: SMOKE_FAIL_ON_NON_BLOCKING=true make cross-platform-smoke
+      - name: Upload cross-platform smoke report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-platform-smoke-report
+          path: tests/cross_platform_smoke_report.json
+
+  multiarch-image-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64, linux/arm/v7]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build platform image
+        run: |
+          platform="${{ matrix.platform }}"
+          tag_suffix="${platform//\//-}"
+          IMAGE_TAG="ci-${tag_suffix}" IMAGE_PLATFORMS="${platform}" LOAD_IMAGE=true ./scripts/build_multiarch_image.sh
+      - name: Verify trust and provenance metadata
+        run: |
+          ./scripts/generate_attestation_artifacts.sh
+          REQUIRE_TRUST_METADATA=true ./scripts/verify_supply_chain_artifacts.sh
+      - name: Validate runtime bundle and service packages
+        run: |
+          ./scripts/check_docker_runtime_bundle.sh
+          ./scripts/check_service_supervisors.sh
+
+  competitive-benchmark-arm-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Run ARM benchmark matrix
+        run: ./scripts/run_competitive_multiarch_benchmarks.sh --runs 10 --profile edge-speed
+      - name: Upload ARM benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: competitive-benchmark-arm-matrix
+          path: |
+            tests/competitive_multiarch_benchmark_report.json
+            tests/competitive_benchmark_report_linux_arm64.json
+            tests/competitive_benchmark_report_linux_arm_v7.json
+            tests/competitive_direct_benchmark_report_linux_arm64.json
+            tests/competitive_direct_benchmark_report_linux_arm_v7.json

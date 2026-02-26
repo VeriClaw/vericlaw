@@ -1,0 +1,7 @@
+step,current_state,failed_attempts,lockout_remaining,event,max_pairing_attempts,lockout_interval,next_state,next_failed_attempts,next_lockout_remaining,token_present,token_valid,expected_decision
+1,Unpaired,0,0,pairing_attempt_failed,2,2,Pairing,1,0,true,true,Deny_Not_Paired
+2,Pairing,1,0,pairing_attempt_failed,2,2,Locked_Out,2,2,true,true,Deny_Pairing_Lockout
+3,Locked_Out,2,2,lockout_interval_elapsed,2,2,Locked_Out,2,1,true,true,Deny_Pairing_Lockout
+4,Locked_Out,2,1,lockout_interval_elapsed,2,2,Unpaired,0,0,true,true,Deny_Not_Paired
+5,Unpaired,0,0,pairing_succeeded,2,2,Paired,0,0,true,true,Allow
+6,Pairing,1,0,reset,2,2,Unpaired,0,0,true,true,Deny_Not_Paired

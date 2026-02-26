@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+    <meta name="referrer" content="no-referrer">
+    <title>Quasar Claw Operator Console (Local)</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="layout">
+      <header>
+        <h1>Operator Web Console</h1>
+        <p class="muted">Local-only console for secure defaults, release checks, and health guidance.</p>
+      </header>
+
+      <section class="panel">
+        <h2>Security defaults</h2>
+        <p class="muted">Derived from repository configuration defaults.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Control</th>
+              <th>Default</th>
+            </tr>
+          </thead>
+          <tbody id="security-defaults"></tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Release checklist snapshot</h2>
+        <ul id="todo-snapshot"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Health snapshot</h2>
+        <ul id="health-snapshot"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Setup guidance</h2>
+        <ol>
+          <li>Run <code>make operator-console-check</code> to validate local scaffold files.</li>
+          <li>Run <code>make operator-console-serve</code> to serve on <code>127.0.0.1</code> by default.</li>
+          <li>If non-loopback hosting is required, pass <code>--allow-non-loopback</code> and secure access at the host/network layer.</li>
+        </ol>
+      </section>
+
+      <footer class="muted">
+        <p>Local-only scaffold. External telemetry/export remains disabled.</p>
+        <p>Rendered: <span id="rendered-at">pending</span></p>
+      </footer>
+    </main>
+  </body>
+</html>

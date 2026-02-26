@@ -1,0 +1,309 @@
+{
+  "comparisons": {
+    "binary_size_mb": {
+      "direction": "lower_is_better",
+      "peers": {
+        "nullclaw": {
+          "quasar_to_peer_ratio": 0.1404833836858006,
+          "value": 0.662
+        },
+        "zeroclaw": {
+          "quasar_to_peer_ratio": 0.010568181818181817,
+          "value": 8.8
+        }
+      },
+      "quasar": 0.093
+    },
+    "container_size_mb": {
+      "direction": "lower_is_better",
+      "peers": {
+        "nullclaw": {
+          "quasar_to_peer_ratio": 0.6586458333333333,
+          "value": 48.0
+        },
+        "zeroclaw": {
+          "quasar_to_peer_ratio": 0.7527380952380952,
+          "value": 42.0
+        }
+      },
+      "quasar": 31.615
+    },
+    "dispatch_latency_p95_ms": {
+      "direction": "lower_is_better",
+      "peers": {
+        "nullclaw": {
+          "quasar_to_peer_ratio": 3.351785714285714,
+          "value": 14.0
+        },
+        "zeroclaw": {
+          "quasar_to_peer_ratio": 3.5018656716417906,
+          "value": 13.4
+        }
+      },
+      "quasar": 46.925
+    },
+    "idle_rss_mb": {
+      "direction": "lower_is_better",
+      "peers": {
+        "nullclaw": {
+          "quasar_to_peer_ratio": null,
+          "value": 1.0
+        },
+        "zeroclaw": {
+          "quasar_to_peer_ratio": null,
+          "value": 4.1
+        }
+      },
+      "quasar": null
+    },
+    "startup_ms": {
+      "direction": "lower_is_better",
+      "peers": {
+        "nullclaw": {
+          "quasar_to_peer_ratio": 5.865625,
+          "value": 8.0
+        },
+        "zeroclaw": {
+          "quasar_to_peer_ratio": 4.6925,
+          "value": 10.0
+        }
+      },
+      "quasar": 46.925
+    },
+    "throughput_ops_per_sec": {
+      "direction": "higher_is_better",
+      "peers": {
+        "nullclaw": {
+          "quasar_to_peer_ratio": 0.27321794871794874,
+          "value": 78.0
+        },
+        "zeroclaw": {
+          "quasar_to_peer_ratio": 0.2663875,
+          "value": 80.0
+        }
+      },
+      "quasar": 21.311
+    }
+  },
+  "generated_at": "2026-02-26T14:50:35Z",
+  "performance_peers": [
+    "quasar",
+    "zeroclaw",
+    "nullclaw"
+  ],
+  "projects": {
+    "nullclaw": {
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 4
+      },
+      "execution_feasibility": {
+        "benchmark_execution_feasible": false,
+        "reason": "zig 0.15.2 unavailable on host; ingested best-available local artifacts",
+        "zig_status": "missing",
+        "zig_version": null
+      },
+      "feature_parity": {
+        "channels": 3,
+        "providers": 3,
+        "tools": 10
+      },
+      "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
+      "ingest_source": {
+        "nullclaw_ci_workflow": "/Users/eugene/apps/demo/claw-mania/nullclaw/.github/workflows/ci.yml",
+        "nullclaw_readme": "/Users/eugene/apps/demo/claw-mania/nullclaw/README.md",
+        "source_scorecard": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/config/competitive_scorecards/nullclaw_v2_scorecard.json"
+      },
+      "peer_mode": "pass_fail",
+      "performance": {
+        "binary_size_mb": 0.662,
+        "container_size_mb": 48.0,
+        "dispatch_latency_p95_ms": 14.0,
+        "idle_rss_mb": 1.0,
+        "startup_ms": 8.0,
+        "throughput_ops_per_sec": 78.0
+      },
+      "performance_metric_sources": {
+        "binary_size_mb": "nullclaw README benchmark snapshot (binary row: 678 KB)",
+        "container_size_mb": "fallback from source scorecard due missing local benchmark artifact",
+        "dispatch_latency_p95_ms": "fallback from source scorecard due missing local benchmark artifact",
+        "idle_rss_mb": "nullclaw README benchmark snapshot (RAM row: ~1 MB)",
+        "startup_ms": "nullclaw README benchmark snapshot (startup row: <8 ms at 0.8 GHz)",
+        "throughput_ops_per_sec": "fallback from source scorecard due missing local benchmark artifact"
+      },
+      "project": "nullclaw",
+      "scenario": {
+        "benchmark_runs": 1,
+        "binder_mode": "portable",
+        "build_profile": "edge-speed",
+        "host_platform": "darwin/arm64",
+        "measurement_mode": "container",
+        "platform_mismatch": true,
+        "target_platform": "linux/arm/v7"
+      },
+      "security_non_regression": {
+        "allow_public_bind_default": false,
+        "deny_private_and_local_egress": true,
+        "empty_allowlist_denies_all": true,
+        "encrypt_secrets_at_rest": true,
+        "require_pairing_default": true,
+        "workspace_scope_default": true
+      },
+      "source": "tests/nullclaw_v2_benchmark_ingest.json"
+    },
+    "openclaw": {
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 6
+      },
+      "feature_parity": {
+        "channels": 4,
+        "providers": 4,
+        "tools": 14
+      },
+      "peer_mode": "scorecard_only",
+      "performance": {},
+      "project": "openclaw",
+      "scenario": {
+        "benchmark_runs": 1,
+        "binder_mode": "portable",
+        "build_profile": "edge-speed",
+        "host_platform": "darwin/arm64",
+        "measurement_mode": "container",
+        "platform_mismatch": true,
+        "target_platform": "linux/arm/v7"
+      },
+      "security_non_regression": {
+        "allow_public_bind_default": false,
+        "deny_private_and_local_egress": true,
+        "empty_allowlist_denies_all": false,
+        "encrypt_secrets_at_rest": false,
+        "require_pairing_default": true,
+        "workspace_scope_default": true
+      },
+      "source": "config/competitive_scorecards/openclaw_v2_scorecard.json"
+    },
+    "quasar": {
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 6
+      },
+      "feature_parity": {
+        "channels": 3,
+        "providers": 3,
+        "tools": 12
+      },
+      "metric_availability": {
+        "idle_rss_mb": {
+          "collector": "unsupported_container_rss_telemetry",
+          "supported": false
+        }
+      },
+      "peer_mode": "pass_fail",
+      "performance": {
+        "binary_size_mb": 0.093,
+        "container_size_mb": 31.615,
+        "dispatch_latency_p95_ms": 46.925,
+        "idle_rss_mb": null,
+        "startup_ms": 46.925,
+        "throughput_ops_per_sec": 21.311
+      },
+      "project": "quasar",
+      "scenario": {
+        "benchmark_runs": 1,
+        "binder_mode": "portable",
+        "build_profile": "edge-speed",
+        "host_platform": "darwin/arm64",
+        "measurement_mode": "container",
+        "platform_mismatch": true,
+        "target_platform": "linux/arm/v7"
+      },
+      "security_non_regression": {
+        "allow_public_bind_default": false,
+        "deny_private_and_local_egress": true,
+        "empty_allowlist_denies_all": true,
+        "encrypt_secrets_at_rest": true,
+        "require_pairing_default": true,
+        "workspace_scope_default": true
+      },
+      "source": "tests/competitive_benchmark_report_linux_arm_v7.json"
+    },
+    "zeroclaw": {
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 5
+      },
+      "execution_feasibility": {
+        "attempted_command": "cargo bench --locked",
+        "benchmark_execution_feasible": false,
+        "cargo_status": "missing",
+        "cargo_version": null,
+        "reason": "cargo unavailable on host; ingested best-available local artifacts"
+      },
+      "feature_parity": {
+        "channels": 3,
+        "providers": 3,
+        "tools": 11
+      },
+      "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
+      "ingest_source": {
+        "source_scorecard": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/config/competitive_scorecards/zeroclaw_v2_scorecard.json",
+        "zeroclaw_benchmark_workflow": "/Users/eugene/apps/demo/claw-mania/zeroclaw/.github/workflows/test-benchmarks.yml",
+        "zeroclaw_readme": "/Users/eugene/apps/demo/claw-mania/zeroclaw/README.md"
+      },
+      "peer_mode": "pass_fail",
+      "performance": {
+        "binary_size_mb": 8.8,
+        "container_size_mb": 42.0,
+        "dispatch_latency_p95_ms": 13.4,
+        "idle_rss_mb": 4.1,
+        "startup_ms": 10.0,
+        "throughput_ops_per_sec": 80.0
+      },
+      "performance_metric_sources": {
+        "binary_size_mb": "zeroclaw README benchmark snapshot/sample (release binary size: ~8.8MB)",
+        "container_size_mb": "fallback from source scorecard due missing local benchmark artifact",
+        "dispatch_latency_p95_ms": "fallback from source scorecard due missing local benchmark artifact",
+        "idle_rss_mb": "zeroclaw README reproducible sample (peak memory footprint from `zeroclaw --help`/`status`)",
+        "startup_ms": "zeroclaw README benchmark snapshot (startup row: <10ms at 0.8GHz core)",
+        "throughput_ops_per_sec": "fallback from source scorecard due missing local benchmark artifact"
+      },
+      "project": "zeroclaw",
+      "scenario": {
+        "benchmark_runs": 1,
+        "binder_mode": "portable",
+        "build_profile": "edge-speed",
+        "host_platform": "darwin/arm64",
+        "measurement_mode": "container",
+        "platform_mismatch": true,
+        "target_platform": "linux/arm/v7"
+      },
+      "security_non_regression": {
+        "allow_public_bind_default": false,
+        "deny_private_and_local_egress": true,
+        "empty_allowlist_denies_all": true,
+        "encrypt_secrets_at_rest": true,
+        "require_pairing_default": true,
+        "workspace_scope_default": true
+      },
+      "source": "tests/zeroclaw_v2_benchmark_ingest.json"
+    }
+  },
+  "scenario": {
+    "benchmark_runs": 1,
+    "binder_mode": "portable",
+    "build_profile": "edge-speed",
+    "host_platform": "darwin/arm64",
+    "measurement_mode": "container",
+    "platform_mismatch": true,
+    "target_platform": "linux/arm/v7"
+  },
+  "schema_version": "competitive-v2-direct-harness",
+  "scorecard_only_projects": [
+    "openclaw"
+  ]
+}

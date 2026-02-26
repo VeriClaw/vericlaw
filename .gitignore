@@ -1,0 +1,10 @@
+obj/
+lib/
+*.ali
+*.o
+*.d
+*.ci
+*.adt
+*.lkp
+*.smt2
+config/bootstrap.local.env

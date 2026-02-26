@@ -1,0 +1,3 @@
+competitive-scorecard: /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/competitive_scorecard_report.json
+competitive-regression-report: /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/competitive_regression_gate_report.json
+competitive-baseline: PASS

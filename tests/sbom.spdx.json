@@ -1,0 +1,985 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "created": "2026-02-26T15:44:15Z",
+    "creators": [
+      "Tool: scripts/generate_attestation_artifacts.sh"
+    ]
+  },
+  "documentNamespace": "https://quasar.local/spdx/quasar-claw-lab",
+  "files": [
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "72787fe893e9763987b13f2ce0b2c0aa39032a634464389a0c9d669998a99dba"
+        }
+      ],
+      "name": ".github/workflows/ada-ci.yml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "891484ff3b19029e2bd3db1a7225e7c667c894e1ea6c9cca98597a0a135e5755"
+        }
+      ],
+      "name": "Dockerfile.release",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "73db137e005b147b118c7eadc059e19576933cf47ba672a63df6964db33ec68c"
+        }
+      ],
+      "name": "Makefile",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "fa9998749ecbdf4c90699e6b0772902904f7ad733282c5439199fe3a92f203f6"
+        }
+      ],
+      "name": "README.md",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "0903d7d12037e6dd828a3fd7948b19eb03702cd7bf2157774c130902bf258238"
+        }
+      ],
+      "name": "config/anywhere_v1_competitive_baseline.toml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "e5d9b0cf1ee9252ace1a1d5b0110252e2e39979298c551839bc133a65178476b"
+        }
+      ],
+      "name": "config/anywhere_v2_competitive_baseline.toml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "a2ee511f9bd8e88f0b2400af411d1bfadbb670bb9a97751fb16d2dec07641233"
+        }
+      ],
+      "name": "config/bootstrap.local.env",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "a2ee511f9bd8e88f0b2400af411d1bfadbb670bb9a97751fb16d2dec07641233"
+        }
+      ],
+      "name": "config/bootstrap_secure_defaults.env",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "3bfb27b38f7207a8395df5fe24f3c0af22a25f160a52ae14726a6395106384ba"
+        }
+      ],
+      "name": "config/borrow_acceptance_criteria.toml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "6873c348fd9b5c9cb898ce74daa468cba49d008699b2fb11d1479fe3f2b8b0a9"
+        }
+      ],
+      "name": "config/borrow_matrix_scintilla_vortex.csv",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "a96653b6c76ae883226eecf7b88c791a67bb47fb55c71750845f932e9ed0b91d"
+        }
+      ],
+      "name": "config/competitive_scorecards/nullclaw_v2_scorecard.json",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "293f645d09a96c9977a0e73165f6a7851bc9eff380eba44e674d07e301f4f0fc"
+        }
+      ],
+      "name": "config/competitive_scorecards/openclaw_v2_scorecard.json",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "a85cb5ae99f2ec905bbdaf5797af84ce2b9ba8b85241c36a9b25b5f162accdd2"
+        }
+      ],
+      "name": "config/competitive_scorecards/zeroclaw_v2_scorecard.json",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "3cf227914965dba68c044536763ac997c43cf89b4abd441432ab43727b8ed1a4"
+        }
+      ],
+      "name": "config/expansion_targets.toml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "d3be6a22de85808371f9613c172a3671f0ba42c50963db5acc927e9c0cb6d3da"
+        }
+      ],
+      "name": "config/feature_gap_matrix.csv",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "c4597cc5c88800d3e387f159dbeb94d8f9479900a5b652a7594cc6ca28b0dadb"
+        }
+      ],
+      "name": "config/security_slos.toml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "13c9a7597b2d7013baaed2aba8b502c4f016d06a118dc51450d886438c512f20"
+        }
+      ],
+      "name": "config/threat_model.toml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "475c6b502a2efaf2e025d01146ee8376af3b7c1abf8214537f83ade0713e7b80"
+        }
+      ],
+      "name": "deploy/.DS_Store",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "15a054e6a0b437e0c5ec536355378061b5a27704f1676098ef3e7e53c4553ab5"
+        }
+      ],
+      "name": "deploy/launchd/com.quasar.claw.plist",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "9d6e70caf1b116143546b917c8a3f7ff7ba097e6cd6e00a993a87ded2f9b52f7"
+        }
+      ],
+      "name": "deploy/systemd/quasar-claw.service",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "ee43e750cf7c867494729dc53bb5201f43beda992ee22f2743461d97c367fa0c"
+        }
+      ],
+      "name": "deploy/windows/install-quasar-claw-service.ps1",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "402f8e9afd25e646986482aa652d0b22d6e1b95fade8ac78b88158597c2bc2c2"
+        }
+      ],
+      "name": "docker-compose.secure.yml",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "2d0f9795d999edab9bd6db1176ff442c62f4929a615faf2e61a33cee4fccb3f2"
+        }
+      ],
+      "name": "quasar_claw.gpr",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "357531d37cf88a7004ce46d0fc4ceec231037cc0f3ad5677d72c22718a0accb0"
+        }
+      ],
+      "name": "scripts/.DS_Store",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "2d0dbeddc95ed9e6b9d2246704138c3c86693079d3791826c7d36ffb9a09d2b9"
+        }
+      ],
+      "name": "scripts/__pycache__/audit_event_log.cpython-314.pyc",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "88a66e3e15c2c3b0e747954425ae5199fc7c2fc1d7b53873224cf12058f10d04"
+        }
+      ],
+      "name": "scripts/audit_event_log.py",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "6dfe1fd2ea343a17e71c2eae6a304d7af757e80012fa1f486380360b03f228b7"
+        }
+      ],
+      "name": "scripts/bootstrap_toolchain.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "742d73e81f81eb42d1348fb607c45682d43d7696a9ea5456564cd49807511386"
+        }
+      ],
+      "name": "scripts/build_multiarch_image.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "457530902cb58aff78f268e49116f324eba982084f3dc5e6da08ed7b7f0ae051"
+        }
+      ],
+      "name": "scripts/check_audit_event_log.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "057ef9b03106fb7379b2f75da8bbc58180d7760c65213f14252dba53b5230231"
+        }
+      ],
+      "name": "scripts/check_competitive_baseline.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "c00e55f8b78a8f5be13f2897ba04ee5ba045dcd88d23ed5e9bdec3511ad27c40"
+        }
+      ],
+      "name": "scripts/check_docker_runtime_bundle.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "0d545302c043acbfccff4b6c3a689442a844f48db61f0c62346311f8e4e34624"
+        }
+      ],
+      "name": "scripts/check_gateway_doctor.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "62e9682a59e48e434a6e00979a4ca3a1a0aded210615de459b41ef07245310ac"
+        }
+      ],
+      "name": "scripts/check_operator_console.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "21be00440be209a4439fa4c3651b5a0729b66df64085b3d06369f8f7ed3dce49"
+        }
+      ],
+      "name": "scripts/check_service_supervisors.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "97561f94780863efdf3de40f3aa584a0647254bc2fea8984549002628d8e89bc"
+        }
+      ],
+      "name": "scripts/check_toolchain.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "09bd87e63796dadc21e0a4039fd441016ab7594fc0a881b9fcdf8ffc42e3912a"
+        }
+      ],
+      "name": "scripts/competitive_v2_release_readiness_gate.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "2fab72176ccffe109fad2a395817df6de394d4009a9c7ae31a1cdfed51ef71b9"
+        }
+      ],
+      "name": "scripts/gateway_doctor.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "3dd48b07e6d3aa68f7d76999f7c3721a663a0d670e7dea02b74eb5951f844c0f"
+        }
+      ],
+      "name": "scripts/generate_attestation_artifacts.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "5636c73bd7426409c1dd03b2e461d4a341be42e36bed580c014d05a11849356d"
+        }
+      ],
+      "name": "scripts/generate_competitive_v2_final_report.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "51b0fbd6e27c2c90a4ce643036f111ea2b96d10c534bc32aafae833863608a4a"
+        }
+      ],
+      "name": "scripts/ingest_nullclaw_benchmarks.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "0fdb63c4ba4f9e3968a6f6f2ba9c8bb72b151e81b7d83daeda9820a20e63d2e9"
+        }
+      ],
+      "name": "scripts/ingest_zeroclaw_benchmarks.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "f6212b6df92bcaa3e8a5d3f21cc021bbb8fc841755bb3358c7a82d0799646c35"
+        }
+      ],
+      "name": "scripts/measure_small_infra.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "c11ba80fa3bd27b537ca35b7933bfe36e455b33695e80da4d9d5e1be3b3a265b"
+        }
+      ],
+      "name": "scripts/release_candidate_gate.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "47f7cb28c3207741ca053adceb77f406485035b74417198d03a981c2aa8cf176"
+        }
+      ],
+      "name": "scripts/release_check.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "79ad7523ed5e17986bae2519073018b64851f59a2bc54e9df95e53718b5e2775"
+        }
+      ],
+      "name": "scripts/run_competitive_benchmarks.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "b4b010a7b2a6b3c638e27148c42e3ecea230e6dca02b0e3d79b96a0fb282d6b7"
+        }
+      ],
+      "name": "scripts/run_competitive_multiarch_benchmarks.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "a01e1589ce3312705b52ee81eb61fc0064df296bdd342b9aca2b55f06645539b"
+        }
+      ],
+      "name": "scripts/run_container_ci.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "4ccc613758f4796d3600ea39251ad3f1a24f69e24bb623edbd05eb3899b08cc3"
+        }
+      ],
+      "name": "scripts/run_cross_platform_smoke_suite.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "e2dc4d1b658fb59ed9896a7a5e6753fd93a33aa723a328380d96fc331784a2b2"
+        }
+      ],
+      "name": "scripts/run_cross_repo_conformance_suite.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "78b4ad4e2c4170818d8a84eb27340995165d4dd968d7078e220a93509d70ea07"
+        }
+      ],
+      "name": "scripts/run_direct_competitor_harness.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "17beff3e9cfb48b0f6e57f5c38da58aaf6f43704d05004c96ef5a153e729a802"
+        }
+      ],
+      "name": "scripts/serve_operator_console.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "36cd5435b2180dfaacde220ee8a762e912b8dece6f406f9bbc0c6e7fba7930de"
+        }
+      ],
+      "name": "scripts/verify_supply_chain_artifacts.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "53eda4e045dcbae2a155adad56fa6ada2d2348b6dea3ab9eb845c8b344f8e195"
+        }
+      ],
+      "name": "scripts/vulnerability_license_gate.sh",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "a12fbb30ddc1321797c2a2a3118f7a9e1d5fed9db3d36837edc54ec1b2018ee4"
+        }
+      ],
+      "name": "src/channels-adapters-discord.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "1a4f1bacd29021ed6cf6ffeec2c7b15c7f00abdd81ba4f34c623f0f5f4a4db4b"
+        }
+      ],
+      "name": "src/channels-adapters-email.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "0e6c352306a77c986775fff5964461c2c1be47874ae2af51fe5de517d9cefc01"
+        }
+      ],
+      "name": "src/channels-adapters-slack.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "7b34d0a39b83b22ea4fdf0c317cfc3ac7e2b3e3719be8ecc5c07fed94ba79239"
+        }
+      ],
+      "name": "src/channels-adapters-telegram.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "3da7cd19c9bd6ec3d2f8038fb3b29c7c213fcf6084426970fb6aafc539be83e8"
+        }
+      ],
+      "name": "src/channels-adapters-whatsapp_bridge.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "9c307c5809a03016017b4a8081d12fe525474eeeca22728f5c922c3904de8e67"
+        }
+      ],
+      "name": "src/channels-adapters.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "dcbea2d86660da0aecace7d2b36019e7b8c38233cba9cd190afc1089a6cc995f"
+        }
+      ],
+      "name": "src/channels-adapters.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "cffcae26ec2ff50616fb6adbe4615d5ae944d990b7da41ecb8b565509feddabb"
+        }
+      ],
+      "name": "src/channels-security.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "bc108b9f7991307abf05448a955b37ecf50c6c95faa425ffa0cda4c360068cbe"
+        }
+      ],
+      "name": "src/channels-security.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "96e88e13e994301f16b5dbecf16f582caa55b8ebbd9080d2c71c323f4a8e33be"
+        }
+      ],
+      "name": "src/channels.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "4a0e7fa9bed0fbd1b970f57b52b40868b4c91aa0952204b758528087c5a928ea"
+        }
+      ],
+      "name": "src/core-agent.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "f076dd317a9f5c13d161f70a8e05028148baea0d71b5c53bf3e61ce2270b7e5c"
+        }
+      ],
+      "name": "src/core-agent.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "b6267b5fca76d2115cb674141c17a9e89f886056357e5d42e5d2969087d6b3da"
+        }
+      ],
+      "name": "src/core.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "d5f87e527e6f115adb77375b16cc839b70bca54cf5559ea23c7df40ecc93ec7f"
+        }
+      ],
+      "name": "src/gateway-auth.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "9160050db00e335cb7caccc47a7a23a8dd8683f8ce3ad96db027411b6f8f5d77"
+        }
+      ],
+      "name": "src/gateway-auth.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "6abbf39503a4114fd7c05ef1e0740ac4a53c53087b277262cf9e61a2c9133969"
+        }
+      ],
+      "name": "src/gateway-provider-credentials.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "f099b9adcdb874cd837ab2ad0a88f902b53a4244697cee053f3ea979a4329f3e"
+        }
+      ],
+      "name": "src/gateway-provider-credentials.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "64eda3b8e491831775740041115c1fd0c1624710b7ae660e2ceac715b0b93706"
+        }
+      ],
+      "name": "src/gateway-provider-registry.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "f3f6f8cc1bcba0073d5e902cda10416d6bbe545efb0ced5929ede25bfe400e65"
+        }
+      ],
+      "name": "src/gateway-provider-registry.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "25b9ddd1517e4b1ae3b6521e329be2bf54c0511ff3f09732b520317b992d4657"
+        }
+      ],
+      "name": "src/gateway-provider-routing.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "51de32d98103d8d4b9f371d01552197bc7651253fe25b8080164ab757a6c4e2b"
+        }
+      ],
+      "name": "src/gateway-provider-routing.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "6affc98e15d23b78b21e85f85cf272d98fd16ae0c60b4f77af81adf361966dc2"
+        }
+      ],
+      "name": "src/gateway-provider.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "4f5cad200733fd1525091e558fafa20eff116c256ff9eff4a8383854d419dc4b"
+        }
+      ],
+      "name": "src/gateway.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "36b2de2a4e3825b4086e5c4ba5e2f5c75023942ee44caf6fad1b875c3b96202f"
+        }
+      ],
+      "name": "src/main.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "d043e74dca0fb8329b6a2f07bfc599e0deab6830f9e344a0adb6b399c80dad86"
+        }
+      ],
+      "name": "src/plugins-capabilities.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "884162dbd9ab0c676610ad586ad58d4443708376174d09a7a3ae6e9ab5675751"
+        }
+      ],
+      "name": "src/plugins-capabilities.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "c503b9d79633ce43c0582c40bcc5a6be98033c9a477d99105fe52a59dcf7421f"
+        }
+      ],
+      "name": "src/plugins.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "8babc95f3ca4f01c34f1194a1def00111322bb168ba95a01e862e3c40d25b2d7"
+        }
+      ],
+      "name": "src/runtime-executor.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "523ccb13fb9efc9f85b3bb935410e582525eb9838689b53d9cd3a0c48c147ad8"
+        }
+      ],
+      "name": "src/runtime-executor.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "ae67e8ba565b04d118b2893bf3bb57c0e9f933f6b0125dece7fcdd4ba59c8ae0"
+        }
+      ],
+      "name": "src/runtime-memory.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "9b77bef58159b22aaf8271baaa6ab6369f54fb24835a479dbf6283492aa4f171"
+        }
+      ],
+      "name": "src/runtime-memory.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "d9a905491423bc0feb6060c13fe28c4ba19f71ffcc6f37ee2ec947827b2fe1fe"
+        }
+      ],
+      "name": "src/runtime.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "b95cb8dcd794d57153365e703f3c9b6cf2be57edf9e9a03428d9b43b23096745"
+        }
+      ],
+      "name": "src/security-audit.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "6cbaae0eca9d8d38fb389547c79c2039a8f8f1148ef8c6c1ef6eac5ec1686baf"
+        }
+      ],
+      "name": "src/security-audit.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "11a8967f19fd29d1484f9891cbf163fda817c1db3b8294ade1d085f198c58422"
+        }
+      ],
+      "name": "src/security-defaults.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "1b18f1ed9829ed5df43f54ed66b821cf944d52c2f7dca8befb779ef0e9a308fa"
+        }
+      ],
+      "name": "src/security-migration.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "d3c79521bde18d89ea69ae248a67a9a8b7cf0116ff333df5857bc70f4789dcc7"
+        }
+      ],
+      "name": "src/security-migration.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "c78a8ead449f86199d469190b6753cbb42a6699c06c7ffbc8940dad21e8d8a49"
+        }
+      ],
+      "name": "src/security-policy.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "ce81e9827d8be633a6303632840f82e087d2b18f9181152bf94dfd930fc0c003"
+        }
+      ],
+      "name": "src/security-policy.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "2148ba6126f3d8420e1fd1d5d9c9c76dbb0567f9c283840c7748ce699ca2bbad"
+        }
+      ],
+      "name": "src/security-secrets-crypto.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "66e50a7f2dc98d900e9e980ef5bc6b8be93e19bbadf6d31abec709ee337912d2"
+        }
+      ],
+      "name": "src/security-secrets-crypto.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "1c284a76961f4cc59f1b0c9c4cf3e818e7097d0689e683042aed8fa2fa574973"
+        }
+      ],
+      "name": "src/security-secrets.adb",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "561de35e90389c8370c631743ca4c1db55cbcd80d13b006f287b9c00845d2a55"
+        }
+      ],
+      "name": "src/security-secrets.ads",
+      "type": "file"
+    },
+    {
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "value": "20e3a811fb932baa6dbae94e93dfc9a927df363dbdbafe00897e67c205100875"
+        }
+      ],
+      "name": "src/security.ads",
+      "type": "file"
+    }
+  ],
+  "name": "quasar-claw-lab-source-sbom",
+  "packages": [],
+  "spdxVersion": "SPDX-2.3"
+}

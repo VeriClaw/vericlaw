@@ -1,0 +1,8 @@
+config_max_entries,config_max_age_days,pruning_mode,current_entries,oldest_age_days,expected_decision
+1000,30,Prune_By_Age_First,900,29,Retention_No_Prune
+1000,30,Prune_By_Age_First,1001,29,Retention_Prune_Entries
+1000,30,Prune_By_Age_First,900,31,Retention_Prune_Age
+1000,30,Prune_By_Age_First,1001,31,Retention_Prune_Age_Then_Entries
+1000,30,Prune_By_Entries_First,1001,31,Retention_Prune_Entries_Then_Age
+10001,30,Prune_By_Age_First,1,1,Retention_Deny_Insecure_Config
+1000,366,Prune_By_Age_First,1,1,Retention_Deny_Insecure_Config

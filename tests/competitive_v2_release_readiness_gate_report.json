@@ -1,0 +1,84 @@
+{
+  "artifacts": {
+    "competitive_benchmark_report": "tests/competitive_benchmark_report.json",
+    "competitive_direct_harness_report": "tests/competitive_direct_benchmark_report.json",
+    "competitive_final_report": "tests/competitive_v2_final_competitive_report.json",
+    "competitive_regression_report": "tests/competitive_regression_gate_report.json",
+    "competitive_scorecard_report": "tests/competitive_scorecard_report.json",
+    "conformance_report": "tests/cross_repo_conformance_report.json",
+    "cross_platform_smoke_report": "tests/cross_platform_smoke_report.json",
+    "step_logs_dir": "tests/competitive_v2_release_readiness_step_logs",
+    "supply_chain_attestation_report": "tests/supply_chain_attestation_report.json",
+    "supply_chain_verification_report": "tests/supply_chain_verification_report.json",
+    "vulnerability_license_gate_report": "tests/vulnerability_license_gate_report.json"
+  },
+  "generated_at": "2026-02-26T15:43:20Z",
+  "overall_status": "pass",
+  "steps": [
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/competitive-bench.log",
+      "status": "pass",
+      "step": "competitive-bench"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/competitive-direct-harness.log",
+      "status": "pass",
+      "step": "competitive-direct-harness"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/competitive-regression-gate.log",
+      "status": "pass",
+      "step": "competitive-regression-gate"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/competitive-final-report.log",
+      "status": "pass",
+      "step": "competitive-final-report"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/conformance-suite.log",
+      "status": "pass",
+      "step": "conformance-suite"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/release-image-build.log",
+      "status": "pass",
+      "step": "release-image-build"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/vulnerability-license-gate.log",
+      "status": "pass",
+      "step": "vulnerability-license-gate"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/cross-platform-smoke.log",
+      "status": "pass",
+      "step": "cross-platform-smoke"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/supply-chain-attestation.log",
+      "status": "pass",
+      "step": "supply-chain-attestation"
+    },
+    {
+      "exit_code": 0,
+      "log_path": "tests/competitive_v2_release_readiness_step_logs/supply-chain-verification.log",
+      "status": "pass",
+      "step": "supply-chain-verification"
+    }
+  ],
+  "summary": {
+    "failed_steps": 0,
+    "passed_steps": 10,
+    "total_steps": 10
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "deny_regex": "(?i)(AGPL|BUSL|SSPL|Elastic|Commons-Clause|LicenseRef-Proprietary|Proprietary)",
+  "detected_licenses": [],
+  "disallowed_licenses": [],
+  "status": "pass"
+}

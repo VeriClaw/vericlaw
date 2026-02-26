@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1.7
+FROM debian:bookworm AS build
+
+ARG DEBIAN_FRONTEND=noninteractive
+WORKDIR /workspace
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends gnat gprbuild binutils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN gprbuild -P quasar_claw.gpr -p \
+    && test -x /workspace/main \
+    && strip /workspace/main
+
+FROM debian:bookworm-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libgnat-12 ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --home-dir /nonexistent --shell /usr/sbin/nologin app \
+    && mkdir -p /app /tmp \
+    && chown -R app:app /app /tmp
+
+COPY --from=build /workspace/main /app/quasar-claw
+
+WORKDIR /app
+ENV HOME=/tmp \
+    TMPDIR=/tmp \
+    XDG_CACHE_HOME=/tmp/.cache \
+    XDG_RUNTIME_DIR=/tmp/.runtime
+VOLUME ["/tmp"]
+
+USER app:app
+ENTRYPOINT ["/app/quasar-claw"]

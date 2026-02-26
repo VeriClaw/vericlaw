@@ -1,0 +1,159 @@
+version = 2
+baseline_id = "anywhere-v2-freeze-competitive-baselines"
+primary_project = "quasar"
+pass_fail_compared_projects = ["zeroclaw", "nullclaw"]
+scorecard_only_projects = ["openclaw"]
+
+[threshold_semantics]
+must_match = "quasar must stay at parity with each pass/fail project threshold"
+must_beat = "quasar must exceed each pass/fail project threshold"
+non_regression = "quasar fail-closed controls must keep expected values release-over-release"
+
+[competitor_scorecards]
+zeroclaw = "config/competitive_scorecards/zeroclaw_v2_scorecard.json"
+nullclaw = "config/competitive_scorecards/nullclaw_v2_scorecard.json"
+openclaw = "config/competitive_scorecards/openclaw_v2_scorecard.json"
+
+[security_defaults_source]
+path = "config/borrow_acceptance_criteria.toml"
+table = "fail_closed_defaults"
+
+[[edge_performance_metrics]]
+id = "startup_ms"
+semantic = "must_match"
+direction = "lower_is_better"
+unit = "ms"
+quasar_slo_max = 400
+quasar_vs_competitor_ratio_max = 1.50
+
+[[edge_performance_metrics]]
+id = "idle_rss_mb"
+semantic = "must_match"
+direction = "lower_is_better"
+unit = "mb"
+quasar_slo_max = 18
+quasar_vs_competitor_ratio_max = 3.95
+
+[[edge_performance_metrics]]
+id = "dispatch_latency_p95_ms"
+semantic = "must_match"
+direction = "lower_is_better"
+unit = "ms"
+quasar_slo_max = 15
+quasar_vs_competitor_ratio_max = 1.05
+
+[[edge_performance_metrics]]
+id = "throughput_ops_per_sec"
+semantic = "must_beat"
+direction = "higher_is_better"
+unit = "ops_per_sec"
+quasar_vs_competitor_ratio_min = 1.05
+
+[[edge_performance_metrics]]
+id = "binary_size_mb"
+semantic = "must_match"
+direction = "lower_is_better"
+unit = "mb"
+quasar_slo_max = 12
+quasar_vs_competitor_ratio_max = 1.10
+
+[[edge_performance_metrics]]
+id = "container_size_mb"
+semantic = "must_match"
+direction = "lower_is_better"
+unit = "mb"
+quasar_slo_max = 250
+quasar_vs_competitor_ratio_max = 1.10
+
+[[feature_parity_counters]]
+id = "providers"
+semantic = "must_match"
+quasar_min = 3
+quasar_minus_competitor_min = 0
+
+[[feature_parity_counters]]
+id = "channels"
+semantic = "must_match"
+quasar_min = 3
+quasar_minus_competitor_min = 0
+
+[[feature_parity_counters]]
+id = "tools"
+semantic = "must_match"
+quasar_min = 10
+quasar_minus_competitor_min = 0
+
+[[deployment_maturity_checks]]
+id = "multi_arch_image"
+semantic = "must_match"
+check_type = "bool"
+quasar_expected = true
+competitor_expected = true
+
+[[deployment_maturity_checks]]
+id = "signed_artifacts"
+semantic = "must_match"
+check_type = "bool"
+quasar_expected = true
+competitor_expected = true
+
+[[deployment_maturity_checks]]
+id = "smoke_matrix"
+semantic = "must_beat"
+check_type = "count"
+quasar_min = 6
+competitor_min = 4
+
+[[security_non_regression_checks]]
+id = "empty_allowlist_denies_all"
+semantic = "non_regression"
+source_key = "empty_allowlist_denies_all"
+expected = true
+
+[[security_non_regression_checks]]
+id = "pairing_required_by_default"
+semantic = "non_regression"
+source_key = "require_pairing_default"
+expected = true
+
+[[security_non_regression_checks]]
+id = "public_bind_default_disabled"
+semantic = "non_regression"
+source_key = "allow_public_bind_default"
+expected = false
+
+[[security_non_regression_checks]]
+id = "workspace_scope_default"
+semantic = "non_regression"
+source_key = "workspace_scope_default"
+expected = true
+
+[[security_non_regression_checks]]
+id = "deny_private_and_local_egress"
+semantic = "non_regression"
+source_key = "deny_private_and_local_egress"
+expected = true
+
+[[security_non_regression_checks]]
+id = "encrypt_secrets_at_rest"
+semantic = "non_regression"
+source_key = "encrypt_secrets_at_rest"
+expected = true
+
+[quasar_scorecard.feature_parity]
+providers = 3
+channels = 3
+tools = 12
+
+[quasar_scorecard.deployment_maturity]
+multi_arch_image = true
+signed_artifacts = true
+smoke_matrix = 6
+
+[quasar_scorecard.security_non_regression]
+empty_allowlist_denies_all = true
+require_pairing_default = true
+allow_public_bind_default = false
+workspace_scope_default = true
+deny_private_and_local_egress = true
+encrypt_secrets_at_rest = true

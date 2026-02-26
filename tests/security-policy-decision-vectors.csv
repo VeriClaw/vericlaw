@@ -1,0 +1,11 @@
+policy,allowlist_size,candidate_matches,restrict_to_workspace,is_subpath,egress_enabled,targets_private_net,targets_local_network,expected_decision
+command,0,false,,,,,,Command_Deny_Empty_Allowlist
+command,2,true,,,,,,Command_Allow_Allowlisted
+command,2,false,,,,,,Command_Deny_Not_Allowlisted
+workspace,,,true,true,,,,Workspace_Allow
+workspace,,,true,false,,,,Workspace_Deny_Outside_Root
+workspace,,,false,false,,,,Workspace_Allow
+egress,,,,,false,false,false,Egress_Deny_Disabled
+egress,,,,,true,true,false,Egress_Deny_Private_Network
+egress,,,,,true,false,true,Egress_Deny_Local_Network
+egress,,,,,true,false,false,Egress_Allow

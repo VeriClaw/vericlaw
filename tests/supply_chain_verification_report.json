@@ -1,0 +1,70 @@
+{
+  "checks": [
+    {
+      "check": "attestation-report-json",
+      "message": "Loaded tests/supply_chain_attestation_report.json",
+      "status": "pass"
+    },
+    {
+      "check": "attestation-report-status",
+      "message": "Attestation report status is pass.",
+      "status": "pass"
+    },
+    {
+      "check": "attestation-report-attestation_manifest",
+      "message": "Found tests/attestation_manifest.sha256",
+      "status": "pass"
+    },
+    {
+      "check": "attestation-report-provenance",
+      "message": "Found tests/provenance_attestation.json",
+      "status": "pass"
+    },
+    {
+      "check": "attestation-report-sbom",
+      "message": "Found tests/sbom.spdx.json",
+      "status": "pass"
+    },
+    {
+      "check": "attestation-manifest-integrity",
+      "message": "Verified 9 manifest entries.",
+      "status": "pass"
+    },
+    {
+      "check": "provenance-json",
+      "message": "Loaded tests/provenance_attestation.json",
+      "status": "pass"
+    },
+    {
+      "check": "provenance-builder",
+      "message": "Builder matches expected script.",
+      "status": "pass"
+    },
+    {
+      "check": "provenance-materials",
+      "message": "Validated 97 provenance materials.",
+      "status": "pass"
+    },
+    {
+      "check": "trust-metadata-required",
+      "message": "Optional trust metadata not present: tests/multiarch_trust_metadata.json",
+      "status": "skip"
+    }
+  ],
+  "generated_at": "2026-02-26T15:44:15Z",
+  "inputs": {
+    "attestation_report": "tests/supply_chain_attestation_report.json",
+    "trust_metadata": "tests/multiarch_trust_metadata.json"
+  },
+  "overall_status": "pass",
+  "policy": {
+    "require_image_signature": false,
+    "require_trust_metadata": false
+  },
+  "summary": {
+    "failed_checks": 0,
+    "passed_checks": 9,
+    "skipped_checks": 1,
+    "total_checks": 10
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-02-26T13:11:25Z",
+  "overall_status": "pass",
+  "steps": [
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "release-check"
+    },
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "competitive-bench"
+    },
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "competitive-baseline"
+    },
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "docker-runtime-bundle"
+    },
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "service-supervisor-packages"
+    },
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "cross-platform-smoke"
+    },
+    {
+      "exit_code": 0,
+      "status": "pass",
+      "step": "supply-chain-attestation"
+    }
+  ]
+}

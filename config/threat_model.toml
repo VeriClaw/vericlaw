@@ -1,0 +1,28 @@
+[system]
+name = "quasar-claw-lab"
+trust_mode = "zero-trust"
+primary_goal = "secure-by-default assistant runtime on small infrastructure"
+
+[assets]
+secrets = "provider keys, session tokens, pairing tokens"
+workspace_data = "local files and command outputs"
+audit_log = "redacted security-relevant action trail"
+
+[threats]
+remote_unauthorized_control = "blocked by pairing-required auth and token validation"
+path_traversal = "blocked by workspace scoping and canonical path checks"
+ssrf_private_network_access = "blocked by egress policy and private-range deny rules"
+privilege_escalation = "blocked by constrained executor and capability gates"
+
+[assumptions]
+operator_controls_host = true
+keys_not_committed = true
+public_bind_requires_explicit_opt_in = true
+
+[required_controls]
+empty_allowlist_denies_all = true
+default_bind_host = "127.0.0.1"
+allow_public_bind_default = false
+require_pairing_default = true
+encrypt_secrets_at_rest = true
+observability_backend_default = "none"

@@ -1,0 +1,281 @@
+--  libcurl thin bindings for HTTP.Client.
+--  Requires libcurl at link time (-lcurl in quasar_claw.gpr).
+
+with Interfaces.C;            use Interfaces.C;
+with Interfaces.C.Strings;    use Interfaces.C.Strings;
+with System;
+
+package body HTTP.Client is
+
+   Default_Timeout_Ms : constant := 30_000;
+
+   --  -----------------------------------------------------------------------
+   --  Thin C bindings to libcurl
+   --  -----------------------------------------------------------------------
+
+   type CURL_Handle is new System.Address;
+   Null_CURL : constant CURL_Handle :=
+     CURL_Handle (System.Null_Address);
+
+   type CURL_Code is new int;
+   CURLE_OK : constant CURL_Code := 0;
+
+   type CURL_Option is new int;
+   CURLOPT_URL            : constant CURL_Option := 10_002;
+   CURLOPT_WRITEFUNCTION  : constant CURL_Option := 20_011;
+   CURLOPT_WRITEDATA      : constant CURL_Option := 10_001;
+   CURLOPT_HTTPHEADER     : constant CURL_Option := 10_023;
+   CURLOPT_POSTFIELDS     : constant CURL_Option := 10_015;
+   CURLOPT_POST           : constant CURL_Option := 47;
+   CURLOPT_CUSTOMREQUEST  : constant CURL_Option := 10_036;
+   CURLOPT_TIMEOUT_MS     : constant CURL_Option := 155;
+   CURLOPT_SSL_VERIFYPEER : constant CURL_Option := 64;
+   CURLOPT_SSL_VERIFYHOST : constant CURL_Option := 81;
+   CURLOPT_FOLLOWLOCATION : constant CURL_Option := 52;
+   CURLOPT_MAXREDIRS      : constant CURL_Option := 68;
+
+   type CURL_Info is new int;
+   CURLINFO_RESPONSE_CODE : constant CURL_Info := 2_097_154;
+
+   type CURL_Slist is new System.Address;
+   Null_Slist : constant CURL_Slist := CURL_Slist (System.Null_Address);
+
+   --  Write callback type: returns bytes consumed (must equal Size*NMemb).
+   type Write_Callback is access function
+     (Ptr      : chars_ptr;
+      Size     : size_t;
+      NMemb    : size_t;
+      UserData : System.Address) return size_t
+   with Convention => C;
+
+   function curl_easy_init return CURL_Handle
+   with Import, Convention => C, External_Name => "curl_easy_init";
+
+   procedure curl_easy_cleanup (Handle : CURL_Handle)
+   with Import, Convention => C, External_Name => "curl_easy_cleanup";
+
+   function curl_easy_setopt_ptr
+     (Handle : CURL_Handle;
+      Option : CURL_Option;
+      Value  : System.Address) return CURL_Code
+   with Import, Convention => C, External_Name => "curl_easy_setopt";
+
+   function curl_easy_setopt_long
+     (Handle : CURL_Handle;
+      Option : CURL_Option;
+      Value  : long) return CURL_Code
+   with Import, Convention => C, External_Name => "curl_easy_setopt";
+
+   function curl_easy_setopt_fn
+     (Handle : CURL_Handle;
+      Option : CURL_Option;
+      Value  : Write_Callback) return CURL_Code
+   with Import, Convention => C, External_Name => "curl_easy_setopt";
+
+   function curl_easy_perform (Handle : CURL_Handle) return CURL_Code
+   with Import, Convention => C, External_Name => "curl_easy_perform";
+
+   function curl_easy_getinfo_long
+     (Handle : CURL_Handle;
+      Info   : CURL_Info;
+      Value  : access long) return CURL_Code
+   with Import, Convention => C, External_Name => "curl_easy_getinfo";
+
+   function curl_slist_append
+     (List : CURL_Slist;
+      Str  : chars_ptr) return CURL_Slist
+   with Import, Convention => C, External_Name => "curl_slist_append";
+
+   procedure curl_slist_free_all (List : CURL_Slist)
+   with Import, Convention => C, External_Name => "curl_slist_free_all";
+
+   --  -----------------------------------------------------------------------
+   --  Write callback — accumulates response body into an Unbounded_String.
+   --  -----------------------------------------------------------------------
+
+   --  We use a global buffer pointer trick: store the access to the
+   --  Unbounded_String in the UserData address passed to CURLOPT_WRITEDATA.
+   function Write_CB
+     (Ptr      : chars_ptr;
+      Size     : size_t;
+      NMemb    : size_t;
+      UserData : System.Address) return size_t
+   with Convention => C;
+
+   function Write_CB
+     (Ptr      : chars_ptr;
+      Size     : size_t;
+      NMemb    : size_t;
+      UserData : System.Address) return size_t
+   is
+      Total   : constant size_t := Size * NMemb;
+      Buffer  : Unbounded_String;
+      for Buffer'Address use UserData;
+      pragma Import (Ada, Buffer);
+      Chunk   : constant String :=
+        Value (Ptr, Interfaces.C.size_t (Total));
+   begin
+      if Length (Buffer) + Natural (Total) > Max_Response_Bytes then
+         return 0;  -- Signal error to curl (CURLE_WRITE_ERROR)
+      end if;
+      Append (Buffer, Chunk);
+      return Total;
+   end Write_CB;
+
+   --  -----------------------------------------------------------------------
+   --  Core implementation
+   --  -----------------------------------------------------------------------
+
+   function Request
+     (Method     : HTTP_Method;
+      URL        : String;
+      Headers    : Header_Array;
+      Body_Text  : String        := "";
+      Timeout_Ms : Natural       := 0) return Response
+   is
+      Handle      : CURL_Handle := curl_easy_init;
+      C_URL       : chars_ptr   := New_String (URL);
+      Slist       : CURL_Slist  := Null_Slist;
+      Code        : CURL_Code;
+      HTTP_Code   : aliased long := 0;
+      Effective_Timeout : constant long :=
+        (if Timeout_Ms = 0 then long (Default_Timeout_Ms)
+         else long (Timeout_Ms));
+
+      Body_Buf    : Unbounded_String;
+      Result      : Response;
+   begin
+      if Handle = Null_CURL then
+         Set_Unbounded_String (Result.Error, "curl_easy_init failed");
+         Free (C_URL);
+         return Result;
+      end if;
+
+      --  URL
+      Code := curl_easy_setopt_ptr
+        (Handle, CURLOPT_URL, C_URL'Address);
+
+      --  TLS: always verify
+      Code := curl_easy_setopt_long
+        (Handle, CURLOPT_SSL_VERIFYPEER, 1);
+      Code := curl_easy_setopt_long
+        (Handle, CURLOPT_SSL_VERIFYHOST, 2);
+
+      --  Follow up to 5 redirects
+      Code := curl_easy_setopt_long (Handle, CURLOPT_FOLLOWLOCATION, 1);
+      Code := curl_easy_setopt_long (Handle, CURLOPT_MAXREDIRS, 5);
+
+      --  Timeout
+      Code := curl_easy_setopt_long
+        (Handle, CURLOPT_TIMEOUT_MS, Effective_Timeout);
+
+      --  Write callback
+      Code := curl_easy_setopt_fn
+        (Handle, CURLOPT_WRITEFUNCTION, Write_CB'Access);
+      Code := curl_easy_setopt_ptr
+        (Handle, CURLOPT_WRITEDATA, Body_Buf'Address);
+
+      --  Build header slist
+      for H of Headers loop
+         declare
+            Header_Str : constant String :=
+              To_String (H.Name) & ": " & To_String (H.Value);
+            C_H        : chars_ptr := New_String (Header_Str);
+         begin
+            Slist := curl_slist_append (Slist, C_H);
+            Free (C_H);
+         end;
+      end loop;
+      if Slist /= Null_Slist then
+         Code := curl_easy_setopt_ptr
+           (Handle, CURLOPT_HTTPHEADER, System.Address (Slist));
+      end if;
+
+      --  Method + body
+      case Method is
+         when POST =>
+            Code := curl_easy_setopt_long (Handle, CURLOPT_POST, 1);
+            if Body_Text'Length > 0 then
+               declare
+                  C_Body : chars_ptr := New_String (Body_Text);
+               begin
+                  Code := curl_easy_setopt_ptr
+                    (Handle, CURLOPT_POSTFIELDS, C_Body'Address);
+                  --  Note: C_Body must outlive curl_easy_perform.
+                  --  Using a stack-local here is safe because perform
+                  --  is called before C_Body goes out of scope.
+                  Code := curl_easy_perform (Handle);
+                  Free (C_Body);
+               end;
+            else
+               Code := curl_easy_perform (Handle);
+            end if;
+         when GET =>
+            Code := curl_easy_perform (Handle);
+         when others =>
+            declare
+               Method_Str : constant String := HTTP_Method'Image (Method);
+               C_Method   : chars_ptr := New_String (Method_Str);
+            begin
+               Code := curl_easy_setopt_ptr
+                 (Handle, CURLOPT_CUSTOMREQUEST, C_Method'Address);
+               if Body_Text'Length > 0 then
+                  declare
+                     C_Body : chars_ptr := New_String (Body_Text);
+                  begin
+                     Code := curl_easy_setopt_ptr
+                       (Handle, CURLOPT_POSTFIELDS, C_Body'Address);
+                     Code := curl_easy_perform (Handle);
+                     Free (C_Body);
+                  end;
+               else
+                  Code := curl_easy_perform (Handle);
+               end if;
+               Free (C_Method);
+            end;
+      end case;
+
+      if Code /= CURLE_OK then
+         Set_Unbounded_String
+           (Result.Error, "curl_easy_perform error code:" & CURL_Code'Image (Code));
+      else
+         Code := curl_easy_getinfo_long
+           (Handle, CURLINFO_RESPONSE_CODE, HTTP_Code'Access);
+         Result.Status_Code := Natural (HTTP_Code);
+         Result.Body_Text   := Body_Buf;
+      end if;
+
+      if Slist /= Null_Slist then
+         curl_slist_free_all (Slist);
+      end if;
+      curl_easy_cleanup (Handle);
+      Free (C_URL);
+      return Result;
+   end Request;
+
+   function Get
+     (URL        : String;
+      Headers    : Header_Array;
+      Timeout_Ms : Natural := 0) return Response is
+   begin
+      return Request (GET, URL, Headers, "", Timeout_Ms);
+   end Get;
+
+   function Post_JSON
+     (URL        : String;
+      Headers    : Header_Array;
+      Body_JSON  : String;
+      Timeout_Ms : Natural := 0) return Response
+   is
+      --  Prepend Content-Type header to caller-supplied headers.
+      CT_Header : constant Header :=
+        (Name  => To_Unbounded_String ("Content-Type"),
+         Value => To_Unbounded_String ("application/json"));
+      All_Headers : Header_Array (1 .. Headers'Length + 1);
+   begin
+      All_Headers (1) := CT_Header;
+      All_Headers (2 .. All_Headers'Last) := Headers;
+      return Request (POST, URL, All_Headers, Body_JSON, Timeout_Ms);
+   end Post_JSON;
+
+end HTTP.Client;

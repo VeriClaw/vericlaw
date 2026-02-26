@@ -1,0 +1,21 @@
+[performance]
+startup_ms_laptop_max = 400
+startup_ms_low_end_arm_max = 1800
+idle_rss_mb_mvp_max = 18
+idle_rss_mb_target = 12
+binary_size_mb_mvp_max = 12
+binary_size_mb_target = 8
+dispatch_overhead_p95_ms_max = 15
+
+[infra]
+min_vcpu = 1
+min_ram_mb = 512
+
+[security]
+empty_allowlist_denies_all = true
+pairing_required_by_default = true
+public_bind_default = false
+workspace_scope_default = true
+egress_private_network_blocked = true
+audit_redaction_default = true
+observability_export_default = "none"

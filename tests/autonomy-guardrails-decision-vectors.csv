@@ -1,0 +1,7 @@
+policy,budget_available,budget_remaining,actions_requested,cooldown_active,supervisor_approved,expected_decision
+autonomy,false,5,1,false,true,Autonomy_Deny_Budget_Unavailable
+autonomy,true,0,1,false,true,Autonomy_Deny_Budget_Exhausted
+autonomy,true,3,1,true,true,Autonomy_Deny_Cooldown_Active
+autonomy,true,3,1,false,false,Autonomy_Deny_Supervisor_Approval_Required
+autonomy,true,3,1,false,true,Autonomy_Allow
+autonomy,true,0,1,true,false,Autonomy_Deny_Budget_Exhausted

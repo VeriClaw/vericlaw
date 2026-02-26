@@ -1,0 +1,35 @@
+{
+  "competitors": {
+    "nullclaw": null,
+    "zeroclaw": null
+  },
+  "generated_at": "2026-02-26T14:50:35Z",
+  "quasar": {
+    "benchmark_runs": 1,
+    "binary_bytes": 96996,
+    "binary_size_mb": 0.093,
+    "binder_mode": "portable",
+    "build_profile": "edge-speed",
+    "container_size_mb": 31.615,
+    "dispatch_latency_avg_ms": 46.925,
+    "dispatch_latency_p95_ms": 46.925,
+    "host_platform": "darwin/arm64",
+    "idle_rss_mb": null,
+    "measurement_mode": "container",
+    "metric_availability": {
+      "idle_rss_mb": {
+        "collector": "unsupported_container_rss_telemetry",
+        "supported": false
+      }
+    },
+    "platform_mismatch": true,
+    "release_metadata": {
+      "generated_at": "2026-02-26T13:12:05Z",
+      "path": "tests/release_metadata.json",
+      "toolchain_mode": "container"
+    },
+    "startup_ms": 46.925,
+    "target_platform": "linux/arm/v7",
+    "throughput_ops_per_sec": 21.311
+  }
+}
