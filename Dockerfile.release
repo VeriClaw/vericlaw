@@ -28,8 +28,8 @@ ENV PATH=/opt/gnat/bin:${PATH}
 COPY . .
 
 RUN gprbuild -P vericlaw.gpr -p \
-    && test -f /workspace/main \
-    && strip /workspace/main
+    && test -f /workspace/vericlaw \
+    && strip /workspace/vericlaw
 
 # ---------------------------------------------------------------------------
 # Minimal runtime image
@@ -52,7 +52,7 @@ RUN apt-get update \
     && mkdir -p /app /tmp \
     && chown -R app:app /app /tmp
 
-COPY --from=build /workspace/main /app/vericlaw
+COPY --from=build /workspace/vericlaw /app/vericlaw
 
 WORKDIR /app
 ENV HOME=/tmp \
