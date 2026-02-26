@@ -124,7 +124,7 @@ binder_mode = sys.argv[5]
 durations_ms = []
 for _ in range(runs):
     started = time.perf_counter()
-    subprocess.run([binary], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    subprocess.run([binary, 'version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     durations_ms.append((time.perf_counter() - started) * 1000.0)
 
 durations_sorted = sorted(durations_ms)
@@ -170,7 +170,7 @@ rm -f "${metrics_json}"
 
 printf 'profile=%s\n' "${profile}"
 printf 'binder_mode=%s\n' "${binder_mode}"
-printf 'binary=main\n'
+printf 'binary=vericlaw\n'
 printf 'binary_bytes=%s\n' "${binary_bytes}"
 printf 'startup_ms=%s\n' "${startup_ms}"
 printf 'runtime_avg_ms=%s\n' "${runtime_avg_ms}"

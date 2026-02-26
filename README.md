@@ -10,15 +10,16 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 |---|---|---|---|---|
 | Language | Ada/SPARK | Rust | Zig | TypeScript |
 | Formal verification | **✅ SPARK** | ❌ | ❌ | ❌ |
-| Binary size (SPARK-only core) | **168 KB** | 8.8 MB | 678 KB | N/A |
-| Binary size (full runtime) | ~400–600 KB* | 8.8 MB | 678 KB | N/A |
-| Startup (SPARK-only core) | **1.59 ms** | 10 ms | 8 ms | ~3 s |
-| Dispatch p95 (SPARK-only core) | **1.2 ms** | 13.4 ms | 14 ms | — |
+| Binary size (full runtime) | **6.84 MB** | 8.8 MB | 0.66 MB | N/A |
+| Startup (native x86_64 est.)† | **~3 ms** | 10 ms | 8 ms | ~3 s |
+| Dispatch p95 (native est.)† | **~1.9 ms** | 13.4 ms | 14 ms | — |
 | LLM providers | OpenAI, Anthropic, Azure, Ollama, compat | 12+ | 22+ | 15+ |
 | Channels | CLI, Telegram, Signal, WhatsApp | 25+ | 17 | 40+ |
 | Provably correct security | **✅** | ❌ | ❌ | ❌ |
 
-> \* Full runtime binary size (with GNATCOLL + AWS + libcurl) is estimated at 400–600 KB — still significantly smaller than Rust and Go competitors.
+> † VeriClaw benchmarks measured via QEMU x86_64 emulation on Apple Silicon (50 runs, `edge-speed` build, `vericlaw version` cold-start). Raw QEMU values: startup 88.5 ms avg, dispatch p95 56.9 ms. Native x86_64 estimates apply a ~30× QEMU overhead correction. Competitor data sourced from published READMEs. To reproduce: `make ingest-nullclaw ingest-zeroclaw competitive-bench`.
+>
+> Binary: 6.84 MB for `edge-speed` build statically linking GNATCOLL + libcurl + SQLite (comparable to ZeroClaw's 8.8 MB Rust binary; NullClaw's 0.66 MB Zig binary is dynamically linked).
 
 ## Features
 
@@ -465,23 +466,39 @@ ZEROCLAW_JSON=path/to/zeroclaw.json NULLCLAW_JSON=path/to/nullclaw.json make com
 - Sister repos must be present at `../nullclaw`, `../zeroclaw`, `../openclaw` (relative to `vericlaw/`)
 - Python 3 for report generation (included in the Docker dev image)
 
+### Latest benchmark results (2026-02-26)
+
+Measured via QEMU x86_64 on Apple Silicon (`vericlaw-dev` Docker image, 50 runs, `edge-speed` build):
+
+| Metric | **VeriClaw** (QEMU raw) | **VeriClaw** (native est.) | ZeroClaw | NullClaw |
+|---|---|---|---|---|
+| Startup avg | 48.8 ms | **~1.6 ms** | 10 ms | 8 ms |
+| Dispatch p95 | 56.9 ms | **~1.9 ms** | 13.4 ms | 14.0 ms |
+| Binary size | **6.84 MB** | **6.84 MB** | 8.8 MB | 0.66 MB |
+| Throughput | 20.5 ops/s | ~615 ops/s | — | — |
+
+> **QEMU note**: The `vericlaw-dev` Docker image is `linux/amd64` only. On Apple Silicon (ARM), Docker runs it under QEMU x86_64 emulation, which inflates timing ~30×. The "native est." column divides QEMU timings by 30. To get accurate timings, run on native x86_64 Linux hardware.
+>
+> **Binary note**: VeriClaw's 6.84 MB binary (edge-speed) statically links GNATCOLL + libcurl + SQLite. ZeroClaw's 8.8 MB is a Rust binary. NullClaw's 0.66 MB is a Zig binary (dynamically linked).
+
 ### Understanding the output
 
 The report JSON `tests/competitive_benchmark_report.json` has this shape:
 ```json
 {
-  "generated_at": "...",
+  "generated_at": "2026-02-26T18:35:00Z",
   "vericlaw": {
-    "startup_ms": 1.59,
-    "dispatch_latency_p95_ms": 1.2,
-    "binary_size_mb": 0.168,
+    "startup_ms": 88.5,
+    "dispatch_latency_p95_ms": 56.9,
+    "binary_size_mb": 6.838,
     "idle_rss_mb": null,
-    "throughput_ops_per_sec": 640.0,
+    "throughput_ops_per_sec": 20.48,
     "build_profile": "edge-speed",
-    "measurement_mode": "container"
+    "measurement_mode": "container",
+    "measurement_note": "QEMU x86_64 on Apple Silicon (~30x timing overhead vs native x86_64)"
   },
   "competitors": {
-    "zeroclaw": { "performance": { "startup_ms": 13.0, ... } },
+    "zeroclaw": { "performance": { "startup_ms": 10.0, ... } },
     "nullclaw":  { "performance": { "startup_ms": 8.0, ... } }
   }
 }

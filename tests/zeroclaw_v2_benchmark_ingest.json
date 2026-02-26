@@ -16,7 +16,7 @@
     "providers": 3,
     "tools": 11
   },
-  "generated_at": "2026-02-26T14:23:22Z",
+  "generated_at": "2026-02-26T18:32:52Z",
   "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
   "ingest_source": {
     "source_scorecard": "/Users/eugene/apps/demo/claw-mania/vericlaw/config/competitive_scorecards/zeroclaw_v2_scorecard.json",

@@ -15,7 +15,7 @@
     "providers": 3,
     "tools": 10
   },
-  "generated_at": "2026-02-26T14:20:04Z",
+  "generated_at": "2026-02-26T18:32:52Z",
   "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
   "ingest_source": {
     "nullclaw_ci_workflow": "/Users/eugene/apps/demo/claw-mania/nullclaw/.github/workflows/ci.yml",
