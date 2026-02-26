@@ -10,12 +10,44 @@ lib/
 # GNAT binder-generated files
 b__*.adb
 b__*.ads
+# GNAT linker exchange files
+*.bexch
+# GNAT Prover (gnatprove) output
+gnatprove/
+*.cswi
+*.spark
 # CI/build stdout and stderr capture files
 *.stderr
 *.stdout
+# Compiled binaries (main executable and test executables)
+/main
+/tests/autonomy_guardrails_policy
+/tests/channel_adapter_policy
+/tests/channel_security_policy
+/tests/competitive_v2_security_regression_fuzz_suite
+/tests/config_migration_policy
+/tests/gateway_auth_policy
+/tests/memory_backend_suite_policy
+/tests/plugin_capability_policy
+/tests/provider_routing_fallback_policy
+/tests/runtime_executor_policy
+/tests/security_secrets_tests
+/tests/config_loader_test
+/tests/agent_context_test
+/tests/memory_sqlite_test
+/tests/agent_tools_test
 # macOS metadata
 .DS_Store
-# Release candidate step logs (generated at runtime)
+# Python bytecode cache
+__pycache__/
+*.pyc
+*.pyo
+# Security gate tool caches (large binary databases)
+tests/security_gate/trivy-cache/
+# Step log directories (generated at runtime)
 tests/release_candidate_step_logs/
+tests/competitive_v2_release_readiness_step_logs/
+# Operator console dev symlink
+operator-console/tests
 # Local bootstrap overrides
 config/bootstrap.local.env

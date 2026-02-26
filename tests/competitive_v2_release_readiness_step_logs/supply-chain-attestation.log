@@ -1,5 +1,0 @@
-Supply-chain attestation artifacts generated:
-  - /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/sbom.spdx.json
-  - /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/provenance_attestation.json
-  - /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/attestation_manifest.sha256
-  - /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/supply_chain_attestation_report.json

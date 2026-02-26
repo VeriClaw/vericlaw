@@ -1,9 +1,0 @@
-Unable to find image 'alire/gnat:community-latest' locally
-community-latest: Pulling from alire/gnat
-Digest: sha256:37fe14993100258203aa25d2e72ae3d2fb5a7676f4c0c2d3bed3f720a3fb05ee
-Status: Image is up to date for alire/gnat:community-latest
-docker: Error response from daemon: image with reference alire/gnat:community-latest was found but does not provide the specified platform (linux/arm64)
-
-Run 'docker run --help' for more information
-debconf: delaying package configuration, since apt-utils is not installed
-competitive-bench report: /Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/competitive_benchmark_report.json
