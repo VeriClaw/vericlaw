@@ -1,12 +1,12 @@
 # VeriClaw
 
-[![CI](https://github.com/your-org/vericlaw/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/your-org/vericlaw/actions/workflows/ada-ci.yml)
+[![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml)
 
 VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
 
-## Why Quasar?
+## Why VeriClaw?
 
-| Feature | Quasar | ZeroClaw | NullClaw | OpenClaw |
+| Feature | **VeriClaw** | ZeroClaw | NullClaw | OpenClaw |
 |---|---|---|---|---|
 | Language | Ada/SPARK | Rust | Zig | TypeScript |
 | Formal verification | **✅ SPARK** | ❌ | ❌ | ❌ |
@@ -14,7 +14,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 | Binary size (full runtime) | ~400–600 KB* | 8.8 MB | 678 KB | N/A |
 | Startup (SPARK-only core) | **1.59 ms** | 10 ms | 8 ms | ~3 s |
 | Dispatch p95 (SPARK-only core) | **1.2 ms** | 13.4 ms | 14 ms | — |
-| LLM providers | OpenAI, Anthropic, Azure Foundry, compat | 12+ | 22+ | 15+ |
+| LLM providers | OpenAI, Anthropic, Azure, Ollama, compat | 12+ | 22+ | 15+ |
 | Channels | CLI, Telegram, Signal, WhatsApp | 25+ | 17 | 40+ |
 | Provably correct security | **✅** | ❌ | ❌ | ❌ |
 
@@ -139,7 +139,7 @@ vericlaw/
 │
 ├── deploy/                           # Deployment packaging
 │   ├── systemd/vericlaw.service   # Linux systemd unit
-│   ├── launchd/com.quasar.claw.plist # macOS launchd plist
+│   ├── launchd/com.vericlaw.plist # macOS launchd plist
 │   └── windows/install-vericlaw-service.ps1 # Windows service installer
 │
 ├── operator-console/                 # Local web operator console (HTML/CSS/JS)
@@ -184,7 +184,15 @@ make edge-size-build  # size-optimised binary (~400-600 KB)
 
 ### 3. Configure
 
-On first run, Quasar creates `~/.vericlaw/config.json` with defaults. Edit it:
+Run the interactive setup wizard — the fastest way to create your config:
+
+```bash
+vericlaw onboard
+```
+
+This asks for your provider, API key, model, agent name, and channel, then writes `~/.vericlaw/config.json`. You can also edit the file directly:
+
+On first run without a config, VeriClaw creates `~/.vericlaw/config.json` with defaults.
 
 ```json
 {
@@ -226,11 +234,13 @@ On first run, Quasar creates `~/.vericlaw/config.json` with defaults. Edit it:
 ### 4. Use
 
 ```bash
-quasar chat                    # interactive CLI conversation
-quasar agent "What is 2+2?"   # one-shot, prints reply
-quasar gateway                 # start HTTP gateway + all enabled channels
-quasar doctor                  # print config and health status
-quasar version                 # print version
+vericlaw onboard                   # interactive setup wizard (first-time setup)
+vericlaw chat                      # interactive CLI conversation
+vericlaw agent "What is 2+2?"     # one-shot, prints reply
+vericlaw gateway                   # start HTTP gateway + all enabled channels
+vericlaw doctor                    # print config and health status
+vericlaw version                   # print version
+vericlaw help                      # show all commands
 ```
 
 ## Providers
@@ -242,7 +252,18 @@ quasar version                 # print version
 | Azure AI Foundry | `azure_foundry` | Set `base_url`, `deployment`, `api_version` |
 | OpenAI-compatible | `openai_compatible` | Set `base_url`; covers Ollama, OpenRouter, LiteLLM |
 
-**Multi-provider failover:** List providers in order; Quasar automatically falls back to the next if the first fails.
+**Multi-provider failover:** List providers in order; VeriClaw automatically falls back to the next if the first fails.
+
+**Ollama (local LLM, no API key required):**
+```json
+{
+  "kind": "openai_compatible",
+  "base_url": "http://localhost:11434",
+  "api_key": "",
+  "model": "llama3.2"
+}
+```
+The `onboard` wizard will configure this automatically when you pick the `ollama` provider.
 
 **Azure AI Foundry example:**
 ```json
@@ -258,13 +279,13 @@ quasar version                 # print version
 ## Channels
 
 ### CLI
-Works out of the box — no config needed. Run `quasar chat`.
+Works out of the box — no config needed. Run `vericlaw chat`.
 
 ### Telegram
 1. Create a bot via [@BotFather](https://t.me/botfather) — get the bot token
 2. Find your Telegram user ID via [@userinfobot](https://t.me/userinfobot)
 3. Set `token` and `allowlist` (comma-separated IDs, or `"*"` for any sender — **not recommended**)
-4. Run `quasar gateway`
+4. Run `vericlaw gateway`
 
 ### Signal
 Requires [signal-cli](https://github.com/AsamK/signal-cli) running as a REST daemon:
@@ -392,12 +413,15 @@ make edge-speed-build   # speed-optimised (-O2)
 | Platform | File |
 |---|---|
 | Linux systemd | `deploy/systemd/vericlaw.service` |
-| macOS launchd | `deploy/launchd/com.quasar.claw.plist` |
+| macOS launchd | `deploy/launchd/com.vericlaw.plist` |
 | Windows service | `deploy/windows/install-vericlaw-service.ps1` |
 | Operator runbook | `docs/runbooks/operator-runbook.md` |
 
 ## What works today
 
+- `make docker-dev-build` — build via Docker (no local GNAT required on macOS)
+- `make docker-dev-test` — smoke tests: `vericlaw version` + `vericlaw doctor`
+- `make docker-dev-integration-test` — end-to-end agent test with mock LLM server ✅
 - `make check` — build + SPARK flow analysis + audit/service-hardening checks
 - `make secrets-test` / `make conformance-suite` / `make release-check`
 - `make vulnerability-license-gate` — blocking CVE + license compliance gate
@@ -405,24 +429,23 @@ make edge-speed-build   # speed-optimised (-O2)
 - `make image-build-multiarch` — multi-arch Docker image (amd64/arm64/arm/v7)
 - `make supply-chain-attest` / `make supply-chain-verify`
 - `make competitive-regression-gate` / `make competitive-v2-release-readiness-gate`
-- All agent runtime source code — written and structured, pending first compilation pass with GNAT + GNATCOLL + AWS installed
+
+**CLI commands:** `onboard` (wizard), `chat`, `agent`, `gateway`, `doctor`, `version`, `help`
+
+**Fixed in this release:**
+- Critical: `curl chars_ptr` URL bug fixed — all HTTP calls to LLM providers now work
+- Rate limiting enforced per-channel session (Telegram, Signal, WhatsApp)
+- Build artefacts moved to `obj/` directory (clean project root)
 
 ## Remaining To-Dos
 
 These items are intentionally deferred post-MVP:
 
-### 🟢 First priority — compilation ✅ DONE
-
-- [x] **First compilation pass** — compiles cleanly with GNAT Community 2021 via Docker (`make docker-dev-build`); smoke tests pass (`quasar version` + `quasar doctor`)
-- [x] **Docker dev workflow** — `Dockerfile.dev` + Makefile `docker-dev-*` targets; no local GNAT required on macOS
-- [ ] **Integration tests** — end-to-end test against a real OpenAI-compatible stub server (e.g. Ollama or a mock)
-- [ ] **SPARK proof CI** — run `gnatprove` in GitHub Actions to catch proof regressions on the security core
-
 ### Provider coverage
 
-- [ ] **Ollama** — local LLM (`http://localhost:11434/v1`, OpenAI-compat)
 - [ ] **Google Gemini** — `generativelanguage.googleapis.com`
 - [ ] **Mistral AI** — `api.mistral.ai/v1`
+- [ ] **Groq / OpenRouter** — via `openai_compatible` with custom base URL
 - [ ] **Streaming output** — SSE token streaming for CLI mode
 
 ### Channel coverage
@@ -451,9 +474,9 @@ These items are intentionally deferred post-MVP:
 - [ ] **Prometheus metrics** — `/metrics` endpoint with latency histograms
 - [ ] **Hot config reload** — `SIGHUP` reloads config without restart
 - [ ] **Multi-user gateway** — per-user conversation and fact store isolation
+- [ ] **Publish to GitHub** — push to `github.com/VeriClaw/vericlaw` once org is created
 
 ### Security hardening
 
 - [ ] **SPARK proofs at level 2+** — upgrade from flow analysis to full proof for all security modules
-- [ ] **Rate limit enforcement** — wire `Channel_Config.Max_RPS` into the gateway dispatch loop
 - [ ] **Audit log shipping** — forward audit events to syslog / external SIEM
