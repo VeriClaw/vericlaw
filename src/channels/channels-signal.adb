@@ -5,6 +5,7 @@ with Config.Schema;      use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
+with Channels.Rate_Limit;
 
 package body Channels.Signal is
 
@@ -79,6 +80,13 @@ package body Channels.Signal is
                return "";
             end if;
          end;
+
+         --  Rate limit: enforce Max_RPS per user session.
+         if not Channels.Rate_Limit.Check
+           ("signal:" & Source, Chan.Max_RPS)
+         then
+            return "";
+         end if;
 
          declare
             Conv  : Agent.Context.Conversation;

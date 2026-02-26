@@ -6,6 +6,7 @@ with Config.Schema;       use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Channels.Security;   -- SPARK security policy checks
+with Channels.Rate_Limit;
 
 package body Channels.Telegram is
 
@@ -116,6 +117,13 @@ package body Channels.Telegram is
                   return "";  -- user not in allowlist
                end if;
             end;
+
+            --  Rate limit: enforce Max_RPS per user session.
+            if not Channels.Rate_Limit.Check
+              ("tg:" & Chat_ID, Chan_Cfg.Max_RPS)
+            then
+               return "";  -- silently drop rate-exceeded messages
+            end if;
          end;
 
          --  Process via agent loop.

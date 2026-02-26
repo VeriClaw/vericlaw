@@ -5,6 +5,7 @@ with Config.Schema;      use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
+with Channels.Rate_Limit;
 
 package body Channels.WhatsApp is
 
@@ -104,6 +105,13 @@ package body Channels.WhatsApp is
                                     goto Next_Item;
                                  end if;
                               end;
+
+                              --  Rate limit: enforce Max_RPS per session.
+                              if not Channels.Rate_Limit.Check
+                                ("wa:" & Chat_ID, Chan_Cfg.Max_RPS)
+                              then
+                                 goto Next_Item;
+                              end if;
 
                               declare
                                  Conv  : Agent.Context.Conversation;
