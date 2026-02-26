@@ -96,7 +96,7 @@ esac
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project_file="${project_root}/vericlaw.gpr"
-binary_path="${project_root}/main"
+binary_path="${project_root}/vericlaw"
 
 "${project_root}/scripts/check_toolchain.sh" --quiet >/dev/null
 gprbuild -q -P "${project_file}" -XBUILD_PROFILE="${profile}" -XBINDER_MODE="${binder_mode}"

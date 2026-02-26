@@ -6,7 +6,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/ingest_zeroclaw_benchmarks.sh [--zeroclaw-repo PATH] [--source-scorecard PATH] [--output PATH]
 
-Ingests best-available local ZeroClaw benchmark metadata into Quasar's
+Ingests best-available local ZeroClaw benchmark metadata into VeriClaw's
 competitive comparator schema. If local ZeroClaw execution is not feasible,
 README benchmark snapshot values are used with scorecard fallback metrics.
 EOF

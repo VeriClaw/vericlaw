@@ -6,7 +6,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/run_competitive_benchmarks.sh [--runs N] [--profile PROFILE] [--binder-mode MODE] [--target-platform PLATFORM] [--output PATH] [--zeroclaw-json PATH] [--nullclaw-json PATH]
 
-Runs local Quasar measurements and writes a competitive benchmark JSON report.
+Runs local VeriClaw measurements and writes a competitive benchmark JSON report.
 Optional competitor JSON paths can also be provided via ZEROCLAW_JSON / NULLCLAW_JSON.
 EOF
 }
@@ -177,7 +177,7 @@ collect_host_metrics() {
   if [[ -x /usr/bin/time ]]; then
     rss_trace="$(
       {
-        /usr/bin/time -l "${project_root}/main" >/dev/null
+        /usr/bin/time -l "${project_root}/vericlaw" >/dev/null
       } 2>&1 || true
     )"
     rss_kb="$(awk '/maximum resident set size/ {print $1; exit}' <<<"${rss_trace}")"
@@ -187,7 +187,7 @@ collect_host_metrics() {
     else
       rss_trace="$(
         {
-          /usr/bin/time -f "%M" "${project_root}/main" >/dev/null
+          /usr/bin/time -f "%M" "${project_root}/vericlaw" >/dev/null
         } 2>&1 || true
       )"
       rss_kb="$(tail -n1 <<<"${rss_trace}" | tr -d '[:space:]')"
@@ -202,7 +202,7 @@ collect_host_metrics() {
 
   if [[ "${rss_supported}" == "0" && -r /proc/self/status ]]; then
     max_rss=0
-    "${project_root}/main" >/dev/null &
+    "${project_root}/vericlaw" >/dev/null &
     pid=$!
     while :; do
       current_rss="$(awk '/^VmRSS:/ {print $2; exit}' "/proc/${pid}/status" 2>/dev/null || true)"
@@ -263,13 +263,13 @@ EOF
       rss_supported=0
       rss_collector="unsupported_container_rss_telemetry"
       if [ -x /usr/bin/time ]; then
-        rss_trace="$({ /usr/bin/time -f "%M" ./main >/dev/null; } 2>&1 || true)"
+        rss_trace="$({ /usr/bin/time -f "%M" ./vericlaw >/dev/null; } 2>&1 || true)"
         rss_kb="$(printf "%s\n" "${rss_trace}" | tail -n1 | tr -d "[:space:]")"
         if [[ "${rss_kb}" =~ ^[1-9][0-9]*$ ]]; then
           rss_supported=1
           rss_collector="container_gnu_time_maxrss_kb"
         else
-          rss_trace="$({ /usr/bin/time -l ./main >/dev/null; } 2>&1 || true)"
+          rss_trace="$({ /usr/bin/time -l ./vericlaw >/dev/null; } 2>&1 || true)"
           rss_kb="$(printf "%s\n" "${rss_trace}" | awk "/maximum resident set size/ {print \$1; exit}")"
           if [[ "${rss_kb}" =~ ^[1-9][0-9]*$ ]]; then
             rss_supported=1
@@ -281,7 +281,7 @@ EOF
       fi
       if [[ "${rss_supported}" == "0" && -r /proc/self/status ]]; then
         max_rss=0
-        ./main >/dev/null &
+        ./vericlaw >/dev/null &
         pid=$!
         while :; do
           current_rss="$(awk "/^VmRSS:/ {print \$2; exit}" "/proc/${pid}/status" 2>/dev/null || true)"
@@ -349,7 +349,7 @@ if [[ "${force_container}" == "1" ]]; then
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     metrics_output="$(collect_container_metrics)"
   else
-    echo "Unable to run Quasar benchmarks: container mode requested but Docker is unavailable." >&2
+    echo "Unable to run VeriClaw benchmarks: container mode requested but Docker is unavailable." >&2
     exit 1
   fi
 elif "${project_root}/scripts/check_toolchain.sh" --quiet >/dev/null 2>&1; then
@@ -357,7 +357,7 @@ elif "${project_root}/scripts/check_toolchain.sh" --quiet >/dev/null 2>&1; then
 elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   metrics_output="$(collect_container_metrics)"
 else
-  echo "Unable to run Quasar benchmarks: host Ada toolchain missing and Docker unavailable." >&2
+  echo "Unable to run VeriClaw benchmarks: host Ada toolchain missing and Docker unavailable." >&2
   exit 1
 fi
 
@@ -498,7 +498,7 @@ def load_optional_json(path):
 
 report = {
     "generated_at": generated_at,
-    "quasar": {
+    "vericlaw": {
         "startup_ms": float(startup_ms),
         "idle_rss_mb": float(idle_rss_mb) if idle_rss_supported_flag and idle_rss_mb else None,
         "dispatch_latency_avg_ms": float(runtime_avg_ms),
@@ -531,7 +531,7 @@ release_path = pathlib.Path(release_metadata_path)
 if release_path.is_file():
     with release_path.open("r", encoding="utf-8") as handle:
         metadata = json.load(handle)
-    report["quasar"]["release_metadata"] = {
+    report["vericlaw"]["release_metadata"] = {
         "path": "tests/release_metadata.json",
         "generated_at": metadata.get("generated_at"),
         "toolchain_mode": metadata.get("toolchain_mode"),

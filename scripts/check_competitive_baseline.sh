@@ -117,7 +117,7 @@ def get_metric(payload, metric_id):
         return None
     if metric_id in payload:
         return payload.get(metric_id)
-    for container_key in ("performance", "metrics", "quasar"):
+    for container_key in ("performance", "metrics", "vericlaw"):
         container = payload.get(container_key)
         if isinstance(container, dict) and metric_id in container:
             return container.get(metric_id)
@@ -161,7 +161,7 @@ def get_scorecard_value(payload, section, key):
 direct_report = load_json(direct_report_path) if direct_report_path.is_file() else None
 
 def run_v1_checks():
-    quasar = report.get("quasar", {})
+    quasar = report.get("vericlaw", {})
     errors = []
     for metric in baseline.get("edge_performance_metrics", []):
         metric_id = metric.get("id")
@@ -193,7 +193,7 @@ def run_v1_checks():
 def run_v2_checks():
     errors = []
     regression_checks = []
-    quasar = report.get("quasar", {})
+    quasar = report.get("vericlaw", {})
     report_competitors = report.get("competitors", {})
     if not isinstance(report_competitors, dict):
         report_competitors = {}
@@ -230,12 +230,12 @@ def run_v2_checks():
             errors.append(f"invalid direct harness project map in {direct_report_path}")
         else:
             direct_projects = projects_payload
-            direct_quasar = direct_projects.get("quasar")
+            direct_quasar = direct_projects.get("vericlaw")
             if isinstance(direct_quasar, dict):
                 quasar = direct_quasar
             else:
-                errors.append("missing direct-harness project payload: quasar")
-            for project in ["quasar", *pass_fail_projects]:
+                errors.append("missing direct-harness project payload: vericlaw")
+            for project in ["vericlaw", *pass_fail_projects]:
                 payload = direct_projects.get(project)
                 if not isinstance(payload, dict):
                     errors.append(f"missing direct-harness project payload: {project}")
@@ -522,9 +522,9 @@ def run_v2_checks():
                 continue
             quasar_value = quasar_feature.get(counter_id)
             competitor_value = get_scorecard_value(payload, "feature_parity", counter_id)
-            entry = {"quasar": quasar_value, project: competitor_value}
+            entry = {"vericlaw": quasar_value, project: competitor_value}
             if is_number(quasar_value) and is_number(competitor_value):
-                entry["delta_quasar_minus_project"] = quasar_value - competitor_value
+                entry["delta_vericlaw_minus_project"] = quasar_value - competitor_value
             feature_comparison[counter_id] = entry
         deployment_comparison = {}
         for check in baseline.get("deployment_maturity_checks", []):
@@ -532,7 +532,7 @@ def run_v2_checks():
             if not isinstance(check_id, str) or not check_id:
                 continue
             deployment_comparison[check_id] = {
-                "quasar": quasar_deployment.get(check_id),
+                "vericlaw": quasar_deployment.get(check_id),
                 project: get_scorecard_value(payload, "deployment_maturity", check_id),
             }
         comparative_dimensions[project] = {
@@ -544,10 +544,10 @@ def run_v2_checks():
     scorecard_snapshot = {
         "generated_at": report.get("generated_at"),
         "baseline_id": baseline.get("baseline_id"),
-        "primary_project": baseline.get("primary_project", "quasar"),
+        "primary_project": baseline.get("primary_project", "vericlaw"),
         "pass_fail_projects": pass_fail_projects,
         "scorecard_only_projects": scorecard_only_projects,
-        "quasar": {
+        "vericlaw": {
             "feature_parity": quasar_feature,
             "deployment_maturity": quasar_deployment,
             "security_non_regression": quasar_security_fallback,

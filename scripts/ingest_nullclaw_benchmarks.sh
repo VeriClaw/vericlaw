@@ -6,7 +6,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/ingest_nullclaw_benchmarks.sh [--nullclaw-repo PATH] [--source-scorecard PATH] [--output PATH]
 
-Ingests best-available local NullClaw benchmark metadata into Quasar's
+Ingests best-available local NullClaw benchmark metadata into VeriClaw's
 competitive comparator schema. If local NullClaw execution is not feasible,
 README benchmark snapshot values are used with scorecard fallback metrics.
 EOF

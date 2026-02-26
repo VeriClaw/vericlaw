@@ -113,7 +113,7 @@ comparative_dimensions = scorecard.get("comparative_dimensions", {})
 if not isinstance(comparative_dimensions, dict):
     comparative_dimensions = {}
 
-quasar_payload = scorecard.get("quasar", {})
+quasar_payload = scorecard.get("vericlaw", {})
 if not isinstance(quasar_payload, dict):
     quasar_payload = {}
 quasar_feature = quasar_payload.get("feature_parity", {})
@@ -189,18 +189,18 @@ for project in pass_fail_projects:
 
     mismatches = {}
     if not peer_security:
-        mismatches["__missing_security_snapshot__"] = {"quasar": quasar_security, project: None}
+        mismatches["__missing_security_snapshot__"] = {"vericlaw": quasar_security, project: None}
     else:
         for key, expected_value in quasar_security.items():
             observed_value = peer_security.get(key)
             if observed_value != expected_value:
-                mismatches[key] = {"quasar": expected_value, project: observed_value}
+                mismatches[key] = {"vericlaw": expected_value, project: observed_value}
 
     if mismatches:
         strict_peer_mismatches += len(mismatches)
         security_status = "fail"
     security_peer_alignment[project] = {
-        "matches_quasar_security_defaults": len(mismatches) == 0,
+        "matches_vericlaw_security_defaults": len(mismatches) == 0,
         "mismatches": mismatches,
     }
 
@@ -210,7 +210,7 @@ for check in regression.get("checks", []):
         continue
     metric_id = check.get("metric_id")
     direction = check.get("direction")
-    quasar_value = check.get("quasar_value")
+    quasar_value = check.get("vericlaw_value")
     comparisons = {}
     for comparison in check.get("comparisons", []):
         if not isinstance(comparison, dict):
@@ -219,16 +219,16 @@ for check in regression.get("checks", []):
         if not isinstance(project, str) or not project:
             continue
         peer_value = comparison.get("competitor_value")
-        ratio = comparison.get("quasar_to_competitor_ratio")
+        ratio = comparison.get("vericlaw_to_competitor_ratio")
         assessment = None
         if is_number(quasar_value) and is_number(peer_value):
             if direction == "higher_is_better":
-                assessment = "quasar_better" if quasar_value >= peer_value else "quasar_worse"
+                assessment = "vericlaw_better" if quasar_value >= peer_value else "vericlaw_worse"
             else:
-                assessment = "quasar_better" if quasar_value <= peer_value else "quasar_worse"
+                assessment = "vericlaw_better" if quasar_value <= peer_value else "vericlaw_worse"
         comparisons[project] = {
             "value": peer_value,
-            "quasar_to_peer_ratio": ratio,
+            "vericlaw_to_peer_ratio": ratio,
             "assessment": assessment,
         }
     metric_outcomes.append(
@@ -236,7 +236,7 @@ for check in regression.get("checks", []):
             "metric_id": metric_id,
             "metric_label": metric_id,
             "direction": direction,
-            "quasar_value": quasar_value,
+            "vericlaw_value": quasar_value,
             "regression_gate_status": check.get("status"),
             "strict_peer_comparisons": comparisons,
         }
@@ -265,7 +265,7 @@ if isinstance(openclaw_dimensions, dict):
     for key, expected_value in quasar_security.items():
         observed_value = openclaw_security.get(key)
         if observed_value != expected_value:
-            security_delta[key] = {"quasar": expected_value, "openclaw": observed_value}
+            security_delta[key] = {"vericlaw": expected_value, "openclaw": observed_value}
             openclaw_security_trailing.append(key)
 
     openclaw_report = {

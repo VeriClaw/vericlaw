@@ -184,7 +184,7 @@ def get_metric(payload, metric_id):
         return None
     if metric_id in payload:
         return as_number(payload.get(metric_id))
-    for key in ("performance", "metrics", "quasar"):
+    for key in ("performance", "metrics", "vericlaw"):
         nested = payload.get(key)
         if isinstance(nested, dict) and metric_id in nested:
             return as_number(nested.get(metric_id))
@@ -240,7 +240,7 @@ def normalize_project(project, payload, scenario, source_path, peer_mode):
     return normalized
 
 
-quasar_payload = quasar_report.get("quasar", {})
+quasar_payload = quasar_report.get("vericlaw", {})
 scenario = {
     "benchmark_runs": quasar_payload.get("benchmark_runs"),
     "build_profile": quasar_payload.get("build_profile"),
@@ -265,7 +265,7 @@ if not isinstance(quasar_security, dict):
     quasar_security = {}
 
 quasar_project = normalize_project(
-    "quasar",
+    "vericlaw",
     quasar_payload,
     scenario,
     quasar_report_path,
@@ -288,7 +288,7 @@ for metric_id in metric_ids:
     quasar_value = quasar_project["performance"].get(metric_id)
     metric_comparison = {
         "direction": metric_directions.get(metric_id),
-        "quasar": quasar_value,
+        "vericlaw": quasar_value,
         "peers": {},
     }
     for peer in (zeroclaw_project, nullclaw_project):
@@ -298,18 +298,18 @@ for metric_id in metric_ids:
             ratio = quasar_value / peer_value
         metric_comparison["peers"][peer["project"]] = {
             "value": peer_value,
-            "quasar_to_peer_ratio": ratio,
+            "vericlaw_to_peer_ratio": ratio,
         }
     comparisons[metric_id] = metric_comparison
 
 report = {
     "schema_version": "competitive-v2-direct-harness",
     "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-    "performance_peers": ["quasar", "zeroclaw", "nullclaw"],
+    "performance_peers": ["vericlaw", "zeroclaw", "nullclaw"],
     "scorecard_only_projects": ["openclaw"],
     "scenario": scenario,
     "projects": {
-        "quasar": quasar_project,
+        "vericlaw": quasar_project,
         "zeroclaw": zeroclaw_project,
         "nullclaw": nullclaw_project,
         "openclaw": openclaw_project,

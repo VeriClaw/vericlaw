@@ -393,6 +393,102 @@ make edge-speed-build   # speed-optimised (-O2)
    SMOKE_FAIL_ON_NON_BLOCKING=true make cross-platform-smoke
    ```
 
+## Benchmarks
+
+### What is measured
+
+Each benchmark run measures VeriClaw against ZeroClaw and NullClaw across five metrics:
+
+| Metric | Unit | Direction |
+|---|---|---|
+| `startup_ms` | milliseconds | lower is better |
+| `dispatch_latency_p95_ms` | milliseconds p95 | lower is better |
+| `binary_bytes` / `binary_size_mb` | bytes / MB | lower is better |
+| `idle_rss_mb` | MB | lower is better |
+| `throughput_ops_per_sec` | ops/s | higher is better |
+
+VeriClaw is built with `edge-speed` profile by default (50 runs, `portable` binder mode). The report JSON lands at `tests/competitive_benchmark_report.json`.
+
+### Benchmark workflow
+
+All sister projects live as siblings next to the `vericlaw/` directory:
+```
+claw-mania/
+├── vericlaw/       ← this repo
+├── nullclaw/       ← sibling (Zig)
+├── zeroclaw/       ← sibling (Rust)
+├── openclaw/       ← sibling (TypeScript)
+├── ironclaw/       ← sibling (Rust)
+├── tinyclaw/       ← sibling (TypeScript/Bun)
+├── picoclaw/       ← sibling (Go)
+└── nanobot/        ← sibling (Python)
+```
+
+**Step 1 — Ingest competitor data** (reads their README benchmark numbers + scorecard JSON):
+```bash
+make ingest-nullclaw    # → tests/nullclaw_v2_benchmark_ingest.json
+make ingest-zeroclaw    # → tests/zeroclaw_v2_benchmark_ingest.json
+```
+
+**Step 2 — Measure VeriClaw** (builds + times startup, dispatch latency, binary size; Docker used automatically if local GNAT not available):
+```bash
+make competitive-bench   # → tests/competitive_benchmark_report.json
+```
+
+**Step 3 — Full side-by-side comparison** (runs steps 1+2, then produces normalized report + baseline gate):
+```bash
+make competitive-regression-gate
+# → tests/competitive_benchmark_report.json
+# → tests/competitive_direct_benchmark_report.json
+# → tests/competitive_regression_gate_report.json
+```
+
+### Options
+
+```bash
+# More runs for statistical confidence (default: 50):
+RUNS=200 make competitive-bench
+
+# Specific build profile:
+BUILD_PROFILE=edge-size make competitive-bench   # smallest binary profile
+
+# Target a specific arch (forces Docker):
+TARGET_PLATFORM=linux/arm64 make competitive-bench
+
+# Provide pre-existing competitor JSON (skip live ingest):
+ZEROCLAW_JSON=path/to/zeroclaw.json NULLCLAW_JSON=path/to/nullclaw.json make competitive-bench
+```
+
+### Prerequisites
+
+- Docker must be running (used automatically when local GNAT is absent)
+- Sister repos must be present at `../nullclaw`, `../zeroclaw`, `../openclaw` (relative to `vericlaw/`)
+- Python 3 for report generation (included in the Docker dev image)
+
+### Understanding the output
+
+The report JSON `tests/competitive_benchmark_report.json` has this shape:
+```json
+{
+  "generated_at": "...",
+  "vericlaw": {
+    "startup_ms": 1.59,
+    "dispatch_latency_p95_ms": 1.2,
+    "binary_size_mb": 0.168,
+    "idle_rss_mb": null,
+    "throughput_ops_per_sec": 640.0,
+    "build_profile": "edge-speed",
+    "measurement_mode": "container"
+  },
+  "competitors": {
+    "zeroclaw": { "performance": { "startup_ms": 13.0, ... } },
+    "nullclaw":  { "performance": { "startup_ms": 8.0, ... } }
+  }
+}
+```
+
+The `make competitive-regression-gate` gate **fails** if any VeriClaw metric regresses past the SLO thresholds defined in `config/security_slos.toml`.
+
 ## Gate commands and report artifacts
 
 | Category | Command | Report |
