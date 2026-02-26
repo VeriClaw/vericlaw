@@ -411,9 +411,10 @@ make edge-speed-build   # speed-optimised (-O2)
 
 These items are intentionally deferred post-MVP:
 
-### 🔴 First priority — compilation
+### 🟢 First priority — compilation ✅ DONE
 
-- [ ] **First compilation pass** — compile with GNAT + GNATCOLL + AWS; fix any remaining Ada syntax issues iteratively
+- [x] **First compilation pass** — compiles cleanly with GNAT Community 2021 via Docker (`make docker-dev-build`); smoke tests pass (`quasar version` + `quasar doctor`)
+- [x] **Docker dev workflow** — `Dockerfile.dev` + Makefile `docker-dev-*` targets; no local GNAT required on macOS
 - [ ] **Integration tests** — end-to-end test against a real OpenAI-compatible stub server (e.g. Ollama or a mock)
 - [ ] **SPARK proof CI** — run `gnatprove` in GitHub Actions to catch proof regressions on the security core
 
