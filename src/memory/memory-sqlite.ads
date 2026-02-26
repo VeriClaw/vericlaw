@@ -1,9 +1,10 @@
 --  SQLite-backed memory: conversation history + persistent facts.
---  Uses GNATCOLL.SQL.SQLite bindings.
+--  Uses direct SQLite3 C bindings (no GNATCOLL dependency).
 --  Thread-safety: each call serialises internally; use one handle per thread.
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
+with System;
 
 package Memory.SQLite is
 
@@ -17,6 +18,9 @@ package Memory.SQLite is
       Error  : out Unbounded_String) return Boolean;
 
    procedure Close (Handle : in out Memory_Handle);
+
+   --  True if the database was successfully opened.
+   function Is_Open (Handle : Memory_Handle) return Boolean;
 
    --  -----------------------------------------------------------------------
    --  Conversation history
@@ -62,11 +66,9 @@ package Memory.SQLite is
 
 private
 
-   type DB_Access is access all Integer;  -- opaque; real type in body
-
    type Memory_Handle is limited record
-      DB   : DB_Access := null;
-      Open : Boolean   := False;
+      DB   : System.Address := System.Null_Address;
+      Open : Boolean        := False;
    end record;
 
 end Memory.SQLite;

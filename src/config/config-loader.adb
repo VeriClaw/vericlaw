@@ -106,14 +106,13 @@ package body Config.Loader is
          --  Providers array
          if Has_Key (Root, "providers") then
             declare
-               PA  : constant JSON_Value_Type := Get_Object (Root, "providers");
-               Idx : Provider_Index := 1;
+               PA_Val : constant JSON_Value_Type := Get_Object (Root, "providers");
+               PA     : constant JSON_Array_Type := Value_To_Array (PA_Val);
+               Idx    : Provider_Index := 1;
             begin
-               --  Iterate JSON array items
-               for I in 1 .. Integer (PA.Length) loop
+               for I in 1 .. Array_Length (PA) loop
                   exit when Idx > Max_Providers;
-                  Parse_Provider
-                    (PA.Get (I), Result.Config.Providers (Idx));
+                  Parse_Provider (Array_Item (PA, I), Result.Config.Providers (Idx));
                   Idx := Idx + 1;
                end loop;
                if Idx > 1 then
@@ -125,13 +124,13 @@ package body Config.Loader is
          --  Channels array
          if Has_Key (Root, "channels") then
             declare
-               CA  : constant JSON_Value_Type := Get_Object (Root, "channels");
-               Idx : Channel_Index := 1;
+               CA_Val : constant JSON_Value_Type := Get_Object (Root, "channels");
+               CA     : constant JSON_Array_Type := Value_To_Array (CA_Val);
+               Idx    : Channel_Index := 1;
             begin
-               for I in 1 .. Integer (CA.Length) loop
+               for I in 1 .. Array_Length (CA) loop
                   exit when Idx > Max_Channels;
-                  Parse_Channel
-                    (CA.Get (I), Result.Config.Channels (Idx));
+                  Parse_Channel (Array_Item (CA, I), Result.Config.Channels (Idx));
                   Idx := Idx + 1;
                end loop;
                if Idx > 1 then

@@ -71,10 +71,14 @@ package body Tools.Brave_Search is
                Items : constant JSON_Value_Type :=
                  Get_Object (Web, "results");
             begin
-               for I in 1 .. Integer (Items.Length) loop
+               declare
+                  Items_Arr : constant JSON_Array_Type :=
+                    Value_To_Array (Items);
+               begin
+                  for I in 1 .. Array_Length (Items_Arr) loop
                   exit when Result.Count >= Max_Results;
                   declare
-                     Item : constant JSON_Value_Type := Items.Get (I);
+                     Item : constant JSON_Value_Type := Array_Item (Items_Arr, I);
                   begin
                      Result.Count := Result.Count + 1;
                      Set_Unbounded_String
@@ -89,6 +93,7 @@ package body Tools.Brave_Search is
                   end;
                end loop;
             end;
+         end;
          end if;
 
          Result.Success := True;

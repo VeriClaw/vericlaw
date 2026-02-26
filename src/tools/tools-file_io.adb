@@ -1,4 +1,4 @@
-with Ada.Text_IO;
+with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Directories;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 
@@ -173,7 +173,7 @@ package body Tools.File_IO is
       Err    : constant String := Validate_Path (Path, Workspace);
       Result : File_Result;
       Search : Ada.Directories.Search_Type;
-      Entry  : Ada.Directories.Directory_Entry_Type;
+      Dir_Ent : Ada.Directories.Directory_Entry_Type;
    begin
       if Err'Length > 0 then
          Set_Unbounded_String (Result.Error, Err);
@@ -187,10 +187,10 @@ package body Tools.File_IO is
 
       Ada.Directories.Start_Search (Search, Path, "*");
       while Ada.Directories.More_Entries (Search) loop
-         Ada.Directories.Get_Next_Entry (Search, Entry);
+         Ada.Directories.Get_Next_Entry (Search, Dir_Ent);
          declare
             Simple : constant String :=
-              Ada.Directories.Simple_Name (Entry);
+              Ada.Directories.Simple_Name (Dir_Ent);
          begin
             if Simple /= "." and then Simple /= ".." then
                Append (Result.Content, Simple & ASCII.LF);

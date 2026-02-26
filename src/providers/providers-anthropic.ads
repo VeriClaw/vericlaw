@@ -1,6 +1,7 @@
 --  Anthropic provider: /v1/messages API (claude-3-5-sonnet, claude-3-opus, etc.)
 
 with Providers.Interface_Pkg; use Providers.Interface_Pkg;
+with Agent.Context;
 with Config.Schema;            use Config.Schema;
 with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 

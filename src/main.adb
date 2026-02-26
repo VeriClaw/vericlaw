@@ -146,7 +146,7 @@ procedure Main is
    --  Entry point
    Cmd    : Unbounded_String := To_Unbounded_String ("chat");
    CR     : Config.Loader.Load_Result;
-   Mem    : Memory.SQLite.Memory_Handle;
+   Mem    : aliased Memory.SQLite.Memory_Handle;
    Mem_OK : Boolean;
 
 begin

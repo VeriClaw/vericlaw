@@ -1,5 +1,6 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
+with Agent.Context;      use Agent.Context;
 
 package body Providers.OpenAI is
 
@@ -109,10 +110,14 @@ package body Providers.OpenAI is
          TC_Array : constant JSON_Value_Type :=
            Get_Object (Resp_Root, "tool_calls");
       begin
-         for I in 1 .. Integer (TC_Array.Length) loop
+         declare
+            TC_Arr : constant JSON_Array_Type :=
+              Value_To_Array (TC_Array);
+         begin
+            for I in 1 .. Array_Length (TC_Arr) loop
             exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
             declare
-               TC_Item  : constant JSON_Value_Type := TC_Array.Get (I);
+               TC_Item  : constant JSON_Value_Type := Array_Item (TC_Arr, I);
                Fn       : constant JSON_Value_Type :=
                  Get_Object (TC_Item, "function");
             begin
@@ -129,6 +134,7 @@ package body Providers.OpenAI is
             end;
          end loop;
       end;
+   end;
    end Parse_Tool_Calls;
 
    function Chat
@@ -178,7 +184,8 @@ package body Providers.OpenAI is
             declare
                Choices : constant JSON_Value_Type :=
                  Get_Object (PR.Root, "choices");
-               First   : constant JSON_Value_Type := Choices.Get (1);
+               Choices_Arr : constant JSON_Array_Type := Value_To_Array (Choices);
+               First       : constant JSON_Value_Type := Array_Item (Choices_Arr, 1);
                Msg     : constant JSON_Value_Type :=
                  Get_Object (First, "message");
             begin

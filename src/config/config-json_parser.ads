@@ -43,6 +43,12 @@ package Config.JSON_Parser is
      (V   : JSON_Value_Type;
       Key : String) return Boolean;
 
+   --  Array helpers: convert a JSON value (array type) and iterate over it.
+   function Value_To_Array (V : JSON_Value_Type) return JSON_Array_Type;
+   function Array_Length    (A : JSON_Array_Type) return Natural;
+   function Array_Item      (A : JSON_Array_Type; I : Positive)
+                             return JSON_Value_Type;
+
    --  Serialisation
    function To_JSON_String (V : JSON_Value_Type) return String;
 

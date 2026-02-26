@@ -1,2 +1,6 @@
+--  Global Ada configuration pragmas for quasar_claw.gpr.
+--  SPARK_Mode is NOT set globally here; it is set per-package in each
+--  security source file (security-*.ads, gateway-*.ads, channels-security.ads,
+--  etc.) so that GNATCOLL and AWS library specs are not type-checked in
+--  SPARK mode. Run gnatprove separately for formal verification.
 pragma Ada_2022;
-pragma SPARK_Mode (On);

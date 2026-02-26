@@ -2,6 +2,7 @@ with Ada.Text_IO;
 with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 with HTTP.Client;
 with Config.JSON_Parser;  use Config.JSON_Parser;
+with Config.Schema;       use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Channels.Security;   -- SPARK security policy checks
@@ -127,7 +128,7 @@ package body Channels.Telegram is
             Set_Unbounded_String (Conv.Channel, "telegram:" & Chat_ID);
 
             --  Load existing history for this chat.
-            if Mem.Open then
+            if Memory.SQLite.Is_Open (Mem) then
                Memory.SQLite.Load_History
                  (Mem, "tg:" & Chat_ID,
                   Cfg.Memory.Max_History, Conv);
@@ -202,10 +203,14 @@ package body Channels.Telegram is
                            Updates : constant JSON_Value_Type :=
                              Get_Object (PR.Root, "result");
                         begin
-                           for I in 1 .. Integer (Updates.Length) loop
+                           declare
+                              Upd_Arr : constant JSON_Array_Type :=
+                                Value_To_Array (Updates);
+                           begin
+                              for I in 1 .. Array_Length (Upd_Arr) loop
                               declare
                                  Update    : constant JSON_Value_Type :=
-                                   Updates.Get (I);
+                                   Array_Item (Upd_Arr, I);
                                  Update_ID : constant Integer :=
                                    Get_Integer (Update, "update_id");
                                  Reply_Text : constant String :=
@@ -233,7 +238,8 @@ package body Channels.Telegram is
                                  end if;
                                  Offset := Update_ID + 1;
                               end;
-                           end loop;
+                              end loop;
+                           end;
                         end;
                      end if;
                   end;

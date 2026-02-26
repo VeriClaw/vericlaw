@@ -4,6 +4,7 @@ with Providers.OpenAI;
 with Providers.Anthropic;
 with Providers.OpenAI_Compatible;
 with Config.Schema;                  use Config.Schema;
+with Agent.Context;                  use Agent.Context;
 
 package body Agent.Loop_Pkg is
 
@@ -77,7 +78,7 @@ package body Agent.Loop_Pkg is
         (Conv, Agent.Context.User, User_Input);
 
       --  Persist to memory.
-      if Mem.Open then
+      if Memory.SQLite.Is_Open (Mem) then
          Memory.SQLite.Save_Message
            (Mem,
             To_String (Conv.Session_ID),
@@ -132,7 +133,7 @@ package body Agent.Loop_Pkg is
                   To_String (Prov_Resp.Content));
 
                --  Persist assistant reply.
-               if Mem.Open then
+               if Memory.SQLite.Is_Open (Mem) then
                   Memory.SQLite.Save_Message
                     (Mem,
                      To_String (Conv.Session_ID),

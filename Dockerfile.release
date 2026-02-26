@@ -1,27 +1,54 @@
 # syntax=docker/dockerfile:1.7
-FROM debian:bookworm AS build
+# Multi-stage release build for Quasar Claw Lab.
+# Build stage uses the same GNAT Community 2021 image as CI.
+# Runtime stage uses a minimal Debian image with only the required .so files.
+#
+# Usage:
+#   docker build -f Dockerfile.release -t quasar-claw:latest .
+#   docker run --rm -e QUASAR_OPENAI_API_KEY=sk-... quasar-claw:latest chat
+FROM alire/gnat:community-latest AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 WORKDIR /workspace
 
+# Add C dev headers needed for thin Ada->C linker bindings.
+# libsqlite3-dev: provides libsqlite3.so symlink for -lsqlite3
+# libcurl4-openssl-dev is 404 on this Debian Bullseye snapshot; create
+# the libcurl.so symlink manually from the already-present libcurl.so.4.
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends gnat gprbuild binutils \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install --yes --no-install-recommends \
+       libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 \
+              /usr/lib/x86_64-linux-gnu/libcurl.so
+
+ENV GPR_PROJECT_PATH=/opt/gnat/share/gpr
+ENV PATH=/opt/gnat/bin:${PATH}
 
 COPY . .
 
 RUN gprbuild -P quasar_claw.gpr -p \
-    && test -x /workspace/main \
+    && test -f /workspace/main \
     && strip /workspace/main
 
+# ---------------------------------------------------------------------------
+# Minimal runtime image
+# ---------------------------------------------------------------------------
 FROM debian:bookworm-slim AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends libgnat-12 ca-certificates \
+    && apt-get install --yes --no-install-recommends \
+       libgnat-12 \
+       libcurl4 \
+       libsqlite3-0 \
+       ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 app \
-    && useradd --system --uid 10001 --gid app --home-dir /nonexistent --shell /usr/sbin/nologin app \
+    && useradd --system --uid 10001 --gid app \
+              --home-dir /nonexistent \
+              --shell /usr/sbin/nologin app \
     && mkdir -p /app /tmp \
     && chown -R app:app /app /tmp
 

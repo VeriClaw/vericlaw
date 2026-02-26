@@ -5,6 +5,11 @@ with Config.JSON_Parser; use Config.JSON_Parser;
 
 package body Agent.Tools is
 
+   --  Renamings to avoid ambiguity between Agent.Tools (this pkg) and top-level Tools
+   package Shell_Pkg   renames Standard.Tools.Shell;
+   package File_IO_Pkg renames Standard.Tools.File_IO;
+   package Search_Pkg  renames Standard.Tools.Brave_Search;
+
    --  JSON Schema strings for each tool (passed to LLM providers).
    Shell_Params : constant String :=
      "{"
@@ -120,8 +125,8 @@ package body Agent.Tools is
             Cmd     : constant String := Get_String (PR.Root, "command");
             WD      : constant String :=
               Get_String (PR.Root, "working_dir", Workspace);
-            SR      : constant Tools.Shell.Shell_Result :=
-              Tools.Shell.Run (Cmd, WD);
+            SR      : constant Shell_Pkg.Shell_Result :=
+              Shell_Pkg.Run (Cmd, WD);
          begin
             if SR.Exit_Code = 0 then
                Result.Success := True;
@@ -147,8 +152,8 @@ package body Agent.Tools is
          declare
             Path : constant String :=
               Workspace & "/" & Get_String (PR.Root, "path");
-            FR   : constant Tools.File_IO.File_Result :=
-              Tools.File_IO.Read (Path, Workspace);
+            FR   : constant File_IO_Pkg.File_Result :=
+              File_IO_Pkg.Read (Path, Workspace);
          begin
             if FR.Success then
                Result.Success := True;
@@ -167,8 +172,8 @@ package body Agent.Tools is
             Path    : constant String :=
               Workspace & "/" & Get_String (PR.Root, "path");
             Content : constant String := Get_String (PR.Root, "content");
-            FR      : constant Tools.File_IO.File_Result :=
-              Tools.File_IO.Write (Path, Content, Workspace);
+            FR      : constant File_IO_Pkg.File_Result :=
+              File_IO_Pkg.Write (Path, Content, Workspace);
          begin
             if FR.Success then
                Result.Success := True;
@@ -186,8 +191,8 @@ package body Agent.Tools is
          declare
             Dir : constant String :=
               Get_String (PR.Root, "path", Workspace);
-            FR  : constant Tools.File_IO.File_Result :=
-              Tools.File_IO.List (Dir, Workspace);
+            FR  : constant File_IO_Pkg.File_Result :=
+              File_IO_Pkg.List (Dir, Workspace);
          begin
             if FR.Success then
                Result.Success := True;
@@ -207,8 +212,8 @@ package body Agent.Tools is
             Query : constant String := Get_String (PR.Root, "query");
             NR    : constant Integer :=
               Get_Integer (PR.Root, "num_results", 5);
-            SR    : constant Tools.Brave_Search.Brave_Result :=
-              Tools.Brave_Search.Search
+            SR    : constant Search_Pkg.Brave_Result :=
+              Search_Pkg.Search
                 (Query       => Query,
                  API_Key     => To_String (Cfg.Brave_API_Key),
                  Num_Results => (if NR > 0 then NR else 5));
@@ -217,7 +222,7 @@ package body Agent.Tools is
                Result.Success := True;
                Set_Unbounded_String
                  (Result.Output,
-                  Tools.Brave_Search.To_Agent_Text (SR));
+                  Search_Pkg.To_Agent_Text (SR));
             else
                Result.Error := SR.Error;
             end if;

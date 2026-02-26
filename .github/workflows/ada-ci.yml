@@ -33,7 +33,10 @@ jobs:
           && ./scripts/bootstrap_toolchain.sh --validate
       - name: Build and prove gate
         run: |
+          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
+          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
           export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
           make check
           make competitive-regression-gate
           make supply-chain-attest

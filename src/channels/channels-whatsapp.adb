@@ -1,6 +1,7 @@
 with Ada.Text_IO;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
+with Config.Schema;      use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
@@ -72,10 +73,14 @@ package body Channels.WhatsApp is
                     Parse (To_String (Resp.Body_Text));
                begin
                   if PR.Valid then
-                     for I in 1 .. Integer (PR.Root.Length) loop
+                     declare
+                        Root_Arr : constant JSON_Array_Type :=
+                          Value_To_Array (PR.Root);
+                     begin
+                        for I in 1 .. Array_Length (Root_Arr) loop
                         declare
                            Item    : constant JSON_Value_Type :=
-                             PR.Root.Get (I);
+                             Array_Item (Root_Arr, I);
                            Chat_ID : constant String :=
                              Get_String (Item, "from");
                            Text    : constant String :=
@@ -109,7 +114,7 @@ package body Channels.WhatsApp is
                                  Set_Unbounded_String
                                    (Conv.Channel, "whatsapp:" & Chat_ID);
 
-                                 if Mem.Open then
+                                 if Memory.SQLite.Is_Open (Mem) then
                                     Memory.SQLite.Load_History
                                       (Mem, "wa:" & Chat_ID,
                                        Cfg.Memory.Max_History, Conv);
@@ -136,7 +141,8 @@ package body Channels.WhatsApp is
                            end if;
                            <<Next_Item>>
                         end;
-                     end loop;
+                        end loop;
+                     end;
                   end if;
                end;
             end if;

@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1.7
+# Development build environment for Quasar Claw Lab.
+# Based on the same image used in CI (alire/gnat:community-latest).
+# Build the image once: make docker-dev-image
+# Then compile with source volume-mounted: make docker-dev-build
+#
+# Note: alire/gnat:community-latest is x86_64 only. On Apple Silicon
+# Docker runs it via QEMU emulation -- builds work, just ~2x slower.
+FROM alire/gnat:community-latest
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Add C dev headers/symlinks needed for thin Ada->C linker bindings.
+# libsqlite3-dev: installs libsqlite3.so symlink for -lsqlite3
+# libcurl4-openssl-dev is 404 on this Debian Bullseye snapshot, so create
+# the libcurl.so symlink manually from the already-installed libcurl.so.4.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+       libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 \
+              /usr/lib/x86_64-linux-gnu/libcurl.so
+
+# GNAT Community 2021 ships gnatcoll.gpr and aws.gpr here.
+# gprbuild finds them automatically via this path.
+ENV GPR_PROJECT_PATH=/opt/gnat/share/gpr
+ENV PATH=/opt/gnat/bin:${PATH}
+
+WORKDIR /workspace

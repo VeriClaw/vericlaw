@@ -3,6 +3,7 @@
 --  Azure Foundry: set base_url, deployment, api_version in config.
 
 with Providers.Interface_Pkg; use Providers.Interface_Pkg;
+with Agent.Context;
 with Config.Schema;            use Config.Schema;
 with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 

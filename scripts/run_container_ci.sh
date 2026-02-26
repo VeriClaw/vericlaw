@@ -65,4 +65,9 @@ esac
 
 echo "Running '${action}' using container image ${image}"
 docker run --rm --platform "${platform}" -e CONFORMANCE_REPORT_PATH="${CONFORMANCE_REPORT_PATH:-}" -v "${project_root}:/workspace" -w /workspace "${image}" \
-  bash -lc "if [ -d /opt/gnat/bin ]; then export PATH=/opt/gnat/bin:\$PATH; fi; ${inner_cmd}"
+  bash -lc "
+    if [ -d /opt/gnat/bin ]; then export PATH=/opt/gnat/bin:\$PATH; fi
+    export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+    apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev >/dev/null 2>&1
+    ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so 2>/dev/null || true
+    ${inner_cmd}"

@@ -19,6 +19,8 @@ SERVICE_SUPERVISOR_CHECK := ./scripts/check_service_supervisors.sh
 AUDIT_LOG_CHECK := ./scripts/check_audit_event_log.sh
 VULNERABILITY_LICENSE_GATE := ./scripts/vulnerability_license_gate.sh
 DOCKERFILE_RELEASE ?= Dockerfile.release
+DOCKERFILE_DEV     ?= Dockerfile.dev
+DEV_IMAGE_NAME     ?= quasar-claw-dev
 IMAGE_NAME ?= quasar-claw-lab
 IMAGE_TAG ?= latest
 IMAGE_PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v7
@@ -36,7 +38,7 @@ COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test
 
 build:
 	$(TOOLCHAIN_CHECK)
@@ -192,3 +194,60 @@ operator-console-serve:
 
 gateway-doctor-check:
 	./scripts/check_gateway_doctor.sh
+
+# ---------------------------------------------------------------------------
+# Docker-based development workflow (Mac-friendly, no local GNAT required)
+# ---------------------------------------------------------------------------
+# Note: alire/gnat:community-latest is x86_64. On Apple Silicon it runs via
+# QEMU emulation -- slower but fully functional for compilation and testing.
+
+## Build the dev image (one-time; ~30s on first run, cached after that).
+docker-dev-image:
+	@command -v docker >/dev/null 2>&1 || { echo "Docker not found."; exit 1; }
+	docker build --platform linux/amd64 \
+	  --file "$(DOCKERFILE_DEV)" \
+	  --tag "$(DEV_IMAGE_NAME):latest" .
+
+## Compile the full project inside the dev container.
+## The source is volume-mounted, so edits are picked up without rebuilding the image.
+## On success the binary lands at ./main (x86_64 ELF, runnable inside Docker).
+docker-dev-build: docker-dev-image
+	docker run --rm --platform linux/amd64 \
+	  -v "$(PWD):/workspace" \
+	  -w /workspace \
+	  "$(DEV_IMAGE_NAME):latest" \
+	  gprbuild -P quasar_claw.gpr -p -j0
+
+## Interactive shell inside the dev container with source mounted.
+## Use this to run gnat, gprbuild, gnatprove manually or inspect errors.
+docker-dev-shell: docker-dev-image
+	docker run --rm -it --platform linux/amd64 \
+	  -v "$(PWD):/workspace" \
+	  -w /workspace \
+	  "$(DEV_IMAGE_NAME):latest" \
+	  bash
+
+## Run gnatprove on the SPARK security core inside the dev container.
+docker-dev-prove: docker-dev-image
+	docker run --rm --platform linux/amd64 \
+	  -v "$(PWD):/workspace" \
+	  -w /workspace \
+	  "$(DEV_IMAGE_NAME):latest" \
+	  gnatprove -P quasar_claw.gpr --mode=flow -j0
+
+## Build and smoke-test: quasar version + quasar doctor.
+## Run with: make docker-dev-test
+docker-dev-test: docker-dev-build
+	@echo "=== quasar version ===" && \
+	docker run --rm --platform linux/amd64 \
+	  -v "$(PWD):/workspace" \
+	  -w /workspace \
+	  "$(DEV_IMAGE_NAME):latest" \
+	  ./main version
+	@echo "=== quasar doctor (exit 1 without config is expected) ===" && \
+	docker run --rm --platform linux/amd64 \
+	  -e HOME=/tmp \
+	  -v "$(PWD):/workspace" \
+	  -w /workspace \
+	  "$(DEV_IMAGE_NAME):latest" \
+	  ./main doctor || true

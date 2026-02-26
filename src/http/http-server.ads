@@ -16,7 +16,7 @@ package HTTP.Server is
    --  Blocks until the server is stopped.
    procedure Run
      (Cfg : Config.Schema.Agent_Config;
-      Mem : Memory.SQLite.Memory_Handle);
+      Mem : aliased in out Memory.SQLite.Memory_Handle);
 
    --  Stop the server gracefully.
    procedure Stop;

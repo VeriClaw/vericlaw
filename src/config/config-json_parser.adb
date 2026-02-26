@@ -146,4 +146,21 @@ package body Config.JSON_Parser is
       V := Create (A);
    end Append_Array;
 
+   function Value_To_Array (V : JSON_Value_Type) return JSON_Array_Type is
+   begin
+      return GNATCOLL.JSON.Get (V);
+   end Value_To_Array;
+
+   function Array_Length (A : JSON_Array_Type) return Natural is
+   begin
+      return GNATCOLL.JSON.Length (A);
+   end Array_Length;
+
+   function Array_Item
+     (A : JSON_Array_Type; I : Positive) return JSON_Value_Type
+   is
+   begin
+      return GNATCOLL.JSON.Get (A, I);
+   end Array_Item;
+
 end Config.JSON_Parser;

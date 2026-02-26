@@ -6,6 +6,7 @@ with AWS.Config;
 with AWS.Config.Set;
 with Ada.Text_IO;
 with Config.JSON_Parser;
+with Config.Schema;      use Config.Schema;
 with Channels.Telegram;
 with Channels.Signal;
 with Channels.WhatsApp;
@@ -15,8 +16,10 @@ package body HTTP.Server is
    WS : AWS.Server.HTTP;
 
    --  Shared state accessed by request handlers.
-   Shared_Cfg : Config.Schema.Agent_Config;
-   Shared_Mem : Memory.SQLite.Memory_Handle;
+   type Mem_Ptr is access all Memory.SQLite.Memory_Handle;
+
+   Shared_Cfg     : Config.Schema.Agent_Config;
+   Shared_Mem_Ptr : Mem_Ptr := null;
 
    --  -----------------------------------------------------------------------
    --  Request dispatcher
@@ -32,7 +35,7 @@ package body HTTP.Server is
       --  Health check
       if URI = "/health" and then Method = "GET" then
          return AWS.Response.Build
-           (AWS.Messages.Content_Type_JSON,
+           ("application/json",
             "{""status"":""ok"",""service"":""quasar""}",
             AWS.Messages.S200);
       end if;
@@ -42,7 +45,7 @@ package body HTTP.Server is
          declare
             Reply_Text : constant String :=
               Channels.Telegram.Process_Update
-                (Body_S, Shared_Cfg, Shared_Mem);
+                (Body_S, Shared_Cfg, Shared_Mem_Ptr.all);
             --  Reply text is sent proactively by the handler; return 200.
          begin
             if Reply_Text'Length > 0 then
@@ -92,7 +95,7 @@ package body HTTP.Server is
             end if;
          end;
          return AWS.Response.Build
-           (AWS.Messages.Content_Type_JSON,
+           ("application/json",
             "{""ok"":true}",
             AWS.Messages.S200);
       end if;
@@ -112,7 +115,7 @@ package body HTTP.Server is
             declare
                Reply_Text : constant String :=
                  Channels.Signal.Process_Message_JSON
-                   (Body_S, Shared_Cfg, Shared_Mem);
+                   (Body_S, Shared_Cfg, Shared_Mem_Ptr.all);
             begin
                if Reply_Text'Length > 0 then
                   declare
@@ -148,27 +151,27 @@ package body HTTP.Server is
             end;
          end;
          return AWS.Response.Build
-           (AWS.Messages.Content_Type_JSON,
+           ("application/json",
             "{""ok"":true}", AWS.Messages.S200);
       end if;
 
       --  404 for everything else
       return AWS.Response.Build
-        (AWS.Messages.Content_Type_JSON,
+        ("application/json",
          "{""error"":""not found""}",
          AWS.Messages.S404);
    end Dispatch;
 
    procedure Run
      (Cfg : Config.Schema.Agent_Config;
-      Mem : Memory.SQLite.Memory_Handle)
+      Mem : aliased in out Memory.SQLite.Memory_Handle)
    is
       AWS_Cfg : AWS.Config.Object := AWS.Config.Get_Current;
       Host    : constant String := To_String (Cfg.Gateway.Bind_Host);
       Port    : constant Positive := Cfg.Gateway.Bind_Port;
    begin
       Shared_Cfg := Cfg;
-      Shared_Mem := Mem;
+      Shared_Mem_Ptr := Mem'Unchecked_Access;
 
       AWS.Config.Set.Server_Host (AWS_Cfg, Host);
       AWS.Config.Set.Server_Port (AWS_Cfg, Port);
@@ -178,7 +181,7 @@ package body HTTP.Server is
       Ada.Text_IO.Put_Line
         ("Gateway: listening on " & Host & ":" & Positive'Image (Port));
 
-      AWS.Server.Start (WS, "quasar", Dispatch'Access, AWS_Cfg);
+      AWS.Server.Start (WS, Dispatch'Access, AWS_Cfg);
       AWS.Server.Wait (AWS.Server.Q_Key_Pressed);
    end Run;
 

@@ -1,5 +1,6 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
+with Agent.Context;      use Agent.Context;
 
 package body Providers.Anthropic is
 
@@ -155,9 +156,13 @@ package body Providers.Anthropic is
                Blocks : constant JSON_Value_Type :=
                  Get_Object (PR.Root, "content");
             begin
-               for I in 1 .. Integer (Blocks.Length) loop
+               declare
+                  Blocks_Arr : constant JSON_Array_Type :=
+                    Value_To_Array (Blocks);
+               begin
+                  for I in 1 .. Array_Length (Blocks_Arr) loop
                   declare
-                     Block : constant JSON_Value_Type := Blocks.Get (I);
+                     Block : constant JSON_Value_Type := Array_Item (Blocks_Arr, I);
                      BType : constant String :=
                        Get_String (Block, "type");
                   begin
@@ -184,6 +189,7 @@ package body Providers.Anthropic is
                   end;
                end loop;
             end;
+         end;
          end if;
 
          Set_Unbounded_String
