@@ -1,4 +1,4 @@
---  Global Ada configuration pragmas for quasar_claw.gpr.
+--  Global Ada configuration pragmas for vericlaw.gpr.
 --  SPARK_Mode is NOT set globally here; it is set per-package in each
 --  security source file (security-*.ads, gateway-*.ads, channels-security.ads,
 --  etc.) so that GNATCOLL and AWS library specs are not type-checked in

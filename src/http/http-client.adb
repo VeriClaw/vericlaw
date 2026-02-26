@@ -1,5 +1,5 @@
 --  libcurl thin bindings for HTTP.Client.
---  Requires libcurl at link time (-lcurl in quasar_claw.gpr).
+--  Requires libcurl at link time (-lcurl in vericlaw.gpr).
 
 with Interfaces.C;            use Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;

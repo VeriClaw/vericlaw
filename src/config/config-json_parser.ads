@@ -1,4 +1,4 @@
---  Thin typed wrapper over GNATCOLL.JSON for Quasar's internal use.
+--  Thin typed wrapper over GNATCOLL.JSON for VeriClaw's internal use.
 --  Provides safe accessors that return Optional values instead of raising
 --  exceptions on missing keys, keeping caller code clean.
 

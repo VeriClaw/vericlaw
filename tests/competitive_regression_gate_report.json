@@ -1,7 +1,7 @@
 {
   "baseline_id": "anywhere-v2-freeze-competitive-baselines",
   "baseline_version": 2,
-  "benchmark_report": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/competitive_benchmark_report.json",
+  "benchmark_report": "/Users/eugene/apps/demo/claw-mania/vericlaw/tests/competitive_benchmark_report.json",
   "checks": [
     {
       "comparisons": [
@@ -116,7 +116,7 @@
       "status": "pass"
     }
   ],
-  "direct_harness_report": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/competitive_direct_benchmark_report.json",
+  "direct_harness_report": "/Users/eugene/apps/demo/claw-mania/vericlaw/tests/competitive_direct_benchmark_report.json",
   "errors": [],
   "generated_at": "2026-02-26T15:43:35Z",
   "pass_fail_projects": [
@@ -132,6 +132,6 @@
   "scorecard_only_projects": [
     "openclaw"
   ],
-  "scorecard_report": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/tests/competitive_scorecard_report.json",
+  "scorecard_report": "/Users/eugene/apps/demo/claw-mania/vericlaw/tests/competitive_scorecard_report.json",
   "status": "pass"
 }

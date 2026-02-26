@@ -237,7 +237,7 @@ package body Config.Loader is
 
    function Load return Load_Result is
       Env_Path : constant String :=
-        Ada.Environment_Variables.Value ("QUASAR_CONFIG", "");
+        Ada.Environment_Variables.Value ("VERICLAW_CONFIG", "");
       Path     : constant String :=
         (if Env_Path'Length > 0 then Env_Path
          else Default_Config_Path);
@@ -255,8 +255,8 @@ package body Config.Loader is
 
       Ada.Text_IO.Create (File, Ada.Text_IO.Out_File, Path);
       Ada.Text_IO.Put_Line (File, "{");
-      Ada.Text_IO.Put_Line (File, "  ""agent_name"": ""Quasar"",");
-      Ada.Text_IO.Put_Line (File, "  ""system_prompt"": ""You are Quasar, a helpful AI assistant."",");
+      Ada.Text_IO.Put_Line (File, "  ""agent_name"": ""VeriClaw"",");
+      Ada.Text_IO.Put_Line (File, "  ""system_prompt"": ""You are VeriClaw, a helpful AI assistant."",");
       Ada.Text_IO.Put_Line (File, "  ""providers"": [");
       Ada.Text_IO.Put_Line (File, "    {");
       Ada.Text_IO.Put_Line (File, "      ""kind"": ""openai"",");

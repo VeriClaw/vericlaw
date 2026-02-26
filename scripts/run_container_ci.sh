@@ -44,13 +44,13 @@ platform="${ADA_CONTAINER_PLATFORM:-linux/amd64}"
 
 case "$action" in
   build)
-    inner_cmd="gprbuild -P quasar_claw.gpr"
+    inner_cmd="gprbuild -P vericlaw.gpr"
     ;;
   prove)
-    inner_cmd="gnatprove -P quasar_claw.gpr --mode=flow --level=1"
+    inner_cmd="gnatprove -P vericlaw.gpr --mode=flow --level=1"
     ;;
   check)
-    inner_cmd="gprbuild -P quasar_claw.gpr && gnatprove -P quasar_claw.gpr --mode=flow --level=1 && ./scripts/check_audit_event_log.sh && ./scripts/check_service_supervisors.sh"
+    inner_cmd="gprbuild -P vericlaw.gpr && gnatprove -P vericlaw.gpr --mode=flow --level=1 && ./scripts/check_audit_event_log.sh && ./scripts/check_service_supervisors.sh"
     ;;
   measure-small)
     inner_cmd="./scripts/measure_small_infra.sh"

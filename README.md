@@ -1,8 +1,8 @@
-# Quasar Claw Lab
+# VeriClaw
 
-[![CI](https://github.com/your-org/quasar-claw-lab/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/your-org/quasar-claw-lab/actions/workflows/ada-ci.yml)
+[![CI](https://github.com/your-org/vericlaw/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/your-org/vericlaw/actions/workflows/ada-ci.yml)
 
-Quasar is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
+VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
 
 ## Why Quasar?
 
@@ -34,7 +34,7 @@ Quasar is a **security-first, edge-friendly AI assistant runtime** written in Ad
 ## Project Structure
 
 ```
-quasar-claw-lab/
+vericlaw/
 ├── src/                              # All Ada/SPARK source code
 │   ├── main.adb                      # Entry point: chat / agent / gateway / doctor / version
 │   │
@@ -77,7 +77,7 @@ quasar-claw-lab/
 │   │   └── channels-whatsapp.ads/adb # WhatsApp via WA-Bridge REST API
 │   ├── config/
 │   │   ├── config-schema.ads/adb     # Typed config record (providers, channels, tools, memory)
-│   │   ├── config-loader.ads/adb     # Load ~/.quasar/config.json; write default if missing
+│   │   ├── config-loader.ads/adb     # Load ~/.vericlaw/config.json; write default if missing
 │   │   └── config-json_parser.ads/adb# GNATCOLL.JSON wrapper with safe accessors
 │   ├── http/
 │   │   ├── http-client.ads/adb       # libcurl thin bindings for LLM API calls
@@ -138,9 +138,9 @@ quasar-claw-lab/
 │   └── competitive_scorecards/       # Sister project benchmark baselines
 │
 ├── deploy/                           # Deployment packaging
-│   ├── systemd/quasar-claw.service   # Linux systemd unit
+│   ├── systemd/vericlaw.service   # Linux systemd unit
 │   ├── launchd/com.quasar.claw.plist # macOS launchd plist
-│   └── windows/install-quasar-claw-service.ps1 # Windows service installer
+│   └── windows/install-vericlaw-service.ps1 # Windows service installer
 │
 ├── operator-console/                 # Local web operator console (HTML/CSS/JS)
 │   ├── index.html                    # Single-page console UI
@@ -151,7 +151,7 @@ quasar-claw-lab/
 │   └── runbooks/operator-runbook.md  # Operator runbook
 │
 ├── .github/workflows/ada-ci.yml      # GitHub Actions CI (build, prove, benchmark)
-├── quasar_claw.gpr                   # GPRbuild project file
+├── vericlaw.gpr                   # GPRbuild project file
 ├── spark.adc                         # SPARK configuration pragmas
 ├── Makefile                          # All build, test, and release targets
 ├── Dockerfile.release                # Multi-arch release image
@@ -184,12 +184,12 @@ make edge-size-build  # size-optimised binary (~400-600 KB)
 
 ### 3. Configure
 
-On first run, Quasar creates `~/.quasar/config.json` with defaults. Edit it:
+On first run, Quasar creates `~/.vericlaw/config.json` with defaults. Edit it:
 
 ```json
 {
-  "agent_name": "Quasar",
-  "system_prompt": "You are Quasar, a helpful AI assistant.",
+  "agent_name": "VeriClaw",
+  "system_prompt": "You are VeriClaw, a helpful AI assistant.",
   "providers": [
     {
       "kind": "openai",
@@ -284,7 +284,7 @@ Scan the QR code on first run. Set `bridge_url: "http://localhost:3000"` in conf
 
 | Tool | Config key | Default | Description |
 |---|---|---|---|
-| File I/O | `file: true` | **on** | Read/write/list files in `~/.quasar/workspace/` |
+| File I/O | `file: true` | **on** | Read/write/list files in `~/.vericlaw/workspace/` |
 | Shell | `shell: true` | off | Execute shell commands via popen |
 | Web fetch | `web_fetch: true` | off | Fetch web pages |
 | Brave Search | `brave_search: true` + `brave_api_key` | off | Web search via Brave Search API |
@@ -295,7 +295,7 @@ Scan the QR code on first run. Set `bridge_url: "http://localhost:3000"` in conf
 - **Fail-closed defaults** — empty allowlist = deny all; pairing required before first use; no public bind by default
 - **Encrypted secrets** — API keys stored with ChaCha20-Poly1305 at rest
 - **Tamper-evident audit log** — signed event trail with metadata redaction
-- **Workspace isolation** — file tool restricted to `~/.quasar/workspace/`; path traversal (`../`, NUL) blocked at policy level
+- **Workspace isolation** — file tool restricted to `~/.vericlaw/workspace/`; path traversal (`../`, NUL) blocked at policy level
 - **Process sandboxing** — Landlock/Seccomp/Firejail auto-selected per platform
 
 ## Testing
@@ -391,9 +391,9 @@ make edge-speed-build   # speed-optimised (-O2)
 
 | Platform | File |
 |---|---|
-| Linux systemd | `deploy/systemd/quasar-claw.service` |
+| Linux systemd | `deploy/systemd/vericlaw.service` |
 | macOS launchd | `deploy/launchd/com.quasar.claw.plist` |
-| Windows service | `deploy/windows/install-quasar-claw-service.ps1` |
+| Windows service | `deploy/windows/install-vericlaw-service.ps1` |
 | Operator runbook | `docs/runbooks/operator-runbook.md` |
 
 ## What works today

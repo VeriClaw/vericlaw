@@ -10,12 +10,12 @@ package body Agent.Loop_Pkg is
 
    Max_Schema_Count : constant := Max_Tool_Schemas;
 
-   --  Derive workspace path (home dir + .quasar/workspace).
+   --  Derive workspace path (home dir + .vericlaw/workspace).
    function Home_Workspace return String is
       Home : constant String :=
         Ada.Environment_Variables.Value ("HOME", ".");
    begin
-      return Home & "/.quasar/workspace";
+      return Home & "/.vericlaw/workspace";
    end Home_Workspace;
 
    --  Create a provider from config. Returns a heap-allocated Provider_Type.

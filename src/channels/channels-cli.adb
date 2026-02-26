@@ -5,7 +5,7 @@ with Agent.Loop_Pkg;
 package body Channels.CLI is
 
    Prompt     : constant String := "you> ";
-   Agent_Name : constant String := "quasar> ";
+   Agent_Name : constant String := "vericlaw> ";
 
    procedure Run_Interactive
      (Cfg : Config.Schema.Agent_Config;
@@ -18,7 +18,7 @@ package body Channels.CLI is
       Set_Unbounded_String (Conv.Session_ID, Agent.Context.Make_Session_ID);
       Set_Unbounded_String (Conv.Channel, "cli");
 
-      Put_Line ("Quasar v1.0  |  type 'exit' to quit");
+      Put_Line ("VeriClaw v1.0  |  type 'exit' to quit");
       Put_Line ("Provider: " & To_String (Cfg.Providers (1).Model));
       New_Line;
 

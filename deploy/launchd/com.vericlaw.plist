@@ -3,23 +3,23 @@
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>com.quasar.claw</string>
+    <string>com.vericlaw</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/opt/quasar-claw/bin/quasar-claw</string>
+      <string>/opt/vericlaw/bin/vericlaw</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/opt/quasar-claw</string>
+    <string>/opt/vericlaw</string>
     <key>UserName</key>
-    <string>quasar</string>
+    <string>vericlaw</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <false/>
     <key>StandardOutPath</key>
-    <string>/var/log/quasar-claw.out.log</string>
+    <string>/var/log/vericlaw.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/quasar-claw.err.log</string>
+    <string>/var/log/vericlaw.err.log</string>
     <key>EnvironmentVariables</key>
     <dict>
       <key>GATEWAY_BIND_HOST</key>

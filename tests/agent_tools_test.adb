@@ -105,7 +105,7 @@ procedure Agent_Tools_Test is
       Cfg.Shell_Enabled := False;
 
       Result := Dispatch ("nonexistent_tool", "{}", Cfg,
-                          Workspace => "/tmp/quasar_test");
+                          Workspace => "/tmp/vericlaw_test");
       Assert (not Result.Success, "Unknown tool returns Success = False");
       Assert (Length (Result.Error) > 0, "Unknown tool returns non-empty error");
    end Test_Dispatch_Unknown;
@@ -121,7 +121,7 @@ procedure Agent_Tools_Test is
       Cfg.Shell_Enabled := False;
 
       Result := Dispatch ("shell", "{""command"": ""echo hello""}", Cfg,
-                          Workspace => "/tmp/quasar_test");
+                          Workspace => "/tmp/vericlaw_test");
       Assert (not Result.Success,
               "Disabled tool returns Success = False");
       Assert (Length (Result.Error) > 0,

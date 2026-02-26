@@ -1,6 +1,6 @@
 --  SQLite memory implementation using direct SQLite3 C thin bindings.
 --  Replaces GNATCOLL.SQL.SQLite with the same pattern used in http-client.adb.
---  Links against -lsqlite3 (declared in quasar_claw.gpr Linker switches).
+--  Links against -lsqlite3 (declared in vericlaw.gpr Linker switches).
 
 with Interfaces.C;            use Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;

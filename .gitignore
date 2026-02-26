@@ -21,6 +21,7 @@ gnatprove/
 *.stdout
 # Compiled binaries (main executable and test executables)
 /main
+/vericlaw
 /tests/autonomy_guardrails_policy
 /tests/channel_adapter_policy
 /tests/channel_security_policy

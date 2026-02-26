@@ -212,9 +212,9 @@ validate_secure_defaults_file() {
 
   require_setting "$file" "OPERATOR_CONSOLE_HOST" "127.0.0.1"
   require_setting "$file" "OPERATOR_CONSOLE_ALLOW_NON_LOOPBACK" "0"
-  require_setting "$file" "QUASAR_DENY_BY_DEFAULT" "1"
-  require_setting "$file" "QUASAR_ALLOW_PUBLIC_BIND" "0"
-  require_setting "$file" "QUASAR_PAIRING_REQUIRED" "1"
+  require_setting "$file" "VERICLAW_DENY_BY_DEFAULT" "1"
+  require_setting "$file" "VERICLAW_ALLOW_PUBLIC_BIND" "0"
+  require_setting "$file" "VERICLAW_PAIRING_REQUIRED" "1"
 }
 
 validate_security_policy_defaults() {

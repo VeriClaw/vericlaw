@@ -1,6 +1,6 @@
 param(
-  [string]$ServiceName = "QuasarClaw",
-  [string]$BinaryPath = "C:\quasar-claw\quasar-claw.exe"
+  [string]$ServiceName = "VeriClaw",
+  [string]$BinaryPath = "C:\vericlaw\vericlaw.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,8 +15,8 @@ if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
 
 New-Service `
   -Name $ServiceName `
-  -DisplayName "Quasar Claw Lab" `
-  -Description "Quasar Claw Lab secure runtime service" `
+  -DisplayName "VeriClaw" `
+  -Description "VeriClaw secure runtime service" `
   -BinaryPathName "`"$BinaryPath`"" `
   -StartupType Automatic `
   -Credential "NT AUTHORITY\LocalService"

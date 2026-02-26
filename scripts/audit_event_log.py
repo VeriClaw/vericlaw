@@ -616,7 +616,7 @@ def build_parser() -> argparse.ArgumentParser:
     append_parser.add_argument(
         "--db",
         dest="db_path",
-        default=str(Path.home() / ".quasar-claw" / "audit-events.sqlite"),
+        default=str(Path.home() / ".vericlaw" / "audit-events.sqlite"),
         help="SQLite database path.",
     )
     append_parser.add_argument("--event-kind", required=True, help="Audit event kind identifier.")
@@ -680,7 +680,7 @@ def build_parser() -> argparse.ArgumentParser:
     query_parser.add_argument(
         "--db",
         dest="db_path",
-        default=str(Path.home() / ".quasar-claw" / "audit-events.sqlite"),
+        default=str(Path.home() / ".vericlaw" / "audit-events.sqlite"),
         help="SQLite database path.",
     )
     query_parser.add_argument("--event-kind", help="Filter by event kind.")
@@ -715,7 +715,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument(
         "--db",
         dest="db_path",
-        default=str(Path.home() / ".quasar-claw" / "audit-events.sqlite"),
+        default=str(Path.home() / ".vericlaw" / "audit-events.sqlite"),
         help="SQLite database path.",
     )
 

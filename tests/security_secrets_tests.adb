@@ -91,11 +91,11 @@ procedure Security_Secrets_Tests is
       (Backend                 => Deterministic_Backend,
        Available               => True,
        Deterministic_Test_Mode => False);
-   Crypto_Key : constant Secret_Message := To_Secret_Message ("quasar-lab-key");
+   Crypto_Key : constant Secret_Message := To_Secret_Message ("vericlaw-lab-key");
    Legacy_Crypto_Key : constant Secret_Message :=
-      To_Secret_Message ("quasar-legacy-key");
+      To_Secret_Message ("vericlaw-legacy-key");
    Rotated_Crypto_Key : constant Secret_Message :=
-      To_Secret_Message ("quasar-rotated-key");
+      To_Secret_Message ("vericlaw-rotated-key");
    Crypto_Plaintext : constant Secret_Message :=
       To_Secret_Message ("provider-token");
    Crypto_Nonce : constant Secret_Nonce := Deterministic_Nonce (Seed => 19);

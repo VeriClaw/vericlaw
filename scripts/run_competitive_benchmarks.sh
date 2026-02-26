@@ -257,7 +257,7 @@ EOF
         chmod +x "${shim_dir}/gnatprove"
         export PATH="${shim_dir}:$PATH"
       fi
-      gprclean -P quasar_claw.gpr >/dev/null 2>&1 || true
+      gprclean -P vericlaw.gpr >/dev/null 2>&1 || true
       measure_output="$(./scripts/measure_small_infra.sh --runs "${RUNS}" --profile "'"${profile}"'" --binder-mode "'"${binder_mode}"'")"
       rss_kb=""
       rss_supported=0
@@ -325,7 +325,7 @@ collect_container_metrics() {
 
 collect_container_size_bytes() {
   local image_ref build_if_missing size_bytes
-  image_ref="${COMPETITIVE_IMAGE_REF:-quasar-claw-lab:benchmark}"
+  image_ref="${COMPETITIVE_IMAGE_REF:-vericlaw:benchmark}"
   build_if_missing="${COMPETITIVE_BUILD_IMAGE_IF_MISSING:-1}"
 
   if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then

@@ -1,5 +1,5 @@
 [system]
-name = "quasar-claw-lab"
+name = "vericlaw"
 trust_mode = "zero-trust"
 primary_goal = "secure-by-default assistant runtime on small infrastructure"
 

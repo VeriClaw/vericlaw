@@ -8,7 +8,7 @@ with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 
 package body Channels.WhatsApp is
 
-   Default_Session : constant String := "quasar";
+   Default_Session : constant String := "vericlaw";
 
    function Get_Chan_Config
      (Cfg : Config.Schema.Agent_Config)

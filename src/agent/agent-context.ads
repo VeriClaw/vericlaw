@@ -1,4 +1,4 @@
---  Conversation context types for Quasar's agent loop.
+--  Conversation context types for VeriClaw's agent loop.
 --  These types are in standard Ada mode (not SPARK) because they manage
 --  dynamic memory (Unbounded_String arrays) — but the security decisions
 --  that act on messages are still SPARK-verified in Security.Policy.

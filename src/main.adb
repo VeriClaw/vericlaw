@@ -24,7 +24,7 @@ procedure Main is
 
    procedure Print_Usage is
    begin
-      Put_Line ("Usage: quasar <command> [options]");
+      Put_Line ("Usage: vericlaw <command> [options]");
       New_Line;
       Put_Line ("Commands:");
       Put_Line ("  chat              Interactive CLI chat (default)");
@@ -33,13 +33,13 @@ procedure Main is
       Put_Line ("  doctor            Print configuration and health status");
       Put_Line ("  version           Print version information");
       New_Line;
-      Put_Line ("Config: ~/.quasar/config.json  (or QUASAR_CONFIG env var)");
+      Put_Line ("Config: ~/.vericlaw/config.json  (or VERICLAW_CONFIG env var)");
    end Print_Usage;
 
    procedure Cmd_Version is
    begin
-      Put_Line ("quasar 1.0.0  |  Ada/SPARK  |  SPARK-verified security core");
-      Put_Line ("Built with Ada 2022 + GNAT  |  https://github.com/quasar-claw");
+      Put_Line ("vericlaw 1.0.0  |  Ada/SPARK  |  SPARK-verified security core");
+      Put_Line ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw");
    end Cmd_Version;
 
    --  Verify SPARK security defaults still hold (keeps the proven layer active).
@@ -70,7 +70,7 @@ procedure Main is
    is
       Default_Path : constant String :=
         Ada.Environment_Variables.Value ("HOME", ".")
-        & "/.quasar/config.json";
+        & "/.vericlaw/config.json";
    begin
       Result := Config.Loader.Load;
       if not Result.Success then
@@ -79,7 +79,7 @@ procedure Main is
          if not Ada.Directories.Exists (Default_Path) then
             Config.Loader.Write_Default_Config (Default_Path);
             Put_Line ("Created starter config: " & Default_Path);
-            Put_Line ("Edit it to add your API keys, then run quasar again.");
+            Put_Line ("Edit it to add your API keys, then run vericlaw again.");
          end if;
          Set_Exit_Status (Failure);
       end if;
@@ -95,7 +95,7 @@ procedure Main is
       DB_Path : constant String :=
         (if Length (Cfg.Memory.DB_Path) > 0
          then To_String (Cfg.Memory.DB_Path)
-         else Home & "/.quasar/memory.db");
+         else Home & "/.vericlaw/memory.db");
       Err    : Unbounded_String;
    begin
       OK := Memory.SQLite.Open (Mem, DB_Path, Err);
@@ -106,7 +106,7 @@ procedure Main is
 
    procedure Cmd_Doctor (Cfg : Config.Schema.Agent_Config) is
    begin
-      Put_Line ("=== Quasar Doctor ===");
+      Put_Line ("=== VeriClaw Doctor ===");
       New_Line;
       Put_Line ("Agent name  : " & To_String (Cfg.Agent_Name));
       Put_Line ("Providers   : " & Config.Schema.Provider_Index'Image
@@ -186,7 +186,7 @@ begin
 
       elsif C = "agent" then
          if Argument_Count < 2 then
-            Put_Line ("Usage: quasar agent <message>");
+            Put_Line ("Usage: vericlaw agent <message>");
             Set_Exit_Status (Failure);
          else
             --  Concatenate remaining arguments as the message.

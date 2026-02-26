@@ -2,9 +2,9 @@
 set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-systemd_unit="${project_root}/deploy/systemd/quasar-claw.service"
+systemd_unit="${project_root}/deploy/systemd/vericlaw.service"
 launchd_plist="${project_root}/deploy/launchd/com.quasar.claw.plist"
-windows_installer="${project_root}/deploy/windows/install-quasar-claw-service.ps1"
+windows_installer="${project_root}/deploy/windows/install-vericlaw-service.ps1"
 
 for file in "${systemd_unit}" "${launchd_plist}" "${windows_installer}"; do
   if [[ ! -f "${file}" ]]; then
@@ -41,8 +41,8 @@ else:
             "Type": "simple",
             "User": "quasar",
             "Group": "quasar",
-            "WorkingDirectory": "/opt/quasar-claw",
-            "ExecStart": "/opt/quasar-claw/bin/quasar-claw",
+            "WorkingDirectory": "/opt/vericlaw",
+            "ExecStart": "/opt/vericlaw/bin/vericlaw",
             "Restart": "on-failure",
             "RestartSec": "5",
             "NoNewPrivileges": "true",
@@ -60,7 +60,7 @@ else:
             "CapabilityBoundingSet": "",
             "AmbientCapabilities": "",
             "ReadWritePaths": "/tmp",
-            "RuntimeDirectory": "quasar-claw",
+            "RuntimeDirectory": "vericlaw",
             "RuntimeDirectoryMode": "0750",
         },
         "Install": {
@@ -86,12 +86,12 @@ except Exception as exc:
 else:
     required_plist = {
         "Label": "com.quasar.claw",
-        "WorkingDirectory": "/opt/quasar-claw",
+        "WorkingDirectory": "/opt/vericlaw",
         "UserName": "quasar",
         "RunAtLoad": True,
         "KeepAlive": False,
-        "StandardOutPath": "/var/log/quasar-claw.out.log",
-        "StandardErrorPath": "/var/log/quasar-claw.err.log",
+        "StandardOutPath": "/var/log/vericlaw.out.log",
+        "StandardErrorPath": "/var/log/vericlaw.err.log",
     }
     for key, expected in required_plist.items():
         actual = plist_payload.get(key)
@@ -99,8 +99,8 @@ else:
             errors.append(f"Launchd plist has {key}={actual!r}, expected {expected!r}")
 
     program_arguments = plist_payload.get("ProgramArguments")
-    if program_arguments != ["/opt/quasar-claw/bin/quasar-claw"]:
-        errors.append("Launchd plist ProgramArguments must be ['/opt/quasar-claw/bin/quasar-claw']")
+    if program_arguments != ["/opt/vericlaw/bin/vericlaw"]:
+        errors.append("Launchd plist ProgramArguments must be ['/opt/vericlaw/bin/vericlaw']")
 
     env_values = plist_payload.get("EnvironmentVariables")
     if not isinstance(env_values, dict):
@@ -122,8 +122,8 @@ required_windows = (
     ("binary existence guard", r'if\s*\(-not\s*\(Test-Path\s+-Path\s+\$BinaryPath\s+-PathType\s+Leaf\)\)'),
     ("duplicate service guard", r'if\s*\(Get-Service\s+-Name\s+\$ServiceName\s+-ErrorAction\s+SilentlyContinue\)'),
     ("service creation command", r'New-Service'),
-    ("service display name", r'-DisplayName\s+"Quasar Claw Lab"'),
-    ("service description", r'-Description\s+"Quasar Claw Lab secure runtime service"'),
+    ("service display name", r'-DisplayName\s+"VeriClaw"'),
+    ("service description", r'-Description\s+"VeriClaw secure runtime service"'),
     ("binary path quoting", r'-BinaryPathName\s+"`"\$BinaryPath`""'),
     ("automatic startup", r'-StartupType\s+Automatic'),
     ("local service credential", r'-Credential\s+"NT AUTHORITY\\LocalService"'),

@@ -22,7 +22,7 @@ USAGE
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 audit_log_tool="${script_dir}/audit_event_log.py"
-audit_log_db="${GATEWAY_AUDIT_LOG_DB:-${HOME:-/tmp}/.quasar-claw/audit-events.sqlite}"
+audit_log_db="${GATEWAY_AUDIT_LOG_DB:-${HOME:-/tmp}/.vericlaw/audit-events.sqlite}"
 audit_max_entries="${GATEWAY_AUDIT_MAX_ENTRIES:-1000}"
 audit_max_age_seconds="${GATEWAY_AUDIT_MAX_AGE_SECONDS:-2592000}"
 

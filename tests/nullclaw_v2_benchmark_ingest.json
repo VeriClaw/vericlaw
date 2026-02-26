@@ -20,7 +20,7 @@
   "ingest_source": {
     "nullclaw_ci_workflow": "/Users/eugene/apps/demo/claw-mania/nullclaw/.github/workflows/ci.yml",
     "nullclaw_readme": "/Users/eugene/apps/demo/claw-mania/nullclaw/README.md",
-    "source_scorecard": "/Users/eugene/apps/demo/claw-mania/quasar-claw-lab/config/competitive_scorecards/nullclaw_v2_scorecard.json"
+    "source_scorecard": "/Users/eugene/apps/demo/claw-mania/vericlaw/config/competitive_scorecards/nullclaw_v2_scorecard.json"
   },
   "performance": {
     "binary_size_mb": 0.662,

@@ -43,7 +43,7 @@ write_checksum_manifest() {
     files+=("${file#${project_root}/}")
   done < <(find "${project_root}/src" "${project_root}/scripts" -type f \
     \( -name '*.adb' -o -name '*.ads' -o -name '*.sh' \) -print0)
-  files+=("quasar_claw.gpr" "Makefile")
+  files+=("vericlaw.gpr" "Makefile")
 
   (
     cd "${project_root}"

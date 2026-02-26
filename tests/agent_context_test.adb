@@ -31,7 +31,7 @@ procedure Agent_Context_Test is
       Conv.Session_ID := To_Unbounded_String ("sess-001");
       Conv.Channel    := To_Unbounded_String ("cli");
 
-      Append_Message (Conv, User, "Hello, Quasar!");
+      Append_Message (Conv, User, "Hello, VeriClaw!");
       Assert (Conv.Msg_Count = 1, "Msg_Count = 1 after first append");
 
       Append_Message (Conv, Assistant, "Hello! How can I help?");
@@ -39,7 +39,7 @@ procedure Agent_Context_Test is
 
       Assert (Conv.Messages (1).Role = User,
               "First message role = User");
-      Assert (To_String (Conv.Messages (1).Content) = "Hello, Quasar!",
+      Assert (To_String (Conv.Messages (1).Content) = "Hello, VeriClaw!",
               "First message content preserved");
       Assert (Conv.Messages (2).Role = Assistant,
               "Second message role = Assistant");

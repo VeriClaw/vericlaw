@@ -50,7 +50,7 @@ package Security.Migration with SPARK_Mode is
      (Mapped_Secure_Input,
       Forced_Secure_Default);
 
-   type Quasar_Config is record
+   type Vericlaw_Config is record
       Gateway_Bind_Host          : Gateway_Host_String :=
         Security.Defaults.Gateway_Bind_Host;
       Allow_Public_Bind          : Boolean :=
@@ -65,7 +65,7 @@ package Security.Migration with SPARK_Mode is
    end record;
 
    type Migration_Report is record
-      Config                 : Quasar_Config := (others => <>);
+      Config                 : Vericlaw_Config := (others => <>);
       Gateway_Host_Decision  : Migration_Decision := Forced_Secure_Default;
       Public_Bind_Decision   : Migration_Decision := Forced_Secure_Default;
       Pairing_Decision       : Migration_Decision := Forced_Secure_Default;

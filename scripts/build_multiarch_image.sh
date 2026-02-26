@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/build_multiarch_image.sh
 
 Environment variables:
-  IMAGE_NAME       Image name (default: quasar-claw-lab)
+  IMAGE_NAME       Image name (default: vericlaw)
   IMAGE_TAG        Image tag (default: latest)
   IMAGE_PLATFORMS  Buildx platform list (default: linux/amd64,linux/arm64,linux/arm/v7)
   DOCKERFILE_PATH  Dockerfile path (default: <project_root>/Dockerfile.release)
@@ -40,7 +40,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-image_name="${IMAGE_NAME:-quasar-claw-lab}"
+image_name="${IMAGE_NAME:-vericlaw}"
 image_tag="${IMAGE_TAG:-latest}"
 image_platforms="${IMAGE_PLATFORMS:-linux/amd64,linux/arm64,linux/arm/v7}"
 dockerfile_path="${DOCKERFILE_PATH:-${project_root}/Dockerfile.release}"

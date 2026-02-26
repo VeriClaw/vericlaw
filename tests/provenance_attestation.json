@@ -150,13 +150,13 @@
       "digest": {
         "sha256": "9d6e70caf1b116143546b917c8a3f7ff7ba097e6cd6e00a993a87ded2f9b52f7"
       },
-      "uri": "deploy/systemd/quasar-claw.service"
+      "uri": "deploy/systemd/vericlaw.service"
     },
     {
       "digest": {
         "sha256": "ee43e750cf7c867494729dc53bb5201f43beda992ee22f2743461d97c367fa0c"
       },
-      "uri": "deploy/windows/install-quasar-claw-service.ps1"
+      "uri": "deploy/windows/install-vericlaw-service.ps1"
     },
     {
       "digest": {
@@ -168,7 +168,7 @@
       "digest": {
         "sha256": "2d0f9795d999edab9bd6db1176ff442c62f4929a615faf2e61a33cee4fccb3f2"
       },
-      "uri": "quasar_claw.gpr"
+      "uri": "vericlaw.gpr"
     },
     {
       "digest": {

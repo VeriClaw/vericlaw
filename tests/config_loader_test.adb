@@ -96,7 +96,7 @@ procedure Config_Loader_Test is
       R : Load_Result;
    begin
       Put_Line ("--- Load_From (missing file) ---");
-      R := Load_From ("/nonexistent/path/quasar_config_test.json");
+      R := Load_From ("/nonexistent/path/vericlaw_config_test.json");
       Assert (not R.Success, "Load_From returns Success = False for missing file");
       Assert (Length (R.Error) > 0, "Error string is non-empty");
    end Test_Load_From_Missing;

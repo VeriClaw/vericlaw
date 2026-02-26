@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
-# Multi-stage release build for Quasar Claw Lab.
+# Multi-stage release build for VeriClaw.
 # Build stage uses the same GNAT Community 2021 image as CI.
 # Runtime stage uses a minimal Debian image with only the required .so files.
 #
 # Usage:
-#   docker build -f Dockerfile.release -t quasar-claw:latest .
-#   docker run --rm -e QUASAR_OPENAI_API_KEY=sk-... quasar-claw:latest chat
+#   docker build -f Dockerfile.release -t vericlaw:latest .
+#   docker run --rm -e VERICLAW_OPENAI_API_KEY=sk-... vericlaw:latest chat
 FROM alire/gnat:community-latest AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -27,7 +27,7 @@ ENV PATH=/opt/gnat/bin:${PATH}
 
 COPY . .
 
-RUN gprbuild -P quasar_claw.gpr -p \
+RUN gprbuild -P vericlaw.gpr -p \
     && test -f /workspace/main \
     && strip /workspace/main
 
@@ -52,7 +52,7 @@ RUN apt-get update \
     && mkdir -p /app /tmp \
     && chown -R app:app /app /tmp
 
-COPY --from=build /workspace/main /app/quasar-claw
+COPY --from=build /workspace/main /app/vericlaw
 
 WORKDIR /app
 ENV HOME=/tmp \
@@ -62,4 +62,4 @@ ENV HOME=/tmp \
 VOLUME ["/tmp"]
 
 USER app:app
-ENTRYPOINT ["/app/quasar-claw"]
+ENTRYPOINT ["/app/vericlaw"]

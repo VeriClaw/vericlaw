@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Development build environment for Quasar Claw Lab.
+# Development build environment for VeriClaw.
 # Based on the same image used in CI (alire/gnat:community-latest).
 # Build the image once: make docker-dev-image
 # Then compile with source volume-mounted: make docker-dev-build

@@ -1,4 +1,4 @@
-PROJECT := quasar_claw.gpr
+PROJECT := vericlaw.gpr
 TOOLCHAIN_CHECK := ./scripts/check_toolchain.sh
 BOOTSTRAP := ./scripts/bootstrap_toolchain.sh
 CONTAINER_RUNNER := ./scripts/run_container_ci.sh
@@ -20,8 +20,8 @@ AUDIT_LOG_CHECK := ./scripts/check_audit_event_log.sh
 VULNERABILITY_LICENSE_GATE := ./scripts/vulnerability_license_gate.sh
 DOCKERFILE_RELEASE ?= Dockerfile.release
 DOCKERFILE_DEV     ?= Dockerfile.dev
-DEV_IMAGE_NAME     ?= quasar-claw-dev
-IMAGE_NAME ?= quasar-claw-lab
+DEV_IMAGE_NAME     ?= vericlaw-dev
+IMAGE_NAME ?= vericlaw
 IMAGE_TAG ?= latest
 IMAGE_PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v7
 PUSH_IMAGE ?= false
@@ -127,7 +127,7 @@ competitive-baseline-check:
 
 competitive-regression-gate:
 	$(COMPETITIVE_BENCH)
-	$(DIRECT_COMPETITIVE_HARNESS) --quasar-report tests/competitive_benchmark_report.json
+	$(DIRECT_COMPETITIVE_HARNESS) --vericlaw-report tests/competitive_benchmark_report.json
 	$(COMPETITIVE_BASELINE_CHECK) --report tests/competitive_benchmark_report.json --direct-report tests/competitive_direct_benchmark_report.json
 
 supply-chain-attest:
@@ -216,7 +216,7 @@ docker-dev-build: docker-dev-image
 	  -v "$(PWD):/workspace" \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  gprbuild -P quasar_claw.gpr -p -j0
+	  gprbuild -P vericlaw.gpr -p -j0
 
 ## Interactive shell inside the dev container with source mounted.
 ## Use this to run gnat, gprbuild, gnatprove manually or inspect errors.
@@ -233,21 +233,21 @@ docker-dev-prove: docker-dev-image
 	  -v "$(PWD):/workspace" \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  gnatprove -P quasar_claw.gpr --mode=flow -j0
+	  gnatprove -P vericlaw.gpr --mode=flow -j0
 
-## Build and smoke-test: quasar version + quasar doctor.
+## Build and smoke-test: vericlaw version + vericlaw doctor.
 ## Run with: make docker-dev-test
 docker-dev-test: docker-dev-build
-	@echo "=== quasar version ===" && \
+	@echo "=== vericlaw version ===" && \
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  ./main version
-	@echo "=== quasar doctor (exit 1 without config is expected) ===" && \
+	  ./vericlaw version
+	@echo "=== vericlaw doctor (exit 1 without config is expected) ===" && \
 	docker run --rm --platform linux/amd64 \
 	  -e HOME=/tmp \
 	  -v "$(PWD):/workspace" \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  ./main doctor || true
+	  ./vericlaw doctor || true

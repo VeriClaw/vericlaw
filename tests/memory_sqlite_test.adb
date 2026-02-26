@@ -25,7 +25,7 @@ procedure Memory_Sqlite_Test is
    end Assert;
 
    DB_Path : constant String :=
-     Ada.Directories.Current_Directory & "/test_memory_quasar.db";
+     Ada.Directories.Current_Directory & "/test_memory_vericlaw.db";
 
    ---------------------------------------------------------
    --  Section 1: Open and Close
@@ -65,7 +65,7 @@ procedure Memory_Sqlite_Test is
         Session_ID => "sess-test-01",
         Channel    => "cli",
         Role       => Agent.Context.Assistant,
-        Content    => "Hello back from Quasar.");
+        Content    => "Hello back from VeriClaw.");
 
       Load_History (H,
         Session_ID => "sess-test-01",

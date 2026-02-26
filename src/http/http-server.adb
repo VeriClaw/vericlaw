@@ -36,7 +36,7 @@ package body HTTP.Server is
       if URI = "/health" and then Method = "GET" then
          return AWS.Response.Build
            ("application/json",
-            "{""status"":""ok"",""service"":""quasar""}",
+            "{""status"":""ok"",""service"":""vericlaw""}",
             AWS.Messages.S200);
       end if;
 

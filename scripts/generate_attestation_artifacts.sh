@@ -35,7 +35,7 @@ scan_roots = [
 explicit_files = [
     "Makefile",
     "Dockerfile.release",
-    "quasar_claw.gpr",
+    "vericlaw.gpr",
     "docker-compose.secure.yml",
     "README.md",
 ]
@@ -85,8 +85,8 @@ for rel_path in sorted(source_files):
 sbom_payload = {
     "spdxVersion": "SPDX-2.3",
     "SPDXID": "SPDXRef-DOCUMENT",
-    "name": "quasar-claw-lab-source-sbom",
-    "documentNamespace": "https://quasar.local/spdx/quasar-claw-lab",
+    "name": "vericlaw-source-sbom",
+    "documentNamespace": "https://quasar.local/spdx/vericlaw",
     "creationInfo": {"created": generated_at, "creators": ["Tool: scripts/generate_attestation_artifacts.sh"]},
     "packages": [],
     "files": components,

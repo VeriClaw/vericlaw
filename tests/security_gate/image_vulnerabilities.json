@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 2,
   "CreatedAt": "2026-02-26T15:43:55.455601251Z",
-  "ArtifactName": "quasar-claw-lab:v2-readiness-gate",
+  "ArtifactName": "vericlaw:v2-readiness-gate",
   "ArtifactType": "container_image",
   "Metadata": {
     "OS": {
@@ -16,10 +16,10 @@
       "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
     ],
     "RepoTags": [
-      "quasar-claw-lab:v2-readiness-gate"
+      "vericlaw:v2-readiness-gate"
     ],
     "RepoDigests": [
-      "quasar-claw-lab@sha256:37b1a679a3a37b8b10b1733695527e0cd7da161c2e68a596996f726eb62d16c1"
+      "vericlaw@sha256:37b1a679a3a37b8b10b1733695527e0cd7da161c2e68a596996f726eb62d16c1"
     ],
     "ImageConfig": {
       "architecture": "arm64",
@@ -43,7 +43,7 @@
         },
         {
           "created": "2026-02-26T15:31:46Z",
-          "created_by": "COPY /workspace/main /app/quasar-claw # buildkit",
+          "created_by": "COPY /workspace/main /app/vericlaw # buildkit",
           "comment": "buildkit.dockerfile.v0"
         },
         {
@@ -71,7 +71,7 @@
         },
         {
           "created": "2026-02-26T15:31:46Z",
-          "created_by": "ENTRYPOINT [\"/app/quasar-claw\"]",
+          "created_by": "ENTRYPOINT [\"/app/vericlaw\"]",
           "comment": "buildkit.dockerfile.v0",
           "empty_layer": true
         }
@@ -88,7 +88,7 @@
       },
       "config": {
         "Entrypoint": [
-          "/app/quasar-claw"
+          "/app/vericlaw"
         ],
         "Env": [
           "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -107,7 +107,7 @@
   },
   "Results": [
     {
-      "Target": "quasar-claw-lab:v2-readiness-gate (debian 12.13)",
+      "Target": "vericlaw:v2-readiness-gate (debian 12.13)",
       "Class": "os-pkgs",
       "Type": "debian"
     }

@@ -1,4 +1,4 @@
---  Quasar configuration schema.
+--  VeriClaw configuration schema.
 --  All records are designed so the safe-defaults constructor produces
 --  values that satisfy Security.Defaults constraints.
 --  Config is loaded once at startup and treated as immutable thereafter.
@@ -66,7 +66,7 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Memory_Config is record
-      DB_Path          : Unbounded_String;  -- "" = ~/.quasar/memory.db
+      DB_Path          : Unbounded_String;  -- "" = ~/.vericlaw/memory.db
       Max_History      : Positive := 50;    -- messages kept per session
       Facts_Enabled    : Boolean  := True;
    end record;

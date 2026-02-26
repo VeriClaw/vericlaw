@@ -1,6 +1,6 @@
 services:
-  quasar:
-    image: quasar-claw-lab:secure-local
+  vericlaw:
+    image: vericlaw:secure-local
     build:
       context: .
       dockerfile: Dockerfile.release

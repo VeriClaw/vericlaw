@@ -6,7 +6,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/run_direct_competitor_harness.sh [--runs N] [--profile PROFILE] [--binder-mode MODE] [--output PATH] [--quasar-report PATH] [--zeroclaw-json PATH] [--nullclaw-json PATH] [--openclaw-json PATH] [--baseline PATH]
 
-Builds a normalized side-by-side benchmark report for Quasar, ZeroClaw, and
+Builds a normalized side-by-side benchmark report for VeriClaw, ZeroClaw, and
 NullClaw using equivalent scenario metadata. OpenClaw is included as
 scorecard-only. ZeroClaw/NullClaw default to tests/*_v2_benchmark_ingest.json
 when present.

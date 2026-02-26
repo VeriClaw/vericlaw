@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-project_file="${project_root}/quasar_claw.gpr"
+project_file="${project_root}/vericlaw.gpr"
 
 if [[ ! -f "$project_file" ]]; then
   echo "Missing project file: $project_file" >&2

@@ -6,7 +6,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/measure_small_infra.sh [--runs N] [--profile PROFILE] [--binder-mode MODE] [--json PATH]
 
-Builds quasar-claw-lab with the requested BUILD_PROFILE and prints benchmark metrics.
+Builds vericlaw with the requested BUILD_PROFILE and prints benchmark metrics.
 Profiles: dev, small, edge-size, edge-speed.
 Binder modes: portable, minimal.
 EOF
@@ -95,7 +95,7 @@ case "${binder_mode}" in
 esac
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-project_file="${project_root}/quasar_claw.gpr"
+project_file="${project_root}/vericlaw.gpr"
 binary_path="${project_root}/main"
 
 "${project_root}/scripts/check_toolchain.sh" --quiet >/dev/null
