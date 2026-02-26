@@ -94,8 +94,11 @@ context-test:
 
 memory-test:
 	$(TOOLCHAIN_CHECK)
-	gprbuild -P tests/memory_sqlite_test.gpr
-	./tests/memory_sqlite_test
+	@if gprls gnatcoll_sqlite 2>/dev/null | grep -q gnatcoll_sqlite.gpr; then \
+	  gprbuild -P tests/memory_sqlite_test.gpr && ./tests/memory_sqlite_test; \
+	else \
+	  echo "SKIP memory-test: gnatcoll_sqlite not available in this environment"; \
+	fi
 
 tools-test:
 	$(TOOLCHAIN_CHECK)

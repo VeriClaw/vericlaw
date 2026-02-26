@@ -126,18 +126,20 @@ procedure Agent_Context_Test is
    ---------------------------------------------------------
    procedure Test_Format_For_Provider is
       Conv : Conversation;
-      Msgs : Message_Array (1 .. Max_History);
    begin
       Put_Line ("--- Format_For_Provider ---");
       Append_Message (Conv, System_Role, "System prompt.");
       Append_Message (Conv, User, "Hello.");
       Append_Message (Conv, Assistant, "Hi there.");
 
-      Msgs := Format_For_Provider (Conv);
-      --  Format_For_Provider should return a contiguous array; check first few
-      Assert (Msgs (1).Role = System_Role, "Format_For_Provider: msg 1 = System");
-      Assert (Msgs (2).Role = User,        "Format_For_Provider: msg 2 = User");
-      Assert (Msgs (3).Role = Assistant,   "Format_For_Provider: msg 3 = Assistant");
+      declare
+         Msgs : constant Message_Array := Format_For_Provider (Conv);
+      begin
+         Assert (Msgs'Length = 3,           "Format_For_Provider: length = 3");
+         Assert (Msgs (1).Role = System_Role, "Format_For_Provider: msg 1 = System");
+         Assert (Msgs (2).Role = User,        "Format_For_Provider: msg 2 = User");
+         Assert (Msgs (3).Role = Assistant,   "Format_For_Provider: msg 3 = Assistant");
+      end;
    end Test_Format_For_Provider;
 
 begin

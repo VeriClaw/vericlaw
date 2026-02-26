@@ -29,7 +29,7 @@ procedure Agent_Tools_Test is
    ---------------------------------------------------------
    procedure Test_Schemas_All_Disabled is
       Cfg : Tool_Config;  -- all disabled by default except File_Enabled
-      Schemas : Tool_Schema_Array;
+      Schemas : Tool_Schema_Array (1 .. Max_Tool_Schemas);
       Num     : Natural;
    begin
       Put_Line ("--- Build_Schemas (all disabled) ---");
@@ -47,7 +47,7 @@ procedure Agent_Tools_Test is
    ---------------------------------------------------------
    procedure Test_Schemas_File_Only is
       Cfg : Tool_Config;
-      Schemas : Tool_Schema_Array;
+      Schemas : Tool_Schema_Array (1 .. Max_Tool_Schemas);
       Num     : Natural;
    begin
       Put_Line ("--- Build_Schemas (file only) ---");
@@ -61,10 +61,10 @@ procedure Agent_Tools_Test is
       --  The first schema should be for the file tool
       Assert (Length (Schemas (1).Name) > 0, "Schema 1 has non-empty name");
       Assert (Length (Schemas (1).Description) > 0, "Schema 1 has non-empty description");
-      Assert (Length (Schemas (1).Parameters_JSON) > 0,
+      Assert (Length (Schemas (1).Parameters) > 0,
               "Schema 1 has non-empty parameters JSON");
       --  Parameters JSON should be valid JSON object
-      Assert (To_String (Schemas (1).Parameters_JSON) (1) = '{',
+      Assert (To_String (Schemas (1).Parameters) (1) = '{',
               "Schema 1 parameters JSON starts with '{'");
    end Test_Schemas_File_Only;
 
@@ -73,7 +73,7 @@ procedure Agent_Tools_Test is
    ---------------------------------------------------------
    procedure Test_Schemas_All_Enabled is
       Cfg : Tool_Config;
-      Schemas : Tool_Schema_Array;
+      Schemas : Tool_Schema_Array (1 .. Max_Tool_Schemas);
       Num     : Natural;
    begin
       Put_Line ("--- Build_Schemas (all enabled) ---");
@@ -84,7 +84,7 @@ procedure Agent_Tools_Test is
       Cfg.Brave_API_Key        := To_Unbounded_String ("test-key");
 
       Build_Schemas (Cfg, Schemas, Num);
-      Assert (Num = 4, "Num = 4 when all 4 tools enabled");
+      Assert (Num = 5, "Num = 5 when all tools enabled (shell + 3 file + brave_search)");
 
       --  Check all names are unique and non-empty
       for I in 1 .. Num loop
