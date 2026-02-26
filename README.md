@@ -184,6 +184,25 @@ quasar doctor            Show config and health status
 quasar version           Print version
 ```
 
+## Testing
+
+### Security policy tests (SPARK-verified)
+
+```bash
+make secrets-test           # crypto + secret store policy
+make conformance-suite      # cross-repo conformance + allowlist policy
+```
+
+### Runtime unit tests (new agent runtime)
+
+```bash
+make runtime-tests          # all 4 runtime test suites
+make config-test            # JSON config parsing + schema defaults
+make context-test           # conversation context add/evict/format
+make memory-test            # SQLite memory save/retrieve/FTS
+make tools-test             # tool schema builder + dispatch gating
+```
+
 ## Build profiles
 
 ```bash
@@ -226,9 +245,7 @@ Reference: `tests/competitive_v2_final_competitive_report.md`.
 - `make competitive-regression-gate` and `make competitive-v2-release-readiness-gate`.
 - `make operator-console-serve` for local release health visibility.
 
-## Quick start
-
-1. Validate/bootstrap toolchain:
+## CI / Release quick start
    - `make bootstrap-validate`
    - `make bootstrap` (if validation fails and you want automated setup)
 2. Run core quality checks:
@@ -258,16 +275,20 @@ Reference: `tests/competitive_v2_final_competitive_report.md`.
 
 ## What is left to productionize Quasar for your environment
 
-Repository implementation is effectively complete for the Competitive V2 scope (all `competitive-v2-*` tasks are done; only superseded legacy `rpi-v1-*` todos remain blocked).  
-To start using Quasar as a real production service, you still need environment-specific rollout work:
+The agent runtime is complete (CLI, providers, tools, memory, channels, HTTP gateway).
+To use Quasar in production you still need environment-specific rollout:
 
-- [ ] Choose target topology (single node vs HA, regions, runtime host sizing).
-- [ ] Provision real provider/channel credentials and enforce your runtime allow/deny policies.
-- [ ] Configure production secret/key management and key rotation procedures.
-- [ ] Configure registry, signing keys, and CI/CD release promotion policy.
-- [ ] Wire monitoring/alerting/SLOs and incident ownership for operator workflows.
-- [ ] Run final gate set on your exact production profile and archive artifacts for audit/compliance.
-- [ ] Publish release/tag + release notes, then onboard users to the operator runbook.
+- [ ] Install GNAT + GNATCOLL + AWS (Ada Web Server) + libcurl + libsqlite3 (see Quick start)
+- [ ] Configure provider API keys in `~/.quasar/config.json`
+- [ ] For Telegram: create bot via @BotFather; set token + allowlist in config
+- [ ] For Signal: run signal-cli daemon; set bridge_url in config
+- [ ] For WhatsApp: run WA-Bridge; scan QR code; set bridge_url in config
+- [ ] Choose target topology (single node vs HA, regions, runtime host sizing)
+- [ ] Configure production secret/key management and key rotation procedures
+- [ ] Configure registry, signing keys, and CI/CD release promotion policy
+- [ ] Wire monitoring/alerting/SLOs and incident ownership for operator workflows
+- [ ] Run final gate set on your exact production profile and archive artifacts for audit/compliance
+- [ ] Publish release/tag + release notes, then onboard users to the operator runbook
 
 ## Gate commands and report artifacts
 
@@ -306,3 +327,50 @@ Primary reports:
 - macOS launchd: `deploy/launchd/com.quasar.claw.plist`
 - Windows installer: `deploy/windows/install-quasar-claw-service.ps1`
 - Operator runbook: `docs/runbooks/operator-runbook.md`
+
+## Remaining To-Dos
+
+These items are intentionally deferred post-MVP and are the next engineering priorities:
+
+### Provider coverage
+- [ ] **Ollama** — local LLM support (OpenAI-compat endpoint, `http://localhost:11434/v1`)
+- [ ] **Google Gemini** — `generativelanguage.googleapis.com` API
+- [ ] **Mistral AI** — `api.mistral.ai/v1` (OpenAI-compat)
+- [ ] **Cohere** — `api.cohere.com` (non-OpenAI format)
+- [ ] **Streaming output** — SSE streaming for CLI mode (real-time token display)
+
+### Channel coverage
+- [ ] **Slack** — Bot API via Socket Mode (no public webhook required)
+- [ ] **Discord** — Bot API with gateway events
+- [ ] **Email** — SMTP/IMAP bridge (async, suitable for long-form tasks)
+- [ ] **Multi-channel concurrency** — Ada tasks for running all channels simultaneously in `gateway` mode (currently sequential)
+
+### Memory and search
+- [ ] **Vector embeddings** — add `sqlite-vss` extension for semantic similarity search
+- [ ] **RAG** — retrieval-augmented generation from local document collections
+- [ ] **Session expiry** — auto-prune conversations older than N days
+
+### Agent capabilities
+- [ ] **MCP (Model Context Protocol)** — tool server protocol for interoperability with external tool servers
+- [ ] **Subagents / delegation** — spawn sub-conversations with different personas or providers
+- [ ] **Cron/heartbeat scheduler** — scheduled tasks without user input (daily summaries, reminders)
+- [ ] **Tool timeout hardening** — per-tool configurable timeout (currently only shell has it)
+- [ ] **Parallel tool calls** — execute multiple tool calls from a single LLM response concurrently
+
+### Infrastructure
+- [ ] **Web UI** — minimal browser interface (single HTML file served by AWS gateway)
+- [ ] **Metrics endpoint** — Prometheus `/metrics` with request count, latency histograms, error rates
+- [ ] **Hot config reload** — `SIGHUP` reloads config without restart
+- [ ] **Multi-user gateway** — per-user conversation isolation and fact stores
+
+### Security hardening
+- [ ] **SPARK proofs at level 2+** — upgrade from flow analysis to full proof for all security modules
+- [ ] **Key rotation workflow** — automated `security-migration` tooling for secret key rotation
+- [ ] **Rate limit enforcement** — wire `Channel_Config.Max_RPS` into the active gateway dispatch loop
+- [ ] **Audit log shipping** — forward audit events to syslog / external SIEM
+
+### Testing
+- [ ] **First compilation pass** — compile against GNAT on CI; fix any remaining Ada syntax issues
+- [ ] **Integration tests** — end-to-end test against a real OpenAI-compatible stub server
+- [ ] **SPARK proof regression** — run `gnatprove` in CI to catch any proof regressions on the security core
+

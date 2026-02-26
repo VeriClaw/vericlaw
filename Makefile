@@ -36,7 +36,7 @@ COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test
 
 build:
 	$(TOOLCHAIN_CHECK)
@@ -79,6 +79,28 @@ secrets-test:
 	gprbuild -P tests/security_secrets_tests.gpr
 	./tests/security_secrets_tests
 	$(AUDIT_LOG_CHECK)
+
+config-test:
+	$(TOOLCHAIN_CHECK)
+	gprbuild -P tests/config_loader_test.gpr
+	./tests/config_loader_test
+
+context-test:
+	$(TOOLCHAIN_CHECK)
+	gprbuild -P tests/agent_context_test.gpr
+	./tests/agent_context_test
+
+memory-test:
+	$(TOOLCHAIN_CHECK)
+	gprbuild -P tests/memory_sqlite_test.gpr
+	./tests/memory_sqlite_test
+
+tools-test:
+	$(TOOLCHAIN_CHECK)
+	gprbuild -P tests/agent_tools_test.gpr
+	./tests/agent_tools_test
+
+runtime-tests: config-test context-test memory-test tools-test
 
 conformance-suite:
 	$(CONFORMANCE_RUNNER)

@@ -7,4 +7,15 @@ lib/
 *.adt
 *.lkp
 *.smt2
+# GNAT binder-generated files
+b__*.adb
+b__*.ads
+# CI/build stdout and stderr capture files
+*.stderr
+*.stdout
+# macOS metadata
+.DS_Store
+# Release candidate step logs (generated at runtime)
+tests/release_candidate_step_logs/
+# Local bootstrap overrides
 config/bootstrap.local.env
