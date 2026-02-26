@@ -60,6 +60,14 @@ package body HTTP.Client is
       Value  : System.Address) return CURL_Code
    with Import, Convention => C, External_Name => "curl_easy_setopt";
 
+   --  Separate binding for C string (char*) options: pass chars_ptr VALUE
+   --  directly so curl receives the pointer, not the address of the pointer.
+   function curl_easy_setopt_cstr
+     (Handle : CURL_Handle;
+      Option : CURL_Option;
+      Value  : chars_ptr) return CURL_Code
+   with Import, Convention => C, External_Name => "curl_easy_setopt";
+
    function curl_easy_setopt_long
      (Handle : CURL_Handle;
       Option : CURL_Option;
@@ -152,8 +160,8 @@ package body HTTP.Client is
       end if;
 
       --  URL
-      Code := curl_easy_setopt_ptr
-        (Handle, CURLOPT_URL, C_URL'Address);
+      Code := curl_easy_setopt_cstr
+        (Handle, CURLOPT_URL, C_URL);
 
       --  TLS: always verify
       Code := curl_easy_setopt_long
@@ -199,8 +207,8 @@ package body HTTP.Client is
                declare
                   C_Body : chars_ptr := New_String (Body_Text);
                begin
-                  Code := curl_easy_setopt_ptr
-                    (Handle, CURLOPT_POSTFIELDS, C_Body'Address);
+                  Code := curl_easy_setopt_cstr
+                    (Handle, CURLOPT_POSTFIELDS, C_Body);
                   --  Note: C_Body must outlive curl_easy_perform.
                   --  Using a stack-local here is safe because perform
                   --  is called before C_Body goes out of scope.
@@ -217,14 +225,14 @@ package body HTTP.Client is
                Method_Str : constant String := HTTP_Method'Image (Method);
                C_Method   : chars_ptr := New_String (Method_Str);
             begin
-               Code := curl_easy_setopt_ptr
-                 (Handle, CURLOPT_CUSTOMREQUEST, C_Method'Address);
+               Code := curl_easy_setopt_cstr
+                 (Handle, CURLOPT_CUSTOMREQUEST, C_Method);
                if Body_Text'Length > 0 then
                   declare
                      C_Body : chars_ptr := New_String (Body_Text);
                   begin
-                     Code := curl_easy_setopt_ptr
-                       (Handle, CURLOPT_POSTFIELDS, C_Body'Address);
+                     Code := curl_easy_setopt_cstr
+                       (Handle, CURLOPT_POSTFIELDS, C_Body);
                      Code := curl_easy_perform (Handle);
                      Free (C_Body);
                   end;

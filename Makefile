@@ -38,7 +38,7 @@ COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test
 
 build:
 	$(TOOLCHAIN_CHECK)
@@ -251,3 +251,24 @@ docker-dev-test: docker-dev-build
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  ./vericlaw doctor || true
+
+## End-to-end integration test: spins up a Python mock OpenAI-compat server
+## inside the container, writes a config pointing to it, then runs
+## `vericlaw agent "hello"` and asserts a non-empty reply.
+## Run with: make docker-dev-integration-test
+docker-dev-integration-test: docker-dev-build
+	@echo "=== vericlaw integration test (mock LLM) ===" && \
+	docker run --rm --platform linux/amd64 \
+	  -e HOME=/tmp \
+	  -v "$(PWD):/workspace" \
+	  -w /workspace \
+	  "$(DEV_IMAGE_NAME):latest" \
+	  bash -c '\
+	    python3 scripts/mock_llm_server.py 11434 & \
+	    sleep 1 && \
+	    mkdir -p /tmp/.vericlaw && \
+	    printf '"'"'{"agent_name":"VeriClaw","system_prompt":"You are VeriClaw.","providers":[{"kind":"openai_compatible","base_url":"http://127.0.0.1:11434","api_key":"","model":"mock"}],"channels":[{"kind":"cli","enabled":true}],"tools":{"file":false,"shell":false,"web_fetch":false,"brave_search":false},"memory":{"max_history":5,"facts_enabled":false},"gateway":{"bind_host":"127.0.0.1","bind_port":8787}}'"'"' > /tmp/.vericlaw/config.json && \
+	    REPLY=$$(./vericlaw agent hello 2>/dev/null) && \
+	    echo "Reply: $$REPLY" && \
+	    test -n "$$REPLY" && echo "INTEGRATION TEST PASSED" \
+	  '

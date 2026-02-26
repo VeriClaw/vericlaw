@@ -116,7 +116,10 @@ procedure Main is
       for I in 1 .. Cfg.Num_Providers loop
          Put_Line ("  [" & Config.Schema.Provider_Index'Image (I) & "] "
            & Config.Schema.Provider_Kind'Image (Cfg.Providers (I).Kind)
-           & "  model=" & To_String (Cfg.Providers (I).Model));
+           & "  model=" & To_String (Cfg.Providers (I).Model)
+           & (if Length (Cfg.Providers (I).Base_URL) > 0
+              then "  url=" & To_String (Cfg.Providers (I).Base_URL)
+              else ""));
       end loop;
       New_Line;
       Put_Line ("Channels    : " & Config.Schema.Channel_Index'Image
