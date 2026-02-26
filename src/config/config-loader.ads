@@ -27,4 +27,8 @@ package Config.Loader is
    --  Write a starter config.json if none exists.
    procedure Write_Default_Config (Path : String);
 
+   --  Interactive onboard wizard: ask user for provider, key, model,
+   --  agent name and channel, then write config to Path.
+   procedure Run_Onboard (Path : String);
+
 end Config.Loader;

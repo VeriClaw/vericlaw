@@ -285,4 +285,189 @@ package body Config.Loader is
       Ada.Text_IO.Close (File);
    end Write_Default_Config;
 
+   procedure Run_Onboard (Path : String) is
+      use Ada.Text_IO;
+
+      procedure Prompt (Label : String; Default : String; Result : out String;
+                        Last_Out : out Natural) is
+         Buf : String (1 .. 256);
+         L   : Natural;
+      begin
+         if Default'Length > 0 then
+            Put (Label & " [" & Default & "]: ");
+         else
+            Put (Label & ": ");
+         end if;
+         Get_Line (Buf, L);
+         if L = 0 and then Default'Length > 0 then
+            Result (1 .. Default'Length) := Default;
+            Last_Out := Default'Length;
+         else
+            Result (1 .. L) := Buf (1 .. L);
+            Last_Out := L;
+         end if;
+      end Prompt;
+
+      Dir            : constant String :=
+        Ada.Directories.Containing_Directory (Path);
+      Provider_Buf   : String (1 .. 256);
+      API_Key_Buf    : String (1 .. 256);
+      Model_Buf      : String (1 .. 256);
+      Agent_Name_Buf : String (1 .. 256);
+      Channel_Buf    : String (1 .. 256);
+      Token_Buf      : String (1 .. 256);
+      PL, KL, ML, NL, CL, TL : Natural;
+      Is_Ollama : Boolean := False;
+   begin
+      New_Line;
+      Put_Line ("=== VeriClaw Setup Wizard ===");
+      New_Line;
+      Put_Line ("Choose your LLM provider:");
+      Put_Line ("  1  openai           (OpenAI GPT-4o, requires API key)");
+      Put_Line ("  2  anthropic         (Claude 3.5, requires API key)");
+      Put_Line ("  3  ollama            (local LLM, no key needed)");
+      Put_Line ("  4  openai_compatible (Azure, Groq, OpenRouter, etc.)");
+      New_Line;
+      Prompt ("Provider", "openai", Provider_Buf, PL);
+
+      --  Normalise numeric shortcuts to names.
+      if PL = 1 and then Provider_Buf (1) = '1' then
+         Provider_Buf (1 .. 6) := "openai"; PL := 6;
+      elsif PL = 1 and then Provider_Buf (1) = '2' then
+         Provider_Buf (1 .. 9) := "anthropic"; PL := 9;
+      elsif PL = 1 and then Provider_Buf (1) = '3' then
+         Provider_Buf (1 .. 6) := "ollama"; PL := 6;
+      elsif PL = 1 and then Provider_Buf (1) = '4' then
+         Provider_Buf (1 .. 18) := "openai_compatible "; PL := 17;
+         Provider_Buf (17) := 'e'; -- fix last char
+      end if;
+
+      Is_Ollama := PL >= 6 and then Provider_Buf (1 .. 6) = "ollama";
+
+      if Is_Ollama then
+         Prompt ("Ollama model", "llama3.2", Model_Buf, ML);
+         KL := 0;
+      else
+         if PL >= 9 and then Provider_Buf (1 .. 9) = "anthropic" then
+            Prompt ("Anthropic API key", "", API_Key_Buf, KL);
+            Prompt ("Model", "claude-3-5-sonnet-20241022", Model_Buf, ML);
+         elsif PL >= 18 and then Provider_Buf (1 .. 18) = "openai_compatible" then
+            Prompt ("API key (or leave blank)", "", API_Key_Buf, KL);
+            Prompt ("Base URL", "http://localhost:8080", Model_Buf, ML);
+            -- Model_Buf is reused for base_url here; handled below
+         else
+            Prompt ("OpenAI API key", "", API_Key_Buf, KL);
+            Prompt ("Model", "gpt-4o", Model_Buf, ML);
+         end if;
+      end if;
+
+      New_Line;
+      Prompt ("Agent name", "VeriClaw", Agent_Name_Buf, NL);
+
+      New_Line;
+      Put_Line ("Choose your primary channel:");
+      Put_Line ("  1  cli      (interactive terminal — default)");
+      Put_Line ("  2  telegram (Telegram bot, requires bot token)");
+      Put_Line ("  3  signal   (Signal via signal-cli bridge)");
+      Put_Line ("  4  whatsapp (WhatsApp via wa-bridge)");
+      New_Line;
+      Prompt ("Channel", "cli", Channel_Buf, CL);
+
+      if CL = 1 and then Channel_Buf (1) in '1' .. '4' then
+         case Channel_Buf (1) is
+            when '1' => Channel_Buf (1 .. 3) := "cli"; CL := 3;
+            when '2' => Channel_Buf (1 .. 8) := "telegram"; CL := 8;
+            when '3' => Channel_Buf (1 .. 6) := "signal"; CL := 6;
+            when '4' => Channel_Buf (1 .. 8) := "whatsapp"; CL := 8;
+            when others => null;
+         end case;
+      end if;
+
+      TL := 0;
+      if CL >= 8 and then
+        (Channel_Buf (1 .. 8) = "telegram" or else
+         Channel_Buf (1 .. 8) = "whatsapp")
+      then
+         Prompt ("Bot token", "", Token_Buf, TL);
+      elsif CL >= 6 and then Channel_Buf (1 .. 6) = "signal" then
+         Prompt ("Signal bridge URL", "http://localhost:8080", Token_Buf, TL);
+      end if;
+
+      --  Create directory if needed.
+      if not Ada.Directories.Exists (Dir) then
+         Ada.Directories.Create_Directory (Dir);
+      end if;
+
+      --  Write config.
+      declare
+         File : Ada.Text_IO.File_Type;
+         function Q (S : String; L : Natural) return String is
+           ("""" & S (1 .. L) & """");
+      begin
+         Ada.Text_IO.Create (File, Ada.Text_IO.Out_File, Path);
+         Put_Line (File, "{");
+         Put_Line (File, "  ""agent_name"": " & Q (Agent_Name_Buf, NL) & ",");
+         Put_Line (File, "  ""system_prompt"": ""You are "
+           & Agent_Name_Buf (1 .. NL) & ", a helpful AI assistant."",");
+         Put_Line (File, "  ""providers"": [");
+         Put_Line (File, "    {");
+         if Is_Ollama then
+            Put_Line (File, "      ""kind"": ""openai_compatible"",");
+            Put_Line (File, "      ""base_url"": ""http://localhost:11434"",");
+            Put_Line (File, "      ""api_key"": """",");
+            Put_Line (File, "      ""model"": " & Q (Model_Buf, ML));
+         elsif CL <= PL and then PL >= 18 and then
+           Provider_Buf (1 .. 17) = "openai_compatible"
+         then
+            Put_Line (File, "      ""kind"": ""openai_compatible"",");
+            Put_Line (File, "      ""base_url"": " & Q (Model_Buf, ML) & ",");
+            if KL > 0 then
+               Put_Line (File, "      ""api_key"": " & Q (API_Key_Buf, KL) & ",");
+            end if;
+            Put_Line (File, "      ""model"": ""default""");
+         else
+            Put_Line (File, "      ""kind"": """ & Provider_Buf (1 .. PL) & """,");
+            Put_Line (File, "      ""api_key"": " & Q (API_Key_Buf, KL) & ",");
+            Put_Line (File, "      ""model"": " & Q (Model_Buf, ML));
+         end if;
+         Put_Line (File, "    }");
+         Put_Line (File, "  ],");
+         Put_Line (File, "  ""channels"": [");
+         Put_Line (File, "    {");
+         Put_Line (File, "      ""kind"": """ & Channel_Buf (1 .. CL) & """,");
+         Put_Line (File, "      ""enabled"": true" &
+           (if TL > 0 then "," else ""));
+         if TL > 0 then
+            if CL >= 6 and then Channel_Buf (1 .. 6) = "signal" then
+               Put_Line (File, "      ""bridge_url"": " & Q (Token_Buf, TL));
+            else
+               Put_Line (File, "      ""token"": " & Q (Token_Buf, TL));
+            end if;
+         end if;
+         Put_Line (File, "    }");
+         Put_Line (File, "  ],");
+         Put_Line (File, "  ""tools"": {");
+         Put_Line (File, "    ""file"": true,");
+         Put_Line (File, "    ""shell"": false,");
+         Put_Line (File, "    ""web_fetch"": false,");
+         Put_Line (File, "    ""brave_search"": false");
+         Put_Line (File, "  },");
+         Put_Line (File, "  ""memory"": {");
+         Put_Line (File, "    ""max_history"": 50,");
+         Put_Line (File, "    ""facts_enabled"": true");
+         Put_Line (File, "  },");
+         Put_Line (File, "  ""gateway"": {");
+         Put_Line (File, "    ""bind_host"": ""127.0.0.1"",");
+         Put_Line (File, "    ""bind_port"": 8787");
+         Put_Line (File, "  }");
+         Put_Line (File, "}");
+         Ada.Text_IO.Close (File);
+      end;
+
+      New_Line;
+      Put_Line ("Config written to: " & Path);
+      Put_Line ("Run ""vericlaw chat"" to start.");
+      New_Line;
+   end Run_Onboard;
+
 end Config.Loader;

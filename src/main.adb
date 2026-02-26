@@ -27,11 +27,13 @@ procedure Main is
       Put_Line ("Usage: vericlaw <command> [options]");
       New_Line;
       Put_Line ("Commands:");
+      Put_Line ("  onboard           Interactive setup wizard (run this first)");
       Put_Line ("  chat              Interactive CLI chat (default)");
       Put_Line ("  agent <message>   One-shot agent: send a message and print reply");
       Put_Line ("  gateway           Run HTTP gateway + all configured channels");
       Put_Line ("  doctor            Print configuration and health status");
       Put_Line ("  version           Print version information");
+      Put_Line ("  help              Show this help message");
       New_Line;
       Put_Line ("Config: ~/.vericlaw/config.json  (or VERICLAW_CONFIG env var)");
    end Print_Usage;
@@ -165,6 +167,21 @@ begin
 
    if To_String (Cmd) = "help" or else To_String (Cmd) = "--help" then
       Print_Usage;
+      return;
+   end if;
+
+   if To_String (Cmd) = "onboard" then
+      declare
+         Default_Path : constant String :=
+           Ada.Environment_Variables.Value ("HOME", ".")
+           & "/.vericlaw/config.json";
+         Env_Path : constant String :=
+           Ada.Environment_Variables.Value ("VERICLAW_CONFIG", "");
+         Path : constant String :=
+           (if Env_Path'Length > 0 then Env_Path else Default_Path);
+      begin
+         Config.Loader.Run_Onboard (Path);
+      end;
       return;
    end if;
 
