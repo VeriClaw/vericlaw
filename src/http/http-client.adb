@@ -98,6 +98,13 @@ package body HTTP.Client is
    with Import, Convention => C, External_Name => "curl_slist_free_all";
 
    --  -----------------------------------------------------------------------
+   --  Streaming write callback state (package-level; CLI mode, not concurrent).
+   --  -----------------------------------------------------------------------
+
+   Streaming_Proc   : Stream_Proc_Access := null;
+   Streaming_Buffer : Unbounded_String;
+
+   --  -----------------------------------------------------------------------
    --  Write callback — accumulates response body into an Unbounded_String.
    --  -----------------------------------------------------------------------
 
@@ -129,6 +136,60 @@ package body HTTP.Client is
       Append (Buffer, Chunk);
       return Total;
    end Write_CB;
+
+   --  -----------------------------------------------------------------------
+   --  Streaming write callback — delivers complete SSE lines to Streaming_Proc.
+   --  -----------------------------------------------------------------------
+
+   function Write_CB_Streaming
+     (Ptr      : chars_ptr;
+      Size     : size_t;
+      NMemb    : size_t;
+      UserData : System.Address) return size_t
+   with Convention => C;
+
+   function Write_CB_Streaming
+     (Ptr      : chars_ptr;
+      Size     : size_t;
+      NMemb    : size_t;
+      UserData : System.Address) return size_t
+   is
+      pragma Unreferenced (UserData);
+      Total : constant size_t := Size * NMemb;
+      Chunk : constant String := Value (Ptr, Interfaces.C.size_t (Total));
+      Found : Boolean;
+   begin
+      Append (Streaming_Buffer, Chunk);
+      --  Extract and dispatch each complete newline-terminated line.
+      loop
+         Found := False;
+         declare
+            S : constant String := To_String (Streaming_Buffer);
+         begin
+            for I in S'Range loop
+               if S (I) = ASCII.LF then
+                  declare
+                     Line_End : constant Natural :=
+                       (if I > S'First and then S (I - 1) = ASCII.CR
+                        then I - 2 else I - 1);
+                     Line : constant String :=
+                       (if Line_End >= S'First
+                        then S (S'First .. Line_End) else "");
+                  begin
+                     if Streaming_Proc /= null then
+                        Streaming_Proc (Line);
+                     end if;
+                  end;
+                  Set_Unbounded_String (Streaming_Buffer, S (I + 1 .. S'Last));
+                  Found := True;
+                  exit;
+               end if;
+            end loop;
+         end;
+         exit when not Found;
+      end loop;
+      return Total;
+   end Write_CB_Streaming;
 
    --  -----------------------------------------------------------------------
    --  Core implementation
@@ -285,5 +346,95 @@ package body HTTP.Client is
       All_Headers (2 .. All_Headers'Last) := Headers;
       return Request (POST, URL, All_Headers, Body_JSON, Timeout_Ms);
    end Post_JSON;
+
+   function Post_JSON_Streaming
+     (URL        : String;
+      Headers    : Header_Array;
+      Body_JSON  : String;
+      On_Chunk   : Stream_Proc_Access;
+      Timeout_Ms : Natural := 0) return Response
+   is
+      CT_Header : constant Header :=
+        (Name  => To_Unbounded_String ("Content-Type"),
+         Value => To_Unbounded_String ("application/json"));
+      All_Headers       : Header_Array (1 .. Headers'Length + 1);
+      Handle            : CURL_Handle := curl_easy_init;
+      C_URL             : chars_ptr   := New_String (URL);
+      C_Body            : chars_ptr   := New_String (Body_JSON);
+      Slist             : CURL_Slist  := Null_Slist;
+      Code              : CURL_Code;
+      HTTP_Code         : aliased long := 0;
+      Effective_Timeout : constant long :=
+        (if Timeout_Ms = 0 then long (Default_Timeout_Ms)
+         else long (Timeout_Ms));
+      Result : Response;
+   begin
+      All_Headers (1) := CT_Header;
+      All_Headers (2 .. All_Headers'Last) := Headers;
+
+      Streaming_Proc := On_Chunk;
+      Set_Unbounded_String (Streaming_Buffer, "");
+
+      if Handle = Null_CURL then
+         Set_Unbounded_String (Result.Error, "curl_easy_init failed");
+         Free (C_Body);
+         Free (C_URL);
+         return Result;
+      end if;
+
+      Code := curl_easy_setopt_cstr (Handle, CURLOPT_URL, C_URL);
+      Code := curl_easy_setopt_long (Handle, CURLOPT_SSL_VERIFYPEER, 1);
+      Code := curl_easy_setopt_long (Handle, CURLOPT_SSL_VERIFYHOST, 2);
+      Code := curl_easy_setopt_long (Handle, CURLOPT_FOLLOWLOCATION, 1);
+      Code := curl_easy_setopt_long (Handle, CURLOPT_MAXREDIRS, 5);
+      Code := curl_easy_setopt_long
+        (Handle, CURLOPT_TIMEOUT_MS, Effective_Timeout);
+      Code := curl_easy_setopt_fn
+        (Handle, CURLOPT_WRITEFUNCTION, Write_CB_Streaming'Access);
+
+      for H of All_Headers loop
+         declare
+            Header_Str : constant String :=
+              To_String (H.Name) & ": " & To_String (H.Value);
+            C_H        : chars_ptr := New_String (Header_Str);
+         begin
+            Slist := curl_slist_append (Slist, C_H);
+            Free (C_H);
+         end;
+      end loop;
+      if Slist /= Null_Slist then
+         Code := curl_easy_setopt_ptr
+           (Handle, CURLOPT_HTTPHEADER, System.Address (Slist));
+      end if;
+
+      Code := curl_easy_setopt_long (Handle, CURLOPT_POST, 1);
+      Code := curl_easy_setopt_cstr (Handle, CURLOPT_POSTFIELDS, C_Body);
+      Code := curl_easy_perform (Handle);
+
+      if Code /= CURLE_OK then
+         Set_Unbounded_String
+           (Result.Error,
+            "curl_easy_perform error code:" & CURL_Code'Image (Code));
+      else
+         Code := curl_easy_getinfo_long
+           (Handle, CURLINFO_RESPONSE_CODE, HTTP_Code'Access);
+         Result.Status_Code := Natural (HTTP_Code);
+      end if;
+
+      if Slist /= Null_Slist then
+         curl_slist_free_all (Slist);
+      end if;
+      curl_easy_cleanup (Handle);
+      Free (C_Body);
+      Free (C_URL);
+
+      --  Flush any partial line remaining in the buffer.
+      if Streaming_Proc /= null and then Length (Streaming_Buffer) > 0 then
+         Streaming_Proc (To_String (Streaming_Buffer));
+         Set_Unbounded_String (Streaming_Buffer, "");
+      end if;
+      Streaming_Proc := null;
+      return Result;
+   end Post_JSON_Streaming;
 
 end HTTP.Client;

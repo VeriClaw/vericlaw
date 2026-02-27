@@ -214,4 +214,125 @@ package body Agent.Loop_Pkg is
       return Reply;
    end Process_Message;
 
+   function Process_Message_Streaming
+     (User_Input : String;
+      Conv       : in out Agent.Context.Conversation;
+      Cfg        : Config.Schema.Agent_Config;
+      Mem        : Memory.SQLite.Memory_Handle) return Agent_Reply
+   is
+      Reply        : Agent_Reply;
+      Provider     : access Provider_Type'Class;
+      Tool_Schemas : Tool_Schema_Array (1 .. Max_Schema_Count);
+      Num_Tools    : Natural := 0;
+      Round        : Natural := 0;
+   begin
+      if Cfg.Num_Providers < 1 then
+         Set_Unbounded_String
+           (Reply.Error, "No providers configured. Add a provider to config.");
+         return Reply;
+      end if;
+
+      Ensure_System_Prompt (Conv, Cfg);
+
+      Agent.Context.Append_Message
+        (Conv, Agent.Context.User, User_Input);
+
+      if Memory.SQLite.Is_Open (Mem) then
+         Memory.SQLite.Save_Message
+           (Mem,
+            To_String (Conv.Session_ID),
+            To_String (Conv.Channel),
+            Agent.Context.User,
+            User_Input);
+      end if;
+
+      Agent.Tools.Build_Schemas (Cfg.Tools, Tool_Schemas, Num_Tools);
+      Provider := Make_Provider (Cfg.Providers (1));
+
+      loop
+         Round := Round + 1;
+         exit when Round > Max_Tool_Rounds;
+
+         declare
+            Prov_Resp : Provider_Response :=
+              Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
+         begin
+            if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
+               declare
+                  Failover : access Provider_Type'Class :=
+                    Make_Provider (Cfg.Providers (2));
+                  FR2      : constant Provider_Response :=
+                    Failover.Chat (Conv, Tool_Schemas, Num_Tools);
+               begin
+                  if FR2.Success then
+                     Prov_Resp := FR2;
+                  end if;
+               end;
+            end if;
+
+            if not Prov_Resp.Success then
+               Set_Unbounded_String
+                 (Reply.Error, To_String (Prov_Resp.Error));
+               return Reply;
+            end if;
+
+            if Prov_Resp.Num_Tool_Calls = 0 then
+               Reply.Content := Prov_Resp.Content;
+               Reply.Success := True;
+
+               Agent.Context.Append_Message
+                 (Conv, Agent.Context.Assistant,
+                  To_String (Prov_Resp.Content));
+
+               if Memory.SQLite.Is_Open (Mem) then
+                  Memory.SQLite.Save_Message
+                    (Mem,
+                     To_String (Conv.Session_ID),
+                     To_String (Conv.Channel),
+                     Agent.Context.Assistant,
+                     To_String (Prov_Resp.Content));
+               end if;
+
+               exit;
+            end if;
+
+            Agent.Context.Append_Message
+              (Conv, Agent.Context.Assistant,
+               "[tool calls: "
+               & Natural'Image (Prov_Resp.Num_Tool_Calls) & "]");
+
+            for I in 1 .. Prov_Resp.Num_Tool_Calls loop
+               declare
+                  TC   : constant Tool_Call := Prov_Resp.Tool_Calls (I);
+                  TRes : constant Agent.Tools.Tool_Result :=
+                    Agent.Tools.Dispatch
+                      (Name      => To_String (TC.Name),
+                       Args_JSON => To_String (TC.Arguments),
+                       Cfg       => Cfg.Tools,
+                       Workspace => Home_Workspace);
+                  Output : constant String :=
+                    (if TRes.Success
+                     then To_String (TRes.Output)
+                     else "ERROR: " & To_String (TRes.Error));
+               begin
+                  Agent.Context.Append_Message
+                    (Conv, Agent.Context.Tool_Result,
+                     Output,
+                     To_String (TC.ID));
+               end;
+            end loop;
+         end;
+      end loop;
+
+      if Round > Max_Tool_Rounds then
+         Set_Unbounded_String
+           (Reply.Content,
+            "I reached the maximum number of tool-use steps. "
+            & "Here is what I found so far.");
+         Reply.Success := True;
+      end if;
+
+      return Reply;
+   end Process_Message_Streaming;
+
 end Agent.Loop_Pkg;

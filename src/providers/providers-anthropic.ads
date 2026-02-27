@@ -17,6 +17,12 @@ package Providers.Anthropic is
       Tools     : Tool_Schema_Array;
       Num_Tools : Natural) return Provider_Response;
 
+   overriding function Chat_Streaming
+     (Provider  : in out Anthropic_Provider;
+      Conv      : Agent.Context.Conversation;
+      Tools     : Tool_Schema_Array;
+      Num_Tools : Natural) return Provider_Response;
+
    overriding function Name (Provider : Anthropic_Provider) return String;
 
 private

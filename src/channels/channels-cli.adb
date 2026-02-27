@@ -51,7 +51,7 @@ package body Channels.CLI is
             else
                declare
                   Reply : constant Agent.Loop_Pkg.Agent_Reply :=
-                    Agent.Loop_Pkg.Process_Message
+                    Agent.Loop_Pkg.Process_Message_Streaming
                       (User_Input => Input,
                        Conv       => Conv,
                        Cfg        => Cfg,
@@ -60,8 +60,11 @@ package body Channels.CLI is
                   Metrics.Increment ("requests_total", "cli");
                   New_Line;
                   Put (Agent_Name);
+                  Flush;
+                  --  Tokens were already streamed to stdout by Chat_Streaming.
+                  --  Print trailing newline; on error show the message.
                   if Reply.Success then
-                     Put_Line (To_String (Reply.Content));
+                     New_Line;
                   else
                      Metrics.Increment ("errors_total", "cli");
                      Put_Line ("[Error] " & To_String (Reply.Error));
@@ -87,7 +90,7 @@ package body Channels.CLI is
       Set_Unbounded_String (Conv.Session_ID, Agent.Context.Make_Session_ID);
       Set_Unbounded_String (Conv.Channel, "cli");
 
-      Reply := Agent.Loop_Pkg.Process_Message
+      Reply := Agent.Loop_Pkg.Process_Message_Streaming
         (User_Input => Input,
          Conv       => Conv,
          Cfg        => Cfg,
@@ -95,9 +98,9 @@ package body Channels.CLI is
 
       Metrics.Increment ("requests_total", "cli");
 
-      if Reply.Success then
-         Put_Line (To_String (Reply.Content));
-      else
+      --  Tokens were already streamed; print newline and any error.
+      New_Line;
+      if not Reply.Success then
          Put_Line ("Error: " & To_String (Reply.Error));
       end if;
    end Run_Once;

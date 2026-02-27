@@ -294,7 +294,8 @@ package body Config.Loader is
       Ada.Text_IO.Put_Line (File, "  },");
       Ada.Text_IO.Put_Line (File, "  ""memory"": {");
       Ada.Text_IO.Put_Line (File, "    ""max_history"": 50,");
-      Ada.Text_IO.Put_Line (File, "    ""facts_enabled"": true");
+      Ada.Text_IO.Put_Line (File, "    ""facts_enabled"": true,");
+      Ada.Text_IO.Put_Line (File, "    ""session_retention_days"": 30");
       Ada.Text_IO.Put_Line (File, "  },");
       Ada.Text_IO.Put_Line (File, "  ""gateway"": {");
       Ada.Text_IO.Put_Line (File, "    ""bind_host"": ""127.0.0.1"",");
@@ -474,7 +475,8 @@ package body Config.Loader is
          Put_Line (File, "  },");
          Put_Line (File, "  ""memory"": {");
          Put_Line (File, "    ""max_history"": 50,");
-         Put_Line (File, "    ""facts_enabled"": true");
+         Put_Line (File, "    ""facts_enabled"": true,");
+         Put_Line (File, "    ""session_retention_days"": 30");
          Put_Line (File, "  },");
          Put_Line (File, "  ""gateway"": {");
          Put_Line (File, "    ""bind_host"": ""127.0.0.1"",");

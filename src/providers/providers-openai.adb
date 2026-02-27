@@ -1,3 +1,4 @@
+with Ada.Text_IO;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
@@ -5,6 +6,129 @@ with Agent.Context;      use Agent.Context;
 package body Providers.OpenAI is
 
    OpenAI_Default_URL : constant String := "https://api.openai.com";
+
+   --  -----------------------------------------------------------------------
+   --  Streaming accumulation state (package-level; CLI-only, non-concurrent).
+   --  -----------------------------------------------------------------------
+   OpenAI_Accum_Content : Unbounded_String;
+   OpenAI_Finish_Reason : Unbounded_String;
+   OpenAI_Has_Tool      : Boolean := False;
+   OpenAI_Tool_ID       : Unbounded_String;
+   OpenAI_Tool_Name     : Unbounded_String;
+   OpenAI_Tool_Args     : Unbounded_String;
+
+   --  SSE line parser called by the HTTP streaming callback.
+   procedure OpenAI_SSE_Parse (Line : String);
+
+   procedure OpenAI_SSE_Parse (Line : String) is
+   begin
+      --  Ignore empty lines and non-data lines.
+      if Line'Length < 6 then return; end if;
+      if Line (Line'First .. Line'First + 5) /= "data: " then return; end if;
+
+      declare
+         JSON_Part : constant String := Line (Line'First + 6 .. Line'Last);
+      begin
+         if JSON_Part = "[DONE]" then return; end if;
+
+         declare
+            PR : constant Parse_Result := Parse (JSON_Part);
+         begin
+            if not PR.Valid then return; end if;
+
+            if Has_Key (PR.Root, "choices") then
+               declare
+                  Choices     : constant JSON_Value_Type :=
+                    Get_Object (PR.Root, "choices");
+                  Choices_Arr : constant JSON_Array_Type :=
+                    Value_To_Array (Choices);
+               begin
+                  if Array_Length (Choices_Arr) >= 1 then
+                     declare
+                        Choice : constant JSON_Value_Type :=
+                          Array_Item (Choices_Arr, 1);
+                     begin
+                        --  Capture finish_reason when present.
+                        declare
+                           FR : constant String :=
+                             Get_String (Choice, "finish_reason");
+                        begin
+                           if FR'Length > 0 then
+                              Set_Unbounded_String (OpenAI_Finish_Reason, FR);
+                           end if;
+                        end;
+
+                        if Has_Key (Choice, "delta") then
+                           declare
+                              D : constant JSON_Value_Type :=
+                                Get_Object (Choice, "delta");
+                           begin
+                              --  Text content token.
+                              declare
+                                 Token : constant String :=
+                                   Get_String (D, "content");
+                              begin
+                                 if Token'Length > 0 then
+                                    Ada.Text_IO.Put (Token);
+                                    Ada.Text_IO.Flush;
+                                    Append (OpenAI_Accum_Content, Token);
+                                 end if;
+                              end;
+
+                              --  Tool call fragments.
+                              if Has_Key (D, "tool_calls") then
+                                 declare
+                                    TC_Val : constant JSON_Value_Type :=
+                                      Get_Object (D, "tool_calls");
+                                    TC_Arr : constant JSON_Array_Type :=
+                                      Value_To_Array (TC_Val);
+                                 begin
+                                    if Array_Length (TC_Arr) >= 1 then
+                                       declare
+                                          TC : constant JSON_Value_Type :=
+                                            Array_Item (TC_Arr, 1);
+                                       begin
+                                          OpenAI_Has_Tool := True;
+                                          declare
+                                             TID : constant String :=
+                                               Get_String (TC, "id");
+                                          begin
+                                             if TID'Length > 0 then
+                                                Set_Unbounded_String
+                                                  (OpenAI_Tool_ID, TID);
+                                             end if;
+                                          end;
+                                          if Has_Key (TC, "function") then
+                                             declare
+                                                Fn : constant JSON_Value_Type :=
+                                                  Get_Object (TC, "function");
+                                                TN : constant String :=
+                                                  Get_String (Fn, "name");
+                                                TA : constant String :=
+                                                  Get_String (Fn, "arguments");
+                                             begin
+                                                if TN'Length > 0 then
+                                                   Set_Unbounded_String
+                                                     (OpenAI_Tool_Name, TN);
+                                                end if;
+                                                Append (OpenAI_Tool_Args, TA);
+                                             end;
+                                          end if;
+                                       end;
+                                    end if;
+                                 end;
+                              end if;
+                           end;
+                        end if;
+                     end;
+                  end if;
+               end;
+            end if;
+         end;
+      end;
+   exception
+      when others => null;  -- Ignore all parse/access errors in stream callback
+   end OpenAI_SSE_Parse;
 
    function Create (Cfg : Provider_Config) return OpenAI_Provider is
       P : OpenAI_Provider;
@@ -34,7 +158,8 @@ package body Providers.OpenAI is
      (Provider  : OpenAI_Provider;
       Conv      : Agent.Context.Conversation;
       Tools     : Tool_Schema_Array;
-      Num_Tools : Natural) return String
+      Num_Tools : Natural;
+      Stream    : Boolean := False) return String
    is
       Root  : JSON_Value_Type := Build_Object;
       Msgs  : JSON_Value_Type := Build_Array;
@@ -92,6 +217,10 @@ package body Providers.OpenAI is
             Set_Field (Root, "tools", Tools_JSON);
             Set_Field (Root, "tool_choice", "auto");
          end;
+      end if;
+
+      if Stream then
+         Set_Field (Root, "stream", True);
       end if;
 
       return To_JSON_String (Root);
@@ -214,5 +343,62 @@ package body Providers.OpenAI is
       end;
       return Result;
    end Chat;
+
+   function Chat_Streaming
+     (Provider  : in out OpenAI_Provider;
+      Conv      : Agent.Context.Conversation;
+      Tools     : Tool_Schema_Array;
+      Num_Tools : Natural) return Provider_Response
+   is
+      URL      : constant String :=
+        To_String (Provider.Base_URL) & "/v1/chat/completions";
+      Auth_Hdr : constant HTTP.Client.Header :=
+        (Name  => To_Unbounded_String ("Authorization"),
+         Value => To_Unbounded_String
+           ("Bearer " & To_String (Provider.API_Key)));
+      Hdrs     : constant HTTP.Client.Header_Array := (1 => Auth_Hdr);
+      Body_Str : constant String :=
+        Build_Request_Body (Provider, Conv, Tools, Num_Tools, Stream => True);
+
+      Http_Resp : HTTP.Client.Response;
+      Result    : Provider_Response;
+   begin
+      --  Reset streaming accumulation state.
+      Set_Unbounded_String (OpenAI_Accum_Content, "");
+      Set_Unbounded_String (OpenAI_Finish_Reason, "");
+      Set_Unbounded_String (OpenAI_Tool_ID,       "");
+      Set_Unbounded_String (OpenAI_Tool_Name,     "");
+      Set_Unbounded_String (OpenAI_Tool_Args,     "");
+      OpenAI_Has_Tool := False;
+
+      Http_Resp := HTTP.Client.Post_JSON_Streaming
+        (URL        => URL,
+         Headers    => Hdrs,
+         Body_JSON  => Body_Str,
+         On_Chunk   => OpenAI_SSE_Parse'Access,
+         Timeout_Ms => Provider.Timeout_Ms);
+
+      if not HTTP.Client.Is_Success (Http_Resp) then
+         Set_Unbounded_String
+           (Result.Error,
+            "HTTP " & Http_Resp.Status_Code'Image & ": "
+            & To_String (Http_Resp.Error));
+         return Result;
+      end if;
+
+      Result.Content    := OpenAI_Accum_Content;
+      Result.Stop_Reason := OpenAI_Finish_Reason;
+      Result.Success    := True;
+
+      if OpenAI_Has_Tool then
+         Result.Num_Tool_Calls := 1;
+         Result.Tool_Calls (1).ID        := OpenAI_Tool_ID;
+         Result.Tool_Calls (1).Name      := OpenAI_Tool_Name;
+         Result.Tool_Calls (1).Arguments := OpenAI_Tool_Args;
+         Set_Unbounded_String (Result.Stop_Reason, "tool_calls");
+      end if;
+
+      return Result;
+   end Chat_Streaming;
 
 end Providers.OpenAI;

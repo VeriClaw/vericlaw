@@ -47,6 +47,16 @@ package Providers.Interface_Pkg is
       Tools     : Tool_Schema_Array;
       Num_Tools : Natural) return Provider_Response is abstract;
 
+   --  Streaming variant: prints tokens to stdout as they arrive, then returns
+   --  the assembled Provider_Response.  Default implementation falls back to
+   --  the non-streaming Chat (no live output).  Override in providers that
+   --  support SSE streaming.
+   function Chat_Streaming
+     (Provider  : in out Provider_Type;
+      Conv      : Agent.Context.Conversation;
+      Tools     : Tool_Schema_Array;
+      Num_Tools : Natural) return Provider_Response;
+
    function Name (Provider : Provider_Type) return String is abstract;
 
 end Providers.Interface_Pkg;

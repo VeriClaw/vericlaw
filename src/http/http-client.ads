@@ -50,4 +50,17 @@ package HTTP.Client is
       Body_JSON  : String;
       Timeout_Ms : Natural := 0) return Response;
 
+   --  Callback type for streaming responses.
+   type Stream_Proc_Access is access procedure (Chunk : String);
+
+   --  Like Post_JSON but streams SSE lines to On_Chunk as they arrive.
+   --  Response body is not buffered; On_Chunk is called per complete line.
+   --  The HTTP status code is still returned in the Response record.
+   function Post_JSON_Streaming
+     (URL        : String;
+      Headers    : Header_Array;
+      Body_JSON  : String;
+      On_Chunk   : Stream_Proc_Access;
+      Timeout_Ms : Natural := 0) return Response;
+
 end HTTP.Client;

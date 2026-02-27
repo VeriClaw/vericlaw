@@ -27,6 +27,15 @@ package Agent.Loop_Pkg is
       Cfg           : Config.Schema.Agent_Config;
       Mem           : Memory.SQLite.Memory_Handle) return Agent_Reply;
 
+   --  Like Process_Message but streams LLM tokens to stdout as they arrive.
+   --  Tokens are printed by the provider's Chat_Streaming implementation.
+   --  The returned Agent_Reply contains the complete assembled response.
+   function Process_Message_Streaming
+     (User_Input : String;
+      Conv       : in out Agent.Context.Conversation;
+      Cfg        : Config.Schema.Agent_Config;
+      Mem        : Memory.SQLite.Memory_Handle) return Agent_Reply;
+
    Max_Tool_Rounds : constant := 10;  -- max agentic loops before forced stop
 
 end Agent.Loop_Pkg;
