@@ -4,7 +4,8 @@
   "description": "Slack Socket Mode bridge for VeriClaw",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test test.js"
   },
   "dependencies": {
     "@slack/bolt": "^3.19.0",

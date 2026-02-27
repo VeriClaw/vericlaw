@@ -4,7 +4,8 @@
   "description": "MCP bridge sidecar for VeriClaw — exposes MCP server tools via REST",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test test.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

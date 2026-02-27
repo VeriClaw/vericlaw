@@ -1,0 +1,28 @@
+{
+  "name": "vericlaw",
+  "version": "1.0.0",
+  "description": "> **Active development — `test` branch has all the latest features. `main` is an empty stub.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VeriClaw/vericlaw.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/VeriClaw/vericlaw/issues"
+  },
+  "homepage": "https://github.com/VeriClaw/vericlaw#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

@@ -1,0 +1,22 @@
+[general]
+name = "vericlaw"
+description = "Ada/SPARK AI agent runtime with formally verified security core"
+version = "1.0.0"
+authors = ["VeriClaw Team"]
+licenses = "MIT"
+website = "https://github.com/vericlaw"
+
+[[depends-on]]
+gnatcoll = "^24.0.0"
+aws = "^24.0.0"
+
+[gpr-externals]
+BUILD_PROFILE = "dev"
+BINDER_MODE = "portable"
+
+[gpr-set-externals]
+BUILD_PROFILE = "dev"
+
+[[actions]]
+type = "post-fetch"
+command = ["gprbuild", "-p", "-P", "vericlaw.gpr"]

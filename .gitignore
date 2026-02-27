@@ -1,3 +1,5 @@
+node_modules/
+
 obj/
 lib/
 *.ali
@@ -70,35 +72,27 @@ tests/security_gate/*_vulnerabilities.log
 # WhatsApp bridge (Node.js)
 wa-bridge/node_modules/
 wa-bridge/sessions/
-wa-bridge/package-lock.json
 
 # Slack bridge (Node.js)
 slack-bridge/node_modules/
-slack-bridge/package-lock.json
 
 # Discord bridge (Node.js)
 discord-bridge/node_modules/
-discord-bridge/package-lock.json
 
 # Email bridge (Node.js)
 email-bridge/node_modules/
-email-bridge/package-lock.json
 
 # MCP bridge (Node.js)
 mcp-bridge/node_modules/
-mcp-bridge/package-lock.json
 
 # IRC bridge (Node.js)
 irc-bridge/node_modules/
-irc-bridge/package-lock.json
 
 # Matrix bridge (Node.js)
 matrix-bridge/node_modules/
-matrix-bridge/package-lock.json
 
 # Browser bridge (Node.js)
 browser-bridge/node_modules/
-browser-bridge/package-lock.json
 
 # Local runtime config (user fills in their API keys)
 config/config.json

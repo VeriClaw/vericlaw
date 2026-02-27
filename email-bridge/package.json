@@ -4,7 +4,8 @@
   "description": "IMAP/SMTP email bridge for VeriClaw",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test test.js"
   },
   "dependencies": {
     "express": "^4.18.2",
