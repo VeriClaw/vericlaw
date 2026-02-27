@@ -3,4 +3,9 @@
 --  security source file (security-*.ads, gateway-*.ads, channels-security.ads,
 --  etc.) so that GNATCOLL and AWS library specs are not type-checked in
 --  SPARK mode. Run gnatprove separately for formal verification.
-pragma Ada_2022;
+--
+--  NOTE: Do NOT add "pragma Ada_2022;" here. Global_Configuration_Pragmas
+--  applies to all sources in the closure, including dependencies (GNATCOLL,
+--  AWS). GNATCOLL is incompatible with Ada 2022 mode on GNAT 14.x due to
+--  ambiguous Vectors.Append overloads. Ada 2022 is enabled per-project via
+--  -gnat2022 in Default_Switches which only affects our sources.

@@ -33,16 +33,6 @@ jobs:
           sudo apt-get install -y --no-install-recommends libsqlite3-dev
           sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
 
-      - name: Cache Alire dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/alire
-            ~/.local/share/alire/builds
-            ~/.local/share/alire/toolchains
-          key: alire-builds-${{ runner.os }}-${{ hashFiles('alire.toml') }}
-          restore-keys: alire-builds-${{ runner.os }}-
-
       - name: Build with strict flags
         run: |
           set -o pipefail
@@ -161,16 +151,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libsqlite3-dev
           sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
-
-      - name: Cache Alire dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/alire
-            ~/.local/share/alire/builds
-            ~/.local/share/alire/toolchains
-          key: alire-builds-${{ runner.os }}-${{ hashFiles('alire.toml') }}
-          restore-keys: alire-builds-${{ runner.os }}-
 
       - name: Run tests with GNATcov
         run: |
