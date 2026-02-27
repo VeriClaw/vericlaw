@@ -2,6 +2,25 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0-rc4] — 2026-02-27
+
+### Added
+- ARMv7 (32-bit ARM) cross-compilation for Raspberry Pi 2/3/4 (32-bit OS)
+- Automated Homebrew tap update on release (pushes to `vericlaw/homebrew-vericlaw`)
+- Automated Scoop bucket update on release (pushes to `vericlaw/scoop-vericlaw`)
+- nfpm `.deb` and `.rpm` package generation in release pipeline (amd64, arm64, armhf)
+- Scoop manifest auto-checksum fetching via `hash.url` + regex
+- Raspberry Pi installation guide with model compatibility matrix
+- Distribution matrix table showing all OS/arch/method combinations
+
+### Changed
+- Homebrew formula: added `bottle :unneeded` (pre-built binaries, no compilation)
+- Homebrew formula: added caveats for 32-bit ARM users directing to install.sh
+- Build matrix: 6 targets (was 5) — added `linux-armv7` with `arm-linux-gnueabihf`
+- Dockerfile.ci: added ARMv7 cross-compiler toolchain
+- install.sh: detects `armv7l`/`armhf` architectures
+- vericlaw.gpr: added `arm-linux-gnueabihf` to Target_Kind
+
 ## [Unreleased]
 ### Added
 - Browser/screenshot tool via Puppeteer bridge (port 3007): `browser_browse`, `browser_screenshot`

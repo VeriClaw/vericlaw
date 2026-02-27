@@ -128,12 +128,57 @@ docker pull ghcr.io/vericlaw/vericlaw:latest
 docker run --rm -it ghcr.io/vericlaw/vericlaw
 ```
 
+### Raspberry Pi
+
+VeriClaw ships native ARM binaries for Raspberry Pi:
+
+| Model | OS | Binary | Install Method |
+|-------|-----|--------|---------------|
+| RPi 5 / RPi 4 | Raspberry Pi OS (64-bit) | `linux-aarch64` | install.sh, apt, Homebrew |
+| RPi 4 / RPi 3 | Raspberry Pi OS (32-bit) | `linux-armv7` | install.sh, apt |
+| RPi 2 | Raspberry Pi OS (32-bit) | `linux-armv7` | install.sh, apt |
+| RPi Zero 2 W | Raspberry Pi OS (64-bit) | `linux-aarch64` | install.sh, apt |
+
+**Quick install on Raspberry Pi:**
+```bash
+curl -fsSL https://get.vericlaw.dev | sh
+```
+
+The installer auto-detects your architecture. For `.deb` package:
+```bash
+# 64-bit (aarch64)
+curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_1.0.0_arm64.deb
+sudo dpkg -i vericlaw_*.deb
+
+# 32-bit (armv7)
+curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_1.0.0_armhf.deb
+sudo dpkg -i vericlaw_*.deb
+```
+
+**Performance notes:**
+- RPi 4 (4GB+): Full agent functionality, recommended for production
+- RPi 3/Zero 2 W: Agent works but with higher latency on large contexts
+- RPi 2: CLI commands work; agent mode may be memory-constrained
+- VeriClaw uses ~50MB RAM at idle, ~200MB under typical agent workload
+- Runtime sandbox auto-applies `setrlimit` memory caps appropriate for the platform
+
 ### Verify Installation
 ```bash
 vericlaw --version
 vericlaw doctor
 vericlaw update-check
 ```
+
+### Supported Platforms
+
+| OS | Architecture | Binary | Homebrew | Scoop | APT (.deb) | RPM | install.sh |
+|----|-------------|--------|----------|-------|------------|-----|------------|
+| Linux | x86_64 | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+| Linux | aarch64 (ARM64) | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+| Linux | armv7 (RPi) | ✅ | — | — | ✅ | ✅ | ✅ |
+| macOS | Apple Silicon | ✅ (universal) | ✅ | — | — | — | ✅ |
+| macOS | Intel | ✅ (universal) | ✅ | — | — | — | ✅ |
+| Windows | x86_64 | ✅ | — | ✅ | — | — | ✅ |
 
 ## Project Structure
 
