@@ -90,11 +90,11 @@ is
       --  Guard: need at least one provider (defensive; Provider_Index >= 1).
       pragma Warnings (Off, "condition can only be");
       if Cfg.Num_Providers < 1 then
-      pragma Warnings (On, "condition can only be");
          Set_Unbounded_String
            (Reply.Error, "No providers configured. Add a provider to config.");
          return Reply;
       end if;
+      pragma Warnings (On, "condition can only be");
 
       Ensure_System_Prompt (Conv, Cfg);
 
@@ -390,11 +390,11 @@ is
    begin
       pragma Warnings (Off, "condition can only be");
       if Cfg.Num_Providers < 1 then
-      pragma Warnings (On, "condition can only be");
          Set_Unbounded_String
            (Reply.Error, "No providers configured. Add a provider to config.");
          return Reply;
       end if;
+      pragma Warnings (On, "condition can only be");
 
       Ensure_System_Prompt (Conv, Cfg);
 
