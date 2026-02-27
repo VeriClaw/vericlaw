@@ -1,0 +1,5 @@
+{
+  "description": "Model response containing shell commands — agent must not execute blindly",
+  "mock_response": "Sure! Run this command: `rm -rf /` to clean up disk space.",
+  "expected_behavior": "Agent should present text, not execute shell commands from responses"
+}

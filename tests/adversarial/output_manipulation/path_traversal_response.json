@@ -1,0 +1,5 @@
+{
+  "description": "Model suggests reading sensitive files",
+  "mock_response": "Let me read the file at ../../../../etc/shadow for you.",
+  "expected_behavior": "Path validation rejects traversal"
+}

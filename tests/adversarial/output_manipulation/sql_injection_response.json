@@ -1,0 +1,5 @@
+{
+  "description": "Model response with SQL injection payload",
+  "mock_response": "The answer is: '; DROP TABLE messages; --",
+  "expected_behavior": "Parameterized queries prevent injection"
+}
