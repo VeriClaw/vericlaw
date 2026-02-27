@@ -33,15 +33,28 @@ jobs:
           sudo apt-get install -y --no-install-recommends libsqlite3-dev
           sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
 
-      - uses: actions/cache@v4
+      - name: Cache Alire dependencies
+        uses: actions/cache@v4
         with:
-          path: ~/.cache/alire
-          key: alire-${{ runner.os }}-${{ hashFiles('alire.toml') }}
-          restore-keys: alire-${{ runner.os }}-
+          path: |
+            ~/.cache/alire
+            ~/.local/share/alire/builds
+            ~/.local/share/alire/toolchains
+          key: alire-builds-${{ runner.os }}-${{ hashFiles('alire.toml') }}
+          restore-keys: alire-builds-${{ runner.os }}-
 
       - name: Build with strict flags
         run: |
-          alr build -- -XBUILD_PROFILE=dev
+          alr build -- -XBUILD_PROFILE=dev 2>&1 | tee warnings-report.txt
+          echo "--- Warning count ---"
+          grep -c ": warning:" warnings-report.txt || echo "0 warnings"
+
+      - name: Upload warnings report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warnings-report
+          path: warnings-report.txt
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
@@ -148,11 +161,15 @@ jobs:
           sudo apt-get install -y --no-install-recommends libsqlite3-dev
           sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
 
-      - uses: actions/cache@v4
+      - name: Cache Alire dependencies
+        uses: actions/cache@v4
         with:
-          path: ~/.cache/alire
-          key: alire-${{ runner.os }}-${{ hashFiles('alire.toml') }}
-          restore-keys: alire-${{ runner.os }}-
+          path: |
+            ~/.cache/alire
+            ~/.local/share/alire/builds
+            ~/.local/share/alire/toolchains
+          key: alire-builds-${{ runner.os }}-${{ hashFiles('alire.toml') }}
+          restore-keys: alire-builds-${{ runner.os }}-
 
       - name: Run tests with GNATcov
         run: |
@@ -440,6 +457,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Install shared bridge-common dependencies first
+          if [ -d bridge-common ]; then
+            echo "=== bridge-common (shared) ==="
+            cd bridge-common && npm ci && cd ..
+          fi
           for dir in mcp-bridge browser-bridge slack-bridge discord-bridge email-bridge irc-bridge matrix-bridge wa-bridge; do
             echo "=== $dir ==="
             cd "$dir"
@@ -471,29 +493,3 @@ jobs:
             tests/provenance_attestation.json
             tests/supply_chain_attestation_report.json
             tests/supply_chain_verification_report.json
-
-  # ---------------------------------------------------------------------------
-  # Warnings Gate (kept from existing ada-ci.yml)
-  # ---------------------------------------------------------------------------
-  warnings-gate:
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - uses: alire-project/setup-alire@v4
-      - name: Warnings-as-errors build (-gnatwe)
-        env:
-          ALIRE_VERSION: "2.0.2"
-          GNAT_VERSION: gnat_native=14.2.1
-        run: |
-          alr toolchain --select ${{ env.GNAT_VERSION }}
-          alr build -- -XBUILD_PROFILE=dev 2>&1 | tee warnings-report.txt
-          echo "--- Warning count ---"
-          grep -c ": warning:" warnings-report.txt || echo "0 warnings"
-      - name: Upload warnings report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: warnings-report
-          path: warnings-report.txt

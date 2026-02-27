@@ -41,8 +41,6 @@ procedure Main
   with SPARK_Mode => Off
 is
 
-   Version : constant String := "1.0.0-rc2";
-
    use type Config.Schema.Channel_Kind;
 
    procedure Print_Usage is
@@ -85,7 +83,7 @@ is
       Resp : HTTP.Client.Response;
       API_URL : constant String := "https://api.github.com/repos/vericlaw/vericlaw/releases/latest";
       No_Headers : constant HTTP.Client.Header_Array (1 .. 0) :=
-        (others => <>);
+        [others => <>];
    begin
       Put_Line ("Checking for updates...");
       Resp := HTTP.Client.Get (API_URL, No_Headers, Timeout_Ms => 5000);
@@ -141,7 +139,7 @@ is
 
    --  Verify SPARK security defaults still hold (keeps the proven layer active).
    procedure Assert_Security_Defaults is
-      Spark_Cfg      : constant Core.Agent.Agent_Config := (others => <>);
+      Spark_Cfg      : constant Core.Agent.Agent_Config := [others => <>];
       Channel_Result : constant Channels.Security.Channel_Request_Result :=
         Channels.Security.Evaluate_Channel_Request
           (Channel                 => Channels.Security.CLI_Channel,
@@ -278,7 +276,7 @@ is
                  To_String (Cfg.Channels (I).Bridge_URL) & "/health";
                Resp : constant HTTP.Client.Response :=
                  HTTP.Client.Get
-                   (URL, HTTP.Client.Header_Array'(1 .. 0 => <>),
+                   (URL, HTTP.Client.Header_Array'[1 .. 0 => <>],
                     Timeout_Ms => 5000);
             begin
                if HTTP.Client.Is_Success (Resp) then
@@ -345,8 +343,8 @@ is
       end if;
    end Cmd_Doctor;
 
-   --  Graceful shutdown flag (set by signal handler or internal logic).
-   Shutdown_Requested : Boolean := False;
+   --  Graceful shutdown flag (placeholder for future signal handling).
+   Shutdown_Requested : constant Boolean := False;
 
    --  Entry point
    Cmd    : Unbounded_String := To_Unbounded_String ("chat");
@@ -473,7 +471,7 @@ begin
                Pair_Resp : constant HTTP.Client.Response :=
                  HTTP.Client.Post_JSON
                    (URL       => Bridge & "/sessions/vericlaw/pair",
-                    Headers   => (1 .. 0 => <>),
+                    Headers   => [1 .. 0 => <>],
                     Body_JSON => Body_JSON);
             begin
                if HTTP.Client.Is_Success (Pair_Resp) then
@@ -506,7 +504,7 @@ begin
                               St_Resp : constant HTTP.Client.Response :=
                                 HTTP.Client.Get
                                   (URL        => Bridge & "/sessions/vericlaw/status",
-                                   Headers    => (1 .. 0 => <>),
+                                   Headers    => [1 .. 0 => <>],
                                    Timeout_Ms => 5_000);
                               St_PR   : constant Parse_Result :=
                                 Parse (Ada.Strings.Unbounded.To_String
