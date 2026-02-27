@@ -1,9 +1,6 @@
 # VeriClaw
 
-> ## ⚠️ WORK IN PROGRESS
-> **This project is actively under development and is not yet production-ready.**
-> The `test` branch contains the latest working code. Do not use `main` — it is an empty stub.
-> Features, APIs, and configuration formats may change without notice.
+> **Active development — `test` branch has all the latest features. `main` is an empty stub.**
 
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml)
 
@@ -14,28 +11,64 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 | Feature | **VeriClaw** | ZeroClaw | NullClaw | OpenClaw |
 |---|---|---|---|---|
 | Language | Ada/SPARK | Rust | Zig | TypeScript |
-| Formal verification | **✅ SPARK** | ❌ | ❌ | ❌ |
+| Formal verification | **✅ SPARK Silver** | ❌ | ❌ | ❌ |
 | Binary size (full runtime) | **6.84 MB** | 8.8 MB | 0.66 MB | N/A |
-| Startup (native x86_64 est.)† | **~3 ms** | 10 ms | 8 ms | ~3 s |
+| Startup (native x86_64 est.)† | **~1.6 ms** | 10 ms | 8 ms | ~3 s |
 | Dispatch p95 (native est.)† | **~1.9 ms** | 13.4 ms | 14 ms | — |
-| LLM providers | OpenAI, Anthropic, Azure, Ollama, compat | 12+ | 22+ | 15+ |
-| Channels | CLI, Telegram, Signal, WhatsApp | 25+ | 17 | 40+ |
+| LLM providers | **5** (OpenAI, Anthropic, Azure, Gemini, compat) | 12+ | 22+ | 15+ |
+| Channels | **9** (CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix) | 25+ | 17 | 40+ |
+| Streaming output | **✅** | ✅ | ✅ | ✅ |
+| MCP client | **✅** | ✅ | ❌ | ✅ |
+| Cron scheduler | **✅** | ❌ | ❌ | ✅ |
+| Parallel tool calls | **✅ Ada tasks** | ✅ Tokio | ❌ | ✅ |
 | Provably correct security | **✅** | ❌ | ❌ | ❌ |
 
-> † VeriClaw benchmarks measured via QEMU x86_64 emulation on Apple Silicon (50 runs, `edge-speed` build, `vericlaw version` cold-start). Raw QEMU values: startup 88.5 ms avg, dispatch p95 56.9 ms. Native x86_64 estimates apply a ~30× QEMU overhead correction. Competitor data sourced from published READMEs. To reproduce: `make ingest-nullclaw ingest-zeroclaw competitive-bench`.
->
-> Binary: 6.84 MB for `edge-speed` build statically linking GNATCOLL + libcurl + SQLite (comparable to ZeroClaw's 8.8 MB Rust binary; NullClaw's 0.66 MB Zig binary is dynamically linked).
+> † Benchmarks measured via QEMU x86_64 on Apple Silicon (50 runs, `edge-speed` build). Raw QEMU: startup 48.8 ms, dispatch p95 56.9 ms. Native estimates apply ~30× correction. To reproduce: `make ingest-nullclaw ingest-zeroclaw competitive-bench`. See [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Features
 
-- **SPARK-verified security core** — auth, secrets, sandbox, audit policies proven correct at the type level
-- **4 LLM providers** — OpenAI (GPT-4o), Anthropic (Claude 3.5), Azure AI Foundry, any OpenAI-compatible endpoint (Ollama, OpenRouter, LiteLLM)
-- **4 channels** — CLI (interactive + one-shot), Telegram Bot API, Signal (via signal-cli bridge), WhatsApp (via WA-Bridge)
-- **4 tools** — shell execution (disabled by default), file I/O (workspace-scoped), web fetch, Brave Search
-- **SQLite memory** — per-session conversation history with FTS5 search + persistent facts store
-- **Multi-provider failover** — automatic fallback to secondary provider on failure
-- **Fail-closed defaults** — empty allowlist = deny all; pairing required; no public bind by default
-- **Edge-optimized** — targets Raspberry Pi Zero W and other constrained hardware
+**LLM providers**
+- OpenAI (GPT-4o, GPT-4-turbo), Anthropic (Claude 3.5/3.7), Azure AI Foundry, Google Gemini (2.0 Flash), and any OpenAI-compatible endpoint — Ollama, Groq, OpenRouter, LiteLLM, LM Studio
+- Multi-provider failover — automatic fallback to secondary provider on failure
+- Streaming SSE token output in CLI mode (always-on, no flag needed)
+
+**Channels (9 total)**
+- CLI — interactive chat + one-shot agent mode
+- Telegram, Signal, WhatsApp — fully operational
+- Slack (Socket Mode), Discord (Gateway), Email (IMAP/SMTP), IRC, Matrix — via lightweight Node.js sidecars
+- All channels run concurrently in `gateway` mode using Ada tasks
+- Per-user memory isolation — operator gets full access, guests get sandboxed namespaces
+
+**Tools (8 built-in + unlimited via MCP)**
+- `file` — read/write/list files in `~/.vericlaw/workspace/` (workspace-scoped, path-traversal blocked)
+- `shell` — execute commands via popen (disabled by default, allowlisted)
+- `web_fetch` — fetch and parse web pages
+- `brave_search` — Brave Search API
+- `git_operations` — `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout`
+- `cron_add` / `cron_list` / `cron_remove` — schedule recurring AI tasks
+- `spawn` — delegate a subtask to an independent sub-agent (depth-capped at 1)
+- **MCP (Model Context Protocol)** — connect external tool servers via `mcp-bridge`; tools auto-discovered at startup
+
+**Memory and state**
+- SQLite with FTS5 full-text search + persistent facts store
+- Session auto-expiry (configurable, default 30 days)
+- WAL mode for safe concurrent multi-channel writes
+- Parallel tool calls — multiple tools from one LLM response execute concurrently via Ada tasks
+
+**Security (formally verified)**
+- **SPARK Silver proofs** — absence of runtime errors proved in security core (auth, allowlist, rate limit)
+- **SPARK Flow Analysis** — all security modules have data flow proof
+- Fail-closed defaults — empty allowlist = deny all; no public bind by default
+- Encrypted secrets — ChaCha20-Poly1305 at rest
+- Tamper-evident audit log + syslog forwarding
+- Workspace isolation + path traversal blocked at policy level
+
+**Operations**
+- Prometheus `/metrics` endpoint — per-channel, per-provider, per-tool counters
+- `SIGHUP` hot config reload — update tokens/allowlists without restart
+- `doctor` command — verify config, connectivity, and tool availability
+- Systemd / launchd / Windows service packaging
+- Multi-arch Docker images (amd64 / arm64 / arm/v7)
 
 ## Project Structure
 
@@ -45,123 +78,98 @@ vericlaw/
 │   ├── main.adb                      # Entry point: chat / agent / gateway / doctor / version
 │   │
 │   ├── # ── SPARK-verified security core (formally proved) ─────────────────
-│   ├── security.ads                  # Root security package
 │   ├── security-policy.ads/adb       # Path, URL, egress policy decisions
 │   ├── security-audit.ads/adb        # Tamper-evident audit log with redaction
-│   ├── security-secrets.ads/adb      # Encrypted secret storage
-│   ├── security-secrets-crypto.ads/adb # ChaCha20-Poly1305 crypto primitives
-│   ├── security-defaults.ads         # Fail-closed default constants
-│   ├── security-migration.ads/adb    # Config/key migration helpers
-│   ├── gateway.ads                   # Root gateway package
+│   ├── security-secrets.ads/adb      # Encrypted secret storage (ChaCha20-Poly1305)
 │   ├── gateway-auth.ads/adb          # Pairing, token auth, lockout policy
-│   ├── gateway-provider.ads          # Provider type hierarchy
-│   ├── gateway-provider-credentials.ads/adb  # API key scope/validation
-│   ├── gateway-provider-registry.ads/adb     # Provider registration
-│   ├── gateway-provider-routing.ads/adb      # Routing and failover policy
-│   ├── channels.ads                  # Root channels package
-│   ├── channels-security.ads/adb     # Channel allowlist + deny-by-default
-│   ├── channels-adapters.ads/adb     # SPARK adapter interface
-│   ├── channels-adapters-telegram.ads # Telegram adapter spec
-│   ├── channels-adapters-discord.ads  # Discord adapter spec (future)
-│   ├── channels-adapters-slack.ads    # Slack adapter spec (future)
-│   ├── channels-adapters-email.ads    # Email adapter spec (future)
-│   ├── channels-adapters-whatsapp_bridge.ads # WhatsApp adapter spec
-│   ├── core.ads / core-agent.ads/adb  # Core agent type declarations
-│   ├── runtime.ads / runtime-executor.ads/adb  # Sandbox execution policy
-│   ├── runtime-memory.ads/adb        # Memory policy declarations
-│   ├── plugins.ads / plugins-capabilities.ads/adb # Plugin capability policy
+│   ├── channels-security.ads/adb     # Channel allowlist + rate limit (SPARK Silver)
+│   ├── channels-adapters-*.ads       # SPARK adapter specs (Telegram, Slack, Discord, Email, WhatsApp)
+│   ├── audit-syslog.ads/adb          # Syslog forwarding (POSIX openlog/syslog C bindings)
 │   │
 │   ├── # ── Agent runtime (standard Ada, built on the security core) ───────
 │   ├── agent/
-│   │   ├── agent-context.ads/adb     # Conversation context: history, roles, eviction
-│   │   ├── agent-loop.ads/adb        # Core reasoning loop: receive→LLM→tools→reply
-│   │   └── agent-tools.ads/adb       # Tool registry + schema builder for LLM providers
+│   │   ├── agent-context.ads/adb     # Conversation history, roles, eviction
+│   │   ├── agent-loop_pkg.ads/adb    # Core reasoning loop; parallel tool dispatch
+│   │   └── agent-tools.ads/adb       # Tool registry, schema builder, MCP integration
 │   ├── channels/
-│   │   ├── channels-cli.ads/adb      # Interactive CLI + one-shot mode
-│   │   ├── channels-telegram.ads/adb # Telegram Bot API (long-polling + webhook)
+│   │   ├── channels-cli.ads/adb      # Interactive CLI + one-shot + streaming output
+│   │   ├── channels-telegram.ads/adb # Telegram Bot API long-polling
 │   │   ├── channels-signal.ads/adb   # Signal via signal-cli REST bridge
-│   │   └── channels-whatsapp.ads/adb # WhatsApp via WA-Bridge REST API
+│   │   ├── channels-whatsapp.ads/adb # WhatsApp via WA-Bridge REST API
+│   │   ├── channels-slack.ads/adb    # Slack via Socket Mode bridge (port 3001)
+│   │   ├── channels-discord.ads/adb  # Discord Gateway bridge (port 3002)
+│   │   ├── channels-email.ads/adb    # Email IMAP/SMTP bridge (port 3003)
+│   │   ├── channels-irc.ads/adb      # IRC via irc-bridge (port 3005)
+│   │   └── channels-matrix.ads/adb   # Matrix via matrix-bridge (port 3006)
 │   ├── config/
-│   │   ├── config-schema.ads/adb     # Typed config record (providers, channels, tools, memory)
-│   │   ├── config-loader.ads/adb     # Load ~/.vericlaw/config.json; write default if missing
-│   │   └── config-json_parser.ads/adb# GNATCOLL.JSON wrapper with safe accessors
+│   │   ├── config-schema.ads         # Typed config record (all providers, channels, tools, memory)
+│   │   ├── config-loader.ads/adb     # Load ~/.vericlaw/config.json; onboard wizard
+│   │   ├── config-reload.ads/adb     # SIGHUP handler — hot config reload
+│   │   └── config-json_parser.ads/adb# Custom JSON parser with safe accessors
 │   ├── http/
-│   │   ├── http-client.ads/adb       # libcurl thin bindings for LLM API calls
-│   │   └── http-server.ads/adb       # AWS (Ada Web Server) HTTP gateway
+│   │   ├── http-client.ads/adb       # libcurl bindings: normal + streaming SSE
+│   │   └── http-server.ads/adb       # HTTP gateway + /metrics endpoint
 │   ├── memory/
-│   │   └── memory-sqlite.ads/adb     # GNATCOLL.SQL.SQLite: history + facts + FTS5
+│   │   └── memory-sqlite.ads/adb     # SQLite WAL: history + FTS5 + facts + cron jobs
+│   ├── metrics.ads/adb               # Prometheus counter store + Render function
 │   ├── providers/
-│   │   ├── providers-interface.ads   # Abstract provider type + tool_call types
-│   │   ├── providers-openai.ads/adb  # OpenAI /v1/chat/completions
-│   │   ├── providers-anthropic.ads/adb # Anthropic /v1/messages (Claude)
-│   │   └── providers-openai_compatible.ads/adb # Azure Foundry + generic compat
+│   │   ├── providers-interface_pkg.ads/adb  # Abstract provider + Chat / Chat_Streaming
+│   │   ├── providers-openai.ads/adb         # OpenAI /v1/chat/completions (+ SSE)
+│   │   ├── providers-anthropic.ads/adb      # Anthropic /v1/messages (+ SSE)
+│   │   ├── providers-gemini.ads/adb         # Google Gemini v1beta generateContent
+│   │   └── providers-openai_compatible.ads/adb  # Azure Foundry + Groq + Ollama + any compat
 │   └── tools/
 │       ├── tools-shell.ads/adb       # Shell execution via popen (disabled by default)
 │       ├── tools-file_io.ads/adb     # File read/write/list (workspace-scoped)
-│       └── tools-brave_search.ads/adb# Brave Search REST API
+│       ├── tools-brave_search.ads/adb# Brave Search REST API
+│       ├── tools-git.ads/adb         # Git operations (9 actions, workspace-scoped)
+│       ├── tools-cron.ads/adb        # Cron scheduler (add/list/remove + interval parser)
+│       ├── tools-spawn.ads/adb       # Sub-agent delegation (depth-capped at 1)
+│       └── tools-mcp.ads/adb         # MCP client: fetch tools + execute via bridge
 │
-├── tests/                            # Test programs and data
-│   ├── # ── SPARK security policy tests (decision-vector driven) ──────────
-│   ├── security_secrets_tests.adb/.gpr
-│   ├── gateway_auth_policy.adb/.gpr
-│   ├── channel_security_policy.adb/.gpr
-│   ├── channel_adapter_policy.adb/.gpr
-│   ├── autonomy_guardrails_policy.adb/.gpr
-│   ├── config_migration_policy.adb/.gpr
-│   ├── memory_backend_suite_policy.adb/.gpr
-│   ├── plugin_capability_policy.adb/.gpr
-│   ├── provider_routing_fallback_policy.adb/.gpr
-│   ├── runtime_executor_policy.adb/.gpr
-│   ├── competitive_v2_security_regression_fuzz_suite.adb/.gpr
-│   ├── *-decision-vectors.csv        # Test vectors for each policy domain
-│   │
-│   ├── # ── Runtime unit tests (new agent runtime) ──────────────────────────
-│   ├── config_loader_test.adb/.gpr   # Config JSON parsing + schema defaults
-│   ├── agent_context_test.adb/.gpr   # Conversation history add/evict/format
+├── # ── Node.js bridge sidecars ─────────────────────────────────────────────
+├── wa-bridge/                        # WhatsApp via Baileys (port 3000)
+├── slack-bridge/                     # Slack Socket Mode (port 3001)
+├── discord-bridge/                   # Discord Gateway via discord.js (port 3002)
+├── email-bridge/                     # IMAP poll + SMTP send via imap-simple (port 3003)
+├── mcp-bridge/                       # MCP client proxy via @modelcontextprotocol/sdk (port 3004)
+├── irc-bridge/                       # IRC via irc-framework (port 3005)
+├── matrix-bridge/                    # Matrix via matrix-js-sdk (port 3006)
+│
+├── tests/                            # SPARK policy tests + runtime unit tests
+│   ├── config_loader_test.adb/.gpr   # 18 config parsing tests
+│   ├── agent_context_test.adb/.gpr   # 16 conversation context tests
+│   ├── agent_tools_test.adb/.gpr     # 21 tool schema + dispatch tests
 │   ├── memory_sqlite_test.adb/.gpr   # SQLite save/retrieve/FTS search
-│   ├── agent_tools_test.adb/.gpr     # Tool schema builder + dispatch gating
-│   │
-│   └── # ── CI report artifacts (generated, not committed) ──────────────────
-│       ├── *.json                    # Benchmark, conformance, gate reports
-│       └── security_gate/            # Vulnerability scan results
+│   └── security_*/                   # SPARK decision-vector driven policy tests
 │
-├── scripts/                          # Build, CI, benchmark, and release scripts
-│   ├── bootstrap_toolchain.sh        # Install GNAT + GNATCOLL + AWS + libcurl + sqlite3
-│   ├── check_toolchain.sh            # Verify toolchain is installed
-│   ├── run_container_ci.sh           # Run CI steps inside Docker container
-│   ├── build_multiarch_image.sh      # Build linux/amd64 + arm64 + arm/v7 images
-│   ├── run_competitive_benchmarks.sh # Benchmark vs sister projects
-│   ├── run_cross_repo_conformance_suite.sh  # Security policy conformance tests
-│   ├── release_check.sh              # Full release gate (build + prove + conformance)
-│   ├── release_candidate_gate.sh     # RC gate with Docker, vuln scan, supply chain
-│   ├── vulnerability_license_gate.sh # CVE + license compliance scan
-│   └── ...                           # (20+ additional scripts)
+├── scripts/
+│   ├── bench-rss.sh                  # Idle RSS benchmark vs ZeroClaw/NullClaw
+│   ├── bootstrap_toolchain.sh        # Install GNAT + Alire + libcurl + sqlite3
+│   └── ...                           # (20+ CI, release, conformance scripts)
 │
-├── config/                           # Runtime and CI configuration
-│   ├── security_slos.toml            # Security SLO definitions
-│   ├── threat_model.toml             # Threat model + acceptance criteria
-│   ├── bootstrap_secure_defaults.env # Secure environment defaults
-│   └── competitive_scorecards/       # Sister project benchmark baselines
-│
-├── deploy/                           # Deployment packaging
-│   ├── systemd/vericlaw.service   # Linux systemd unit
-│   ├── launchd/com.vericlaw.plist # macOS launchd plist
-│   └── windows/install-vericlaw-service.ps1 # Windows service installer
-│
-├── operator-console/                 # Local web operator console (HTML/CSS/JS)
-│   ├── index.html                    # Single-page console UI
-│   ├── app.js                        # Console logic
-│   └── styles.css                    # Styles
+├── config/
+│   ├── *.example.json                # Ready-to-copy configs for every channel
+│   ├── examples/                     # Full example configs (groq.json, etc.)
+│   └── security_slos.toml            # Performance SLO thresholds for CI gate
 │
 ├── docs/
-│   └── runbooks/operator-runbook.md  # Operator runbook
+│   ├── benchmarks.md                 # Performance targets + comparison table
+│   ├── providers/                    # groq.md, ollama.md, openrouter.md
+│   └── setup/                        # whatsapp.md, slack.md, discord.md, email.md, irc.md, matrix.md, mcp.md
 │
-├── .github/workflows/ada-ci.yml      # GitHub Actions CI (build, prove, benchmark)
-├── vericlaw.gpr                   # GPRbuild project file
-├── spark.adc                         # SPARK configuration pragmas
+├── deploy/
+│   ├── systemd/vericlaw.service      # Linux systemd unit
+│   ├── launchd/com.vericlaw.plist    # macOS launchd plist
+│   └── windows/install-vericlaw-service.ps1
+│
+├── operator-console/                 # Local web operator console (HTML/CSS/JS)
+├── .github/workflows/ada-ci.yml      # GitHub Actions CI
+├── vericlaw.gpr                      # GPRbuild project file
+├── spark.adc                         # SPARK configuration (Silver level)
 ├── Makefile                          # All build, test, and release targets
-├── Dockerfile.release                # Multi-arch release image
-└── docker-compose.secure.yml         # Hardened local deployment
+├── docker-compose.yml                # Full stack (vericlaw + all bridges)
+└── docker-compose.secure.yml         # Hardened production deployment
 ```
 
 ## Quick start
@@ -185,6 +193,7 @@ make bootstrap
 
 ```bash
 make build            # dev build (full SPARK assertions)
+make edge-speed-build # speed-optimised binary (~6.84 MB)
 make edge-size-build  # size-optimised binary (~400-600 KB)
 ```
 
@@ -196,43 +205,29 @@ Run the interactive setup wizard — the fastest way to create your config:
 vericlaw onboard
 ```
 
-This asks for your provider, API key, model, agent name, and channel, then writes `~/.vericlaw/config.json`. You can also edit the file directly:
-
-On first run without a config, VeriClaw creates `~/.vericlaw/config.json` with defaults.
+This asks for your provider, API key, model, agent name, and channel, then writes `~/.vericlaw/config.json`. A minimal manual config:
 
 ```json
 {
   "agent_name": "VeriClaw",
   "system_prompt": "You are VeriClaw, a helpful AI assistant.",
   "providers": [
-    {
-      "kind": "openai",
-      "api_key": "sk-...",
-      "model": "gpt-4o"
-    },
-    {
-      "kind": "anthropic",
-      "api_key": "sk-ant-...",
-      "model": "claude-3-5-sonnet-20241022"
-    }
+    { "kind": "openai", "api_key": "sk-...", "model": "gpt-4o" },
+    { "kind": "anthropic", "api_key": "sk-ant-...", "model": "claude-3-5-sonnet-20241022" }
   ],
   "channels": [
     { "kind": "cli", "enabled": true },
-    {
-      "kind": "telegram",
-      "enabled": true,
-      "token": "YOUR_BOT_TOKEN",
-      "allowlist": "123456789"
-    }
+    { "kind": "telegram", "enabled": true, "token": "BOT_TOKEN", "allowlist": "123456789" }
   ],
   "tools": {
     "file": true,
     "shell": false,
     "web_fetch": false,
     "brave_search": false,
-    "brave_api_key": ""
+    "brave_api_key": "",
+    "git": true
   },
-  "memory": { "max_history": 50, "facts_enabled": true },
+  "memory": { "max_history": 50, "facts_enabled": true, "session_retention_days": 30 },
   "gateway": { "bind_host": "127.0.0.1", "bind_port": 8787 }
 }
 ```
@@ -240,60 +235,70 @@ On first run without a config, VeriClaw creates `~/.vericlaw/config.json` with d
 ### 4. Use
 
 ```bash
-vericlaw onboard                                      # interactive setup wizard (first-time setup)
-vericlaw channels login --channel whatsapp            # link WhatsApp (headless pairing code)
-vericlaw chat                                         # interactive CLI conversation
-vericlaw agent "What is 2+2?"                        # one-shot, prints reply
-vericlaw gateway                                      # start HTTP gateway + all enabled channels
-vericlaw doctor                                       # print config and health status
-vericlaw version                                      # print version
-vericlaw help                                         # show all commands
+vericlaw onboard                        # interactive setup wizard (first-time)
+vericlaw channels login --channel whatsapp  # link WhatsApp (headless pairing code)
+vericlaw chat                           # interactive CLI conversation (streaming output)
+vericlaw agent "Summarise today's news" # one-shot, prints reply
+vericlaw gateway                        # start all enabled channels concurrently
+vericlaw doctor                         # check config, health, connectivity
+vericlaw version                        # print version
+vericlaw help                           # show all commands
 ```
-
-**WhatsApp setup:** see [docs/setup/whatsapp.md](docs/setup/whatsapp.md) for the full headless guide (no QR code scan required — uses pairing code entered in your WhatsApp app).
 
 ## Providers
 
 | Kind | `kind` in config | Notes |
 |---|---|---|
 | OpenAI | `openai` | `model`: gpt-4o, gpt-4-turbo, etc. |
-| Anthropic | `anthropic` | `model`: claude-3-5-sonnet-20241022, etc. |
+| Anthropic | `anthropic` | `model`: claude-3-5-sonnet-20241022, claude-3-7-sonnet, etc. |
 | Azure AI Foundry | `azure_foundry` | Set `base_url`, `deployment`, `api_version` |
-| OpenAI-compatible | `openai_compatible` | Set `base_url`; covers Ollama, OpenRouter, LiteLLM |
+| Google Gemini | `gemini` | `model`: gemini-2.0-flash (default), gemini-1.5-pro, etc. |
+| OpenAI-compatible | `openai_compatible` | `base_url` covers Ollama, Groq, OpenRouter, LiteLLM, LM Studio |
 
-**Multi-provider failover:** List providers in order; VeriClaw automatically falls back to the next if the first fails.
+**Multi-provider failover:** List providers in order; VeriClaw automatically falls back to the next on failure.
 
-**Ollama (local LLM, no API key required):**
+**Streaming:** Always-on in CLI mode — tokens are printed as they arrive for all OpenAI and Anthropic providers. Other providers fall back gracefully to non-streaming.
+
+**Groq (fastest inference):**
 ```json
-{
-  "kind": "openai_compatible",
-  "base_url": "http://localhost:11434",
-  "api_key": "",
-  "model": "llama3.2"
-}
+{ "kind": "openai_compatible", "base_url": "https://api.groq.com/openai/v1",
+  "token": "gsk_...", "model": "llama-3.3-70b-versatile" }
 ```
-The `onboard` wizard will configure this automatically when you pick the `ollama` provider.
+See [docs/providers/groq.md](docs/providers/groq.md) for model list.
 
-**Azure AI Foundry example:**
+**Ollama (local, no API key):**
 ```json
-{
-  "kind": "azure_foundry",
-  "api_key": "YOUR_AZURE_KEY",
+{ "kind": "openai_compatible", "base_url": "http://localhost:11434",
+  "api_key": "", "model": "llama3.2" }
+```
+See [docs/providers/ollama.md](docs/providers/ollama.md) for setup.
+
+**OpenRouter (200+ models, one key):**
+```json
+{ "kind": "openai_compatible", "base_url": "https://openrouter.ai/api/v1",
+  "token": "sk-or-...", "model": "anthropic/claude-3.5-sonnet" }
+```
+
+**Azure AI Foundry:**
+```json
+{ "kind": "azure_foundry", "api_key": "AZURE_KEY",
   "base_url": "https://YOUR-HUB.openai.azure.com",
-  "deployment": "gpt-4o",
-  "api_version": "2024-02-15-preview"
-}
+  "deployment": "gpt-4o", "api_version": "2024-02-15-preview" }
 ```
 
 ## Channels
 
+All channels run concurrently in `vericlaw gateway` mode using Ada tasks. Each gets its own memory handle (SQLite WAL mode).
+
 ### CLI
-Works out of the box — no config needed. Run `vericlaw chat`.
+Works out of the box — no config needed. Run `vericlaw chat` or `vericlaw agent "..."`.
+
+Streaming output is always-on — tokens print as they arrive.
 
 ### Telegram
 1. Create a bot via [@BotFather](https://t.me/botfather) — get the bot token
 2. Find your Telegram user ID via [@userinfobot](https://t.me/userinfobot)
-3. Set `token` and `allowlist` (comma-separated IDs, or `"*"` for any sender — **not recommended**)
+3. Set `token` and `allowlist` (comma-separated IDs, or `"*"` for open — **not recommended**)
 4. Run `vericlaw gateway`
 
 ### Signal
@@ -304,11 +309,54 @@ java -jar signal-cli.jar -u +15551234567 daemon --http=127.0.0.1:8080
 Set `bridge_url: "http://127.0.0.1:8080"` and `token: "+15551234567"` in config.
 
 ### WhatsApp
-Requires a [WA-Bridge](https://github.com/chrishubert/whatsapp-web-api) instance:
+Requires the bundled WA-Bridge (Baileys-based). See [docs/setup/whatsapp.md](docs/setup/whatsapp.md) for headless pairing:
 ```bash
-docker run -p 3000:3000 chrishubert/whatsapp-web-api
+docker compose up wa-bridge
+vericlaw channels login --channel whatsapp  # shows pairing code
 ```
-Scan the QR code on first run. Set `bridge_url: "http://localhost:3000"` in config.
+
+### Slack
+Requires a Slack app in Socket Mode. See [docs/setup/slack.md](docs/setup/slack.md):
+```bash
+export SLACK_BOT_TOKEN=xoxb-...
+export SLACK_APP_TOKEN=xapp-...
+docker compose up slack-bridge vericlaw
+```
+
+### Discord
+Requires a Discord application with bot token. See [docs/setup/discord.md](docs/setup/discord.md):
+```bash
+export DISCORD_BOT_TOKEN=...
+docker compose up discord-bridge vericlaw
+```
+
+### Email
+Polls an IMAP inbox every 30 seconds; replies via SMTP. See [docs/setup/email.md](docs/setup/email.md):
+```bash
+# Gmail: enable IMAP + create an App Password (requires 2FA)
+export EMAIL_USER=you@gmail.com  EMAIL_PASS=your-app-password
+docker compose up email-bridge vericlaw
+```
+
+### IRC
+Connect to any IRC server. See [docs/setup/irc.md](docs/setup/irc.md):
+```bash
+export IRC_HOST=irc.libera.chat  IRC_NICK=vericlaw  IRC_CHANNELS="#general"
+docker compose up irc-bridge vericlaw
+```
+
+### Matrix
+Connect to any Matrix homeserver. See [docs/setup/matrix.md](docs/setup/matrix.md):
+```bash
+export MATRIX_HOMESERVER=https://matrix.org  MATRIX_TOKEN=syt_...  MATRIX_USER_ID=@bot:matrix.org
+docker compose up matrix-bridge vericlaw
+```
+
+### Multi-user gateway
+
+When `allowlist` contains a specific user (not `"*"`), that user is the **operator** — full access, full system prompt.
+
+Anyone else reaching the agent when `allowlist: "*"` is a **guest** — sandboxed to an isolated memory namespace (`guest-{channel}-{user_id}`) and a modified system prompt with an advisory note. Guests cannot access operator memory or facts.
 
 ## Tools
 
@@ -316,17 +364,114 @@ Scan the QR code on first run. Set `bridge_url: "http://localhost:3000"` in conf
 |---|---|---|---|
 | File I/O | `file: true` | **on** | Read/write/list files in `~/.vericlaw/workspace/` |
 | Shell | `shell: true` | off | Execute shell commands via popen |
-| Web fetch | `web_fetch: true` | off | Fetch web pages |
+| Web fetch | `web_fetch: true` | off | Fetch and parse web pages |
 | Brave Search | `brave_search: true` + `brave_api_key` | off | Web search via Brave Search API |
+| Git operations | `git: true` | **on** | `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout` |
+| Cron scheduler | always available | — | `cron_add`, `cron_list`, `cron_remove` — schedule recurring AI tasks |
+| Spawn | always available | — | Delegate a subtask to an isolated sub-agent |
+| MCP tools | `mcp_bridge_url` | off | Auto-discovered from any MCP server via mcp-bridge |
+
+### Cron scheduler
+
+Schedule recurring tasks that run automatically:
+```
+you: cron_add daily-summary every 24h — "Give me a briefing on what happened today"
+bot: Scheduled 'daily-summary' to run every 24h. Next run: 2026-02-28T14:00:00Z
+```
+
+Intervals: `5m`, `1h`, `24h`, `7d`. Jobs are stored in SQLite and survive restarts. A background Ada task checks for due jobs every 60 seconds and runs them autonomously.
+
+### MCP client
+
+Connect any [Model Context Protocol](https://modelcontextprotocol.io) tool server:
+
+```json
+{
+  "tools": { "mcp_bridge_url": "http://mcp-bridge:3004" }
+}
+```
+
+In `docker-compose.yml`:
+```yaml
+mcp-bridge:
+  build: ./mcp-bridge
+  environment:
+    MCP_SERVERS: '[{"name":"filesystem","command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/workspace"]}]'
+  profiles: [mcp]
+```
+
+On startup, VeriClaw fetches the tool list from the bridge and exposes them to the LLM as `mcp__{server}__{tool}` — transparently alongside built-in tools. See [docs/setup/mcp.md](docs/setup/mcp.md).
+
+### Spawn / subagent
+
+The LLM can delegate focused subtasks to an isolated sub-agent:
+```
+you: Research the top 5 Rust async runtimes and compare them
+bot: [calls spawn("Research top 5 Rust async runtimes: Tokio, async-std, ...")]
+bot: Here's a comparison based on the research: ...
+```
+
+Sub-agents run with a clean conversation (system prompt + single prompt, no tools, depth cap = 1).
 
 ## Security
 
-- **SPARK-verified policies** — auth, secrets, channel allowlists, sandbox limits — all formally proved, not just tested
+- **SPARK Silver proofs** — absence of runtime errors formally proved in all security core modules (auth, channel allowlist + rate limit, secrets). GNATprove `--level=2` with Z3/CVC4/AltErgo.
+- **SPARK Flow Analysis** — all security modules have data flow proof (no uninitialised reads, no data leaks across security boundaries)
 - **Fail-closed defaults** — empty allowlist = deny all; pairing required before first use; no public bind by default
 - **Encrypted secrets** — API keys stored with ChaCha20-Poly1305 at rest
-- **Tamper-evident audit log** — signed event trail with metadata redaction
-- **Workspace isolation** — file tool restricted to `~/.vericlaw/workspace/`; path traversal (`../`, NUL) blocked at policy level
+- **Tamper-evident audit log** — signed event trail with metadata redaction + syslog forwarding (`LOG_INFO` / `LOG_WARNING` per event severity)
+- **Workspace isolation** — file tool restricted to `~/.vericlaw/workspace/`; `../` and NUL path traversal blocked at policy level (proved in SPARK)
 - **Process sandboxing** — Landlock/Seccomp/Firejail auto-selected per platform
+
+### Running GNATprove
+
+```bash
+make check           # flow analysis (fast, development)
+gnatprove -P vericlaw.gpr --level=2 --report=fail   # full Silver proof
+```
+
+## Operations
+
+### Prometheus metrics
+
+VeriClaw exposes a standard `/metrics` endpoint (Prometheus text format) on the gateway bind address:
+
+```bash
+curl http://127.0.0.1:8787/metrics
+```
+
+Available counters:
+- `vericlaw_requests_total{channel="telegram|slack|..."}` — messages processed
+- `vericlaw_errors_total{channel="..."}` — processing errors
+- `vericlaw_provider_calls_total{provider="openai|anthropic|..."}` — LLM calls
+- `vericlaw_provider_errors_total{provider="..."}` — LLM failures (triggers failover)
+- `vericlaw_tool_calls_total{tool="file|shell|git|..."}` — tool invocations
+- `vericlaw_uptime_seconds` — process uptime gauge
+
+### Hot config reload (SIGHUP)
+
+Update tokens, allowlists, or system prompts without restarting:
+
+```bash
+# Edit config
+nano ~/.vericlaw/config.json
+
+# Signal running process
+kill -HUP $(pidof vericlaw)
+# → "Config reloaded." printed on next poll cycle for each channel
+```
+
+### Parallel tool execution
+
+When an LLM response includes multiple tool calls, VeriClaw executes them concurrently via Ada tasks and collects results in order. Ordering-sensitive tools (`cron_*`, `spawn`) always run sequentially.
+
+### Idle RSS benchmark
+
+```bash
+./scripts/bench-rss.sh ./vericlaw
+```
+
+See [docs/benchmarks.md](docs/benchmarks.md) for the full comparison table against ZeroClaw and NullClaw.
 
 ## Testing
 
@@ -545,64 +690,40 @@ The `make competitive-regression-gate` gate **fails** if any VeriClaw metric reg
 
 ## What works today
 
-- `make docker-dev-build` — build via Docker (no local GNAT required on macOS)
-- `make docker-dev-test` — smoke tests: `vericlaw version` + `vericlaw doctor`
-- `make docker-dev-integration-test` — end-to-end agent test with mock LLM server ✅
-- `make check` — build + SPARK flow analysis + audit/service-hardening checks
-- `make secrets-test` / `make conformance-suite` / `make release-check`
-- `make vulnerability-license-gate` — blocking CVE + license compliance gate
-- `make docker-runtime-bundle-check` / `make service-supervisor-check`
-- `make image-build-multiarch` — multi-arch Docker image (amd64/arm64/arm/v7)
-- `make supply-chain-attest` / `make supply-chain-verify`
-- `make competitive-regression-gate` / `make competitive-v2-release-readiness-gate`
+**All commands:**
+- `vericlaw onboard` — interactive wizard (provider, API key, model, agent name, channel)
+- `vericlaw chat` — interactive CLI with streaming token output
+- `vericlaw agent "..."` — one-shot mode with streaming output
+- `vericlaw gateway` — runs all enabled channels concurrently via Ada tasks
+- `vericlaw doctor` — config check, connectivity, health status
+- `vericlaw version` / `vericlaw help`
 
-**CLI commands:** `onboard` (wizard), `chat`, `agent`, `gateway`, `doctor`, `version`, `help`
+**All 5 providers:** OpenAI, Anthropic, Azure AI Foundry, Google Gemini, any OpenAI-compatible (Groq, Ollama, OpenRouter, LiteLLM)
 
-**Fixed in this release:**
-- Critical: `curl chars_ptr` URL bug fixed — all HTTP calls to LLM providers now work
-- Rate limiting enforced per-channel session (Telegram, Signal, WhatsApp)
-- Build artefacts moved to `obj/` directory (clean project root)
+**All 9 channels (concurrently in gateway mode):** CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix
+
+**All 8 built-in tools + unlimited MCP tools:**
+`file`, `shell`, `web_fetch`, `brave_search`, `git_operations`, `cron_add/list/remove`, `spawn`
+
+**Infrastructure:**
+- Streaming SSE output (OpenAI + Anthropic)
+- Multi-provider failover
+- Session expiry auto-prune (configurable)
+- Prometheus `/metrics` endpoint
+- `SIGHUP` hot config reload
+- Multi-user gateway (operator vs guest memory isolation)
+- Parallel tool execution (Ada task pool)
+- Cron heartbeat background task
+- Syslog audit forwarding
+- SPARK Silver proofs on security core
+- SQLite WAL mode for safe concurrent channel writes
+- Multi-arch Docker images (amd64 / arm64 / arm/v7)
+- Systemd / launchd / Windows service packaging
 
 ## Remaining To-Dos
 
-These items are intentionally deferred post-MVP:
+Three items intentionally deferred for a future release:
 
-### Provider coverage
-
-- [ ] **Google Gemini** — `generativelanguage.googleapis.com`
-- [ ] **Mistral AI** — `api.mistral.ai/v1`
-- [ ] **Groq / OpenRouter** — via `openai_compatible` with custom base URL
-- [ ] **Streaming output** — SSE token streaming for CLI mode
-
-### Channel coverage
-
-- [ ] **Slack** — Bot API via Socket Mode
-- [ ] **Discord** — Bot API with gateway events
-- [ ] **Email** — SMTP/IMAP bridge
-- [ ] **Multi-channel concurrency** — Ada tasks so all channels run simultaneously in `gateway` mode
-
-### Memory and search
-
-- [ ] **Vector embeddings** — `sqlite-vss` extension for semantic similarity search
-- [ ] **RAG** — retrieval-augmented generation from local documents
-- [ ] **Session expiry** — auto-prune conversations older than N days
-
-### Agent capabilities
-
-- [ ] **MCP (Model Context Protocol)** — interoperability with external tool servers
-- [ ] **Subagents / delegation** — nested conversations with different personas
-- [ ] **Cron/heartbeat scheduler** — scheduled tasks without user input
-- [ ] **Parallel tool calls** — execute multiple tool calls from one LLM response concurrently
-
-### Infrastructure
-
-- [ ] **Web UI** — minimal browser interface served by AWS gateway
-- [ ] **Prometheus metrics** — `/metrics` endpoint with latency histograms
-- [ ] **Hot config reload** — `SIGHUP` reloads config without restart
-- [ ] **Multi-user gateway** — per-user conversation and fact store isolation
-- [x] **Published to GitHub** — `github.com/VeriClaw/vericlaw` (`test` branch)
-
-### Security hardening
-
-- [ ] **SPARK proofs at level 2+** — upgrade from flow analysis to full proof for all security modules
-- [ ] **Audit log shipping** — forward audit events to syslog / external SIEM
+- [ ] **Browser / screenshot tool** — headless Chromium control via Chrome DevTools Protocol (`browser_navigate`, `browser_screenshot`, `browser_click`)
+- [ ] **Vector embeddings + RAG** — `sqlite-vec` extension for semantic similarity search; retrieval-augmented generation from local documents
+- [ ] **Web operator console** — wire the `operator-console/` HTML/JS frontend to the live gateway for in-browser session management
