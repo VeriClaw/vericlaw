@@ -96,6 +96,11 @@ package body Memory.SQLite is
       Col  : int) return double
    with Import, Convention => C, External_Name => "sqlite3_column_double";
 
+   function c_column_int
+     (Stmt : System.Address;
+      Col  : int) return int
+   with Import, Convention => C, External_Name => "sqlite3_column_int";
+
    function c_errmsg (DB : System.Address) return chars_ptr
    with Import, Convention => C, External_Name => "sqlite3_errmsg";
 
@@ -145,6 +150,8 @@ package body Memory.SQLite is
      & " enabled INTEGER DEFAULT 1"
      & ");";
 
+   Current_Schema_Version : constant := 2;
+
    --  -----------------------------------------------------------------------
    --  Internal helpers
    --  -----------------------------------------------------------------------
@@ -163,6 +170,54 @@ package body Memory.SQLite is
       end if;
       pragma Unreferenced (Rc);
    end Exec_DDL;
+
+   procedure Run_Migrations (DB : System.Address) is
+      Version : Natural := 0;
+      CS      : chars_ptr;
+      Stmt    : System.Address;
+      Rc      : int;
+   begin
+      --  Ensure the version table exists.
+      Exec_DDL (DB,
+        "CREATE TABLE IF NOT EXISTS schema_version"
+        & " (version INTEGER PRIMARY KEY)");
+
+      --  Read the current schema version.
+      CS := New_String ("SELECT MAX(version) FROM schema_version");
+      Rc := c_prepare_v2 (DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc = SQLITE_OK then
+         if c_step (Stmt) = SQLITE_ROW then
+            declare
+               V : constant int := c_column_int (Stmt, 0);
+            begin
+               if V > 0 then
+                  Version := Natural (V);
+               end if;
+            end;
+         end if;
+         Rc := c_finalize (Stmt);
+      end if;
+
+      --  Apply migrations sequentially.
+      if Version < 1 then
+         --  Version 1 is the initial schema (tables created above).
+         Exec_DDL (DB, "INSERT OR IGNORE INTO schema_version VALUES (1)");
+      end if;
+
+      if Version < 2 then
+         Exec_DDL (DB,
+           "CREATE TABLE IF NOT EXISTS conversation_branches ("
+           & " session_id TEXT PRIMARY KEY,"
+           & " fork_of TEXT,"
+           & " fork_at_msg INTEGER,"
+           & " created_at TEXT DEFAULT (datetime('now'))"
+           & ")");
+         Exec_DDL (DB, "INSERT OR IGNORE INTO schema_version VALUES (2)");
+      end if;
+
+      pragma Unreferenced (Rc);
+   end Run_Migrations;
 
    --  Bind a text parameter (column 1-indexed).
    procedure Bind_Text
@@ -258,16 +313,27 @@ package body Memory.SQLite is
         "CREATE INDEX IF NOT EXISTS idx_messages_session_ts"
         & " ON messages(session_id, created_at)");
 
+      --  Run schema migrations (creates version table, applies upgrades).
+      Run_Migrations (DB);
+
       --  Prune old sessions on startup if retention is configured.
       if Retention_Days > 0 then
          declare
-            Days_Str : constant String :=
-              Ada.Strings.Fixed.Trim
-                (Natural'Image (Retention_Days), Ada.Strings.Left);
-         begin
-            Exec_DDL (DB,
+            Prune_SQL : constant String :=
               "DELETE FROM messages WHERE"
-              & " julianday('now') - julianday(created_at) > " & Days_Str);
+              & " julianday('now') - julianday(created_at) > ?";
+            CS   : chars_ptr := New_String (Prune_SQL);
+            Stmt : System.Address;
+            Rc   : int;
+         begin
+            Rc := c_prepare_v2 (DB, CS, -1, Stmt, System.Null_Address);
+            Free (CS);
+            if Rc = SQLITE_OK then
+               Bind_Int (Stmt, 1, Retention_Days);
+               Rc := c_step (Stmt);
+               Rc := c_finalize (Stmt);
+            end if;
+            pragma Unreferenced (Rc);
          end;
       end if;
 
@@ -621,6 +687,125 @@ package body Memory.SQLite is
       Rc := c_finalize (Stmt);
       pragma Unreferenced (Rc);
    end Cron_Update_Run;
+
+   procedure Fork_Session
+     (Handle      : Memory_Handle;
+      Old_Session : String;
+      New_Session : String;
+      Fork_At_Msg : Positive;
+      Success     : out Boolean;
+      Error       : out Unbounded_String)
+   is
+      --  Copy messages 1..Fork_At_Msg from Old_Session into New_Session.
+      --  Messages are numbered in chronological order (ascending id).
+      SQL_Copy : constant String :=
+        "INSERT INTO messages (session_id, channel, role, name, content,"
+        & " created_at)"
+        & " SELECT ?, channel, role, name, content, created_at"
+        & " FROM (SELECT * FROM messages WHERE session_id = ?"
+        & "       ORDER BY id ASC LIMIT ?)";
+      SQL_Branch : constant String :=
+        "INSERT OR REPLACE INTO conversation_branches"
+        & " (session_id, fork_of, fork_at_msg) VALUES (?, ?, ?)";
+      CS   : chars_ptr;
+      Stmt : System.Address;
+      Rc   : int;
+   begin
+      Success := False;
+      Set_Unbounded_String (Error, "");
+
+      --  Copy the messages.
+      CS := New_String (SQL_Copy);
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then
+         Set_Unbounded_String (Error, "Failed to prepare fork copy");
+         return;
+      end if;
+      Bind_Text (Stmt, 1, New_Session);
+      Bind_Text (Stmt, 2, Old_Session);
+      Bind_Int  (Stmt, 3, Fork_At_Msg);
+      Rc := c_step (Stmt);
+      Rc := c_finalize (Stmt);
+
+      --  Record the branch relationship.
+      CS := New_String (SQL_Branch);
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then
+         Set_Unbounded_String (Error, "Failed to prepare branch record");
+         return;
+      end if;
+      Bind_Text (Stmt, 1, New_Session);
+      Bind_Text (Stmt, 2, Old_Session);
+      Bind_Int  (Stmt, 3, Fork_At_Msg);
+      Rc := c_step (Stmt);
+      Rc := c_finalize (Stmt);
+
+      --  Sync FTS for copied messages.
+      declare
+         SQL_FTS : constant String :=
+           "INSERT INTO messages_fts (rowid, content, session_id)"
+           & " SELECT id, content, session_id FROM messages"
+           & " WHERE session_id = ?";
+         FCS : chars_ptr := New_String (SQL_FTS);
+         FStmt : System.Address;
+      begin
+         Rc := c_prepare_v2 (Handle.DB, FCS, -1, FStmt,
+                             System.Null_Address);
+         Free (FCS);
+         if Rc = SQLITE_OK then
+            Bind_Text (FStmt, 1, New_Session);
+            Rc := c_step (FStmt);
+            Rc := c_finalize (FStmt);
+         end if;
+      end;
+
+      Success := True;
+      pragma Unreferenced (Rc);
+   end Fork_Session;
+
+   procedure List_Branches
+     (Handle   : Memory_Handle;
+      Session  : String;
+      Branches : out Agent.Context.Branch_Array;
+      Count    : out Natural)
+   is
+      --  Find the root session (follow fork_of up one level, or self).
+      --  Then list all branches that share the same root.
+      SQL : constant String :=
+        "SELECT b.session_id, b.fork_at_msg, b.created_at"
+        & " FROM conversation_branches b"
+        & " WHERE b.fork_of = ?"
+        & "    OR b.fork_of = (SELECT fork_of FROM conversation_branches"
+        & "                     WHERE session_id = ?)"
+        & " ORDER BY b.created_at";
+      CS   : chars_ptr := New_String (SQL);
+      Stmt : System.Address;
+      Rc   : int;
+   begin
+      Count    := 0;
+      Branches := (others => (others => <>));
+
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then return; end if;
+
+      Bind_Text (Stmt, 1, Session);
+      Bind_Text (Stmt, 2, Session);
+
+      while c_step (Stmt) = SQLITE_ROW
+        and Count < Agent.Context.Max_Branches
+      loop
+         Count := Count + 1;
+         Branches (Count) :=
+           (Session_ID => To_Unbounded_String (Col_Text (Stmt, 0)),
+            Fork_At    => Natural (c_column_int (Stmt, 1)),
+            Created_At => To_Unbounded_String (Col_Text (Stmt, 2)));
+      end loop;
+      Rc := c_finalize (Stmt);
+      pragma Unreferenced (Rc);
+   end List_Branches;
 
    procedure Load_Vec_Extension (Handle : Memory_Handle; Path : String) is
       CS : chars_ptr;

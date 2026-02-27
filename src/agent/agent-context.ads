@@ -64,4 +64,13 @@ package Agent.Context is
       Images   : out Image_Array;
       Num_Imgs : out Natural);
 
+   --  Branch metadata for conversation forking.
+   type Branch_Info is record
+      Session_ID : Unbounded_String;
+      Fork_At    : Natural := 0;
+      Created_At : Unbounded_String;
+   end record;
+   Max_Branches : constant := 32;
+   type Branch_Array is array (1 .. Max_Branches) of Branch_Info;
+
 end Agent.Context;

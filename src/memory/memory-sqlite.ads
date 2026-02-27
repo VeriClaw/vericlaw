@@ -124,6 +124,27 @@ package Memory.SQLite is
       Next_Run : String);
 
    --  -----------------------------------------------------------------------
+   --  Conversation branching
+   --  -----------------------------------------------------------------------
+
+   --  Fork a session: copy messages 1..Fork_At_Msg from Old_Session to
+   --  New_Session and record the branch relationship.
+   procedure Fork_Session
+     (Handle      : Memory_Handle;
+      Old_Session : String;
+      New_Session : String;
+      Fork_At_Msg : Positive;
+      Success     : out Boolean;
+      Error       : out Unbounded_String);
+
+   --  List all branches that forked from Session (or share the same root).
+   procedure List_Branches
+     (Handle   : Memory_Handle;
+      Session  : String;
+      Branches : out Agent.Context.Branch_Array;
+      Count    : out Natural);
+
+   --  -----------------------------------------------------------------------
    --  Vector extension support (sqlite-vec)
    --  -----------------------------------------------------------------------
 
