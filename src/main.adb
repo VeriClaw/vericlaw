@@ -24,6 +24,8 @@ with Channels.Discord;
 with Channels.Slack;
 with Channels.Email;
 with HTTP.Server;
+with Config.Reload;
+with Metrics;
 
 procedure Main is
 
@@ -343,58 +345,142 @@ begin
          end if;
 
       elsif C = "gateway" then
-         --  Start polling channels in tasks + run HTTP server.
-         --  For MVP: run Telegram polling in the main thread if HTTP
-         --  server is not configured (no TLS cert), otherwise run HTTP server.
+         --  Run all enabled channels concurrently via Ada tasks.
+         --  Each task opens its own memory handle (WAL mode allows safe concurrency).
          declare
-            Has_Telegram  : Boolean := False;
-            Has_Signal    : Boolean := False;
-            Has_WhatsApp  : Boolean := False;
-            Has_Discord   : Boolean := False;
-            Has_Slack     : Boolean := False;
-            Has_Email     : Boolean := False;
+            Home    : constant String :=
+              Ada.Environment_Variables.Value ("HOME", ".");
+            DB_Path : constant String :=
+              (if Length (CR.Config.Memory.DB_Path) > 0
+               then To_String (CR.Config.Memory.DB_Path)
+               else Home & "/.vericlaw/memory.db");
+            Has_Any : Boolean := False;
          begin
             for I in 1 .. CR.Config.Num_Channels loop
-               case CR.Config.Channels (I).Kind is
-                  when Config.Schema.Telegram =>
-                     Has_Telegram := Has_Telegram
-                       or else CR.Config.Channels (I).Enabled;
-                  when Config.Schema.Signal =>
-                     Has_Signal := Has_Signal
-                       or else CR.Config.Channels (I).Enabled;
-                  when Config.Schema.WhatsApp =>
-                     Has_WhatsApp := Has_WhatsApp
-                       or else CR.Config.Channels (I).Enabled;
-                  when Config.Schema.Discord =>
-                     Has_Discord := Has_Discord
-                       or else CR.Config.Channels (I).Enabled;
-                  when Config.Schema.Slack =>
-                     Has_Slack := Has_Slack
-                       or else CR.Config.Channels (I).Enabled;
-                  when Config.Schema.Email =>
-                     Has_Email := Has_Email
-                       or else CR.Config.Channels (I).Enabled;
-                  when Config.Schema.CLI =>
-                     null;
-               end case;
+               if CR.Config.Channels (I).Enabled
+                 and then CR.Config.Channels (I).Kind /= Config.Schema.CLI
+               then
+                  Has_Any := True;
+                  exit;
+               end if;
             end loop;
 
-            --  Run whichever channel is enabled (first found wins for MVP).
-            --  Full multi-channel concurrency requires Ada tasks (post-MVP).
-            if Has_Telegram then
-               Channels.Telegram.Run_Polling (CR.Config, Mem);
-            elsif Has_Signal then
-               Channels.Signal.Run_Polling (CR.Config, Mem);
-            elsif Has_WhatsApp then
-               Channels.WhatsApp.Run_Polling (CR.Config, Mem);
-            elsif Has_Discord then
-               Channels.Discord.Run_Polling (CR.Config, Mem);
-            elsif Has_Slack then
-               Channels.Slack.Run_Polling (CR.Config, Mem);
-            elsif Has_Email then
-               Channels.Email.Run_Polling (CR.Config, Mem);
+            if Has_Any then
+               declare
+                  task Telegram_Poller;
+                  task body Telegram_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Telegram.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[Telegram]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end Telegram_Poller;
+
+                  task Signal_Poller;
+                  task body Signal_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Signal.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[Signal]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end Signal_Poller;
+
+                  task WhatsApp_Poller;
+                  task body WhatsApp_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.WhatsApp.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[WhatsApp]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end WhatsApp_Poller;
+
+                  task Discord_Poller;
+                  task body Discord_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Discord.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[Discord]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end Discord_Poller;
+
+                  task Slack_Poller;
+                  task body Slack_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Slack.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[Slack]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end Slack_Poller;
+
+                  task Email_Poller;
+                  task body Email_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Email.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[Email]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end Email_Poller;
+               begin
+                  null;
+                  --  Block waits for all pollers to terminate.
+                  --  Enabled channels loop forever; disabled ones return quickly.
+               end;
             else
-               --  No channels: run HTTP server for webhook registration.
+               --  No channels configured: run HTTP server for webhooks.
                HTTP.Server.Run (CR.Config, Mem);
             end if;
          end;

@@ -3,10 +3,13 @@ with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 with HTTP.Client;
 with Config.JSON_Parser;  use Config.JSON_Parser;
 with Config.Schema;       use Config.Schema;
+with Config.Loader;
+with Config.Reload;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Channels.Security;   -- SPARK security policy checks
 with Channels.Rate_Limit;
+with Metrics;
 
 package body Channels.Telegram is
 
@@ -142,6 +145,8 @@ package body Channels.Telegram is
                   Cfg.Memory.Max_History, Conv);
             end if;
 
+            Metrics.Increment ("requests_total", "telegram");
+
             Reply := Agent.Loop_Pkg.Process_Message
               (User_Input => Text,
                Conv       => Conv,
@@ -151,6 +156,7 @@ package body Channels.Telegram is
             if Reply.Success then
                return To_String (Reply.Content);
             else
+               Metrics.Increment ("errors_total", "telegram");
                return "Sorry, I encountered an error. Please try again.";
             end if;
          end;
@@ -162,14 +168,15 @@ package body Channels.Telegram is
       Mem : Memory.SQLite.Memory_Handle)
    is
       --  Find Telegram channel config.
-      Bot_Token : Unbounded_String;
-      Found     : Boolean := False;
+      Current_Cfg : Config.Schema.Agent_Config := Cfg;
+      Bot_Token   : Unbounded_String;
+      Found       : Boolean := False;
    begin
-      for I in 1 .. Cfg.Num_Channels loop
-         if Cfg.Channels (I).Kind = Config.Schema.Telegram
-           and then Cfg.Channels (I).Enabled
+      for I in 1 .. Current_Cfg.Num_Channels loop
+         if Current_Cfg.Channels (I).Kind = Config.Schema.Telegram
+           and then Current_Cfg.Channels (I).Enabled
          then
-            Bot_Token := Cfg.Channels (I).Token;
+            Bot_Token := Current_Cfg.Channels (I).Token;
             Found := True;
             exit;
          end if;
@@ -186,10 +193,33 @@ package body Channels.Telegram is
 
       declare
          Offset : Integer := 0;
-         Token  : constant String := To_String (Bot_Token);
       begin
          loop
+            --  Check for SIGHUP-triggered config reload.
+            if Config.Reload.Is_Requested then
+               declare
+                  New_CR : constant Config.Loader.Load_Result :=
+                    Config.Loader.Load;
+               begin
+                  if New_CR.Success then
+                     Current_Cfg := New_CR.Config;
+                     Ada.Text_IO.Put_Line ("Config reloaded.");
+                     for I in 1 .. Current_Cfg.Num_Channels loop
+                        if Current_Cfg.Channels (I).Kind =
+                          Config.Schema.Telegram
+                          and then Current_Cfg.Channels (I).Enabled
+                        then
+                           Bot_Token := Current_Cfg.Channels (I).Token;
+                           exit;
+                        end if;
+                     end loop;
+                  end if;
+               end;
+               Config.Reload.Acknowledge;
+            end if;
+
             declare
+               Token : constant String := To_String (Bot_Token);
                URL   : constant String :=
                  Bot_URL (Token)
                  & "/getUpdates?offset="
@@ -197,8 +227,8 @@ package body Channels.Telegram is
                  & "&timeout=30";
                Resp  : constant HTTP.Client.Response :=
                  HTTP.Client.Get
-                   (URL       => URL,
-                    Headers   => (1 .. 0 => <>),
+                   (URL        => URL,
+                    Headers    => (1 .. 0 => <>),
                     Timeout_Ms => 35_000);
             begin
                if HTTP.Client.Is_Success (Resp) then
@@ -224,7 +254,7 @@ package body Channels.Telegram is
                                  Reply_Text : constant String :=
                                    Process_Update
                                      (To_JSON_String (Update),
-                                      Cfg, Mem);
+                                      Current_Cfg, Mem);
                               begin
                                  if Reply_Text'Length > 0 then
                                     declare

@@ -3,10 +3,13 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Config.Schema;      use Config.Schema;
+with Config.Loader;
+with Config.Reload;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
+with Metrics;
 
 package body Channels.WhatsApp is
 
@@ -73,24 +76,44 @@ package body Channels.WhatsApp is
      (Cfg : Config.Schema.Agent_Config;
       Mem : Memory.SQLite.Memory_Handle)
    is
-      Chan_Cfg   : constant Config.Schema.Channel_Config :=
-        Get_Chan_Config (Cfg);
-      Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
+      Current_Cfg : Config.Schema.Agent_Config := Cfg;
+      Chan_Cfg    : Config.Schema.Channel_Config :=
+        Get_Chan_Config (Current_Cfg);
+      Bridge_URL  : Unbounded_String :=
+        Chan_Cfg.Bridge_URL;
    begin
-      if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
+      if not Chan_Cfg.Enabled or else Length (Bridge_URL) = 0 then
          Ada.Text_IO.Put_Line ("WhatsApp: not configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line ("WhatsApp: polling " & Bridge_URL & " ...");
+      Ada.Text_IO.Put_Line
+        ("WhatsApp: polling " & To_String (Bridge_URL) & " ...");
 
       loop
+         --  Check for SIGHUP-triggered config reload.
+         if Config.Reload.Is_Requested then
+            declare
+               New_CR : constant Config.Loader.Load_Result :=
+                 Config.Loader.Load;
+            begin
+               if New_CR.Success then
+                  Current_Cfg := New_CR.Config;
+                  Chan_Cfg    := Get_Chan_Config (Current_Cfg);
+                  Bridge_URL  := Chan_Cfg.Bridge_URL;
+                  Ada.Text_IO.Put_Line ("Config reloaded.");
+               end if;
+            end;
+            Config.Reload.Acknowledge;
+         end if;
+
          declare
+            BU   : constant String := To_String (Bridge_URL);
             Resp : constant HTTP.Client.Response :=
               HTTP.Client.Get
-                (URL       => Bridge_URL & "/sessions/"
+                (URL        => BU & "/sessions/"
                   & Default_Session & "/messages?limit=10",
-                 Headers   => (1 .. 0 => <>),
+                 Headers    => (1 .. 0 => <>),
                  Timeout_Ms => 10_000);
          begin
             if HTTP.Client.Is_Success (Resp) then
@@ -157,25 +180,29 @@ package body Channels.WhatsApp is
                                  if Memory.SQLite.Is_Open (Mem) then
                                     Memory.SQLite.Load_History
                                       (Mem, "wa:" & Chat_ID,
-                                       Cfg.Memory.Max_History, Conv);
+                                       Current_Cfg.Memory.Max_History, Conv);
                                  end if;
+
+                                 Metrics.Increment ("requests_total", "whatsapp");
 
                                  Reply :=
                                    Agent.Loop_Pkg.Process_Message
                                      (User_Input => Text,
                                       Conv       => Conv,
-                                      Cfg        => Cfg,
+                                      Cfg        => Current_Cfg,
                                       Mem        => Mem);
 
                                  if Reply.Success then
                                     if not Send_Message
-                                      (Bridge_URL, Default_Session,
+                                      (BU, Default_Session,
                                        Chat_ID, To_String (Reply.Content))
                                     then
                                        Ada.Text_IO.Put_Line
                                          ("WhatsApp: send failed to "
                                           & Chat_ID);
                                     end if;
+                                 else
+                                    Metrics.Increment ("errors_total", "whatsapp");
                                  end if;
                               end;
                            end if;

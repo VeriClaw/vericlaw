@@ -3,6 +3,7 @@ with Tools.File_IO;
 with Tools.Brave_Search;
 with Tools.MCP;
 with Config.JSON_Parser; use Config.JSON_Parser;
+with Metrics;
 
 package body Agent.Tools is
 
@@ -130,6 +131,7 @@ package body Agent.Tools is
       end if;
 
       if Name = "shell" then
+         Metrics.Increment ("tool_calls_total", "shell");
          if not Cfg.Shell_Enabled then
             Set_Unbounded_String (Result.Error, "Shell tool is not enabled");
             return Result;
@@ -158,6 +160,7 @@ package body Agent.Tools is
          end;
 
       elsif Name = "file_read" then
+         Metrics.Increment ("tool_calls_total", "file_read");
          if not Cfg.File_Enabled then
             Set_Unbounded_String (Result.Error, "File tool is not enabled");
             return Result;
@@ -177,6 +180,7 @@ package body Agent.Tools is
          end;
 
       elsif Name = "file_write" then
+         Metrics.Increment ("tool_calls_total", "file_write");
          if not Cfg.File_Enabled then
             Set_Unbounded_String (Result.Error, "File tool is not enabled");
             return Result;
@@ -197,6 +201,7 @@ package body Agent.Tools is
          end;
 
       elsif Name = "file_list" then
+         Metrics.Increment ("tool_calls_total", "file_list");
          if not Cfg.File_Enabled then
             Set_Unbounded_String (Result.Error, "File tool is not enabled");
             return Result;
@@ -216,6 +221,7 @@ package body Agent.Tools is
          end;
 
       elsif Name = "brave_search" then
+         Metrics.Increment ("tool_calls_total", "brave_search");
          if not Cfg.Brave_Search_Enabled then
             Set_Unbounded_String
               (Result.Error, "Brave Search tool is not enabled");

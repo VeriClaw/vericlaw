@@ -6,6 +6,7 @@ with Providers.OpenAI_Compatible;
 with Providers.Gemini;
 with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
+with Metrics;
 
 package body Agent.Loop_Pkg is
 
@@ -39,6 +40,18 @@ package body Agent.Loop_Pkg is
               (Providers.Gemini.Create (Cfg));
       end case;
    end Make_Provider;
+
+   --  Map Provider_Kind to a Prometheus label string.
+   function Provider_Label (Kind : Provider_Kind) return String is
+   begin
+      case Kind is
+         when OpenAI             => return "openai";
+         when Anthropic          => return "anthropic";
+         when Azure_Foundry      => return "azure_foundry";
+         when OpenAI_Compatible  => return "openai_compatible";
+         when Gemini             => return "gemini";
+      end case;
+   end Provider_Label;
 
    --  Inject system prompt at the start of the conversation if not present.
    procedure Ensure_System_Prompt
@@ -103,24 +116,33 @@ package body Agent.Loop_Pkg is
          exit when Round > Max_Tool_Rounds;
 
          declare
+            Prov_Label : constant String :=
+              Provider_Label (Cfg.Providers (1).Kind);
             Prov_Resp : Provider_Response :=
               Provider.Chat (Conv, Tool_Schemas, Num_Tools);
          begin
+            Metrics.Increment ("provider_calls_total", Prov_Label);
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
                --  Try failover provider.
                declare
-                  Failover : access Provider_Type'Class :=
+                  Failover       : access Provider_Type'Class :=
                     Make_Provider (Cfg.Providers (2));
-                  FR2      : constant Provider_Response :=
+                  Failover_Label : constant String :=
+                    Provider_Label (Cfg.Providers (2).Kind);
+                  FR2            : constant Provider_Response :=
                     Failover.Chat (Conv, Tool_Schemas, Num_Tools);
                begin
+                  Metrics.Increment ("provider_calls_total", Failover_Label);
                   if FR2.Success then
                      Prov_Resp := FR2;
+                  else
+                     Metrics.Increment ("provider_errors_total", Failover_Label);
                   end if;
                end;
             end if;
 
             if not Prov_Resp.Success then
+               Metrics.Increment ("provider_errors_total", Prov_Label);
                Set_Unbounded_String
                  (Reply.Error, To_String (Prov_Resp.Error));
                return Reply;

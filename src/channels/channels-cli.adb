@@ -1,6 +1,7 @@
 with Ada.Text_IO;         use Ada.Text_IO;
 with Agent.Context;
 with Agent.Loop_Pkg;
+with Metrics;
 
 package body Channels.CLI is
 
@@ -56,11 +57,13 @@ package body Channels.CLI is
                        Cfg        => Cfg,
                        Mem        => Mem);
                begin
+                  Metrics.Increment ("requests_total", "cli");
                   New_Line;
                   Put (Agent_Name);
                   if Reply.Success then
                      Put_Line (To_String (Reply.Content));
                   else
+                     Metrics.Increment ("errors_total", "cli");
                      Put_Line ("[Error] " & To_String (Reply.Error));
                   end if;
                   New_Line;
@@ -89,6 +92,8 @@ package body Channels.CLI is
          Conv       => Conv,
          Cfg        => Cfg,
          Mem        => Mem);
+
+      Metrics.Increment ("requests_total", "cli");
 
       if Reply.Success then
          Put_Line (To_String (Reply.Content));

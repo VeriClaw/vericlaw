@@ -10,6 +10,7 @@ with Config.Schema;      use Config.Schema;
 with Channels.Telegram;
 with Channels.Signal;
 with Channels.WhatsApp;
+with Metrics;
 
 package body HTTP.Server is
 
@@ -153,6 +154,14 @@ package body HTTP.Server is
          return AWS.Response.Build
            ("application/json",
             "{""ok"":true}", AWS.Messages.S200);
+      end if;
+
+      --  Prometheus metrics
+      if URI = "/metrics" and then Method = "GET" then
+         return AWS.Response.Build
+           ("text/plain; version=0.0.4",
+            Metrics.Render,
+            AWS.Messages.S200);
       end if;
 
       --  404 for everything else
