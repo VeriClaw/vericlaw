@@ -6,6 +6,7 @@ with Tools.MCP;
 with Tools.Cron;
 with Tools.Spawn;
 with Tools.Browser;
+with Agent.Orchestrator;
 with Memory.SQLite;
 with Memory.Vector;
 with Config.JSON_Parser; use Config.JSON_Parser;
@@ -115,6 +116,21 @@ package body Agent.Tools is
      &   """description"":""Optional: model override""}"
      & "},"
      & """required"":[""prompt""]"
+     & "}";
+
+   Delegate_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """task"":{""type"":""string"","
+     &   """description"":""Task prompt for the delegated agent""},"
+     & """role"":{""type"":""string"","
+     &   """enum"":[""researcher"",""coder"",""reviewer"",""general""],"
+     &   """description"":""Agent role (default: general)""},"
+     & """timeout"":{""type"":""integer"","
+     &   """description"":""Timeout in seconds (default: 120)""}"
+     & "},"
+     & """required"":[""task""]"
      & "}";
 
    Browser_Browse_Params : constant String :=
@@ -257,6 +273,12 @@ package body Agent.Tools is
       Schemas (Num) := Make_Schema
         ("spawn", "Spawn a sub-agent to research or process independently",
          Spawn_Params);
+      --  delegate (multi-agent orchestration)
+      Num := Num + 1;
+      Schemas (Num) := Make_Schema
+        ("delegate",
+         "Delegate a task to a role-specialized sub-agent (researcher, coder, reviewer, general)",
+         Delegate_Params);
       --  browser tools
       if Length (Cfg.Browser_Bridge_URL) > 0 then
          Browser_Pkg.Bridge_URL := Cfg.Browser_Bridge_URL;
@@ -491,6 +513,51 @@ package body Agent.Tools is
          begin
             Result.Success := True;
             Set_Unbounded_String (Result.Output, SResp);
+         end;
+
+      elsif Name = "delegate" then
+         Metrics.Increment ("tool_calls_total", "delegate");
+         declare
+            use Agent.Orchestrator;
+            Task_Str : constant String := Get_String (PR.Root, "task");
+            Role_Str : constant String := Get_String (PR.Root, "role", "general");
+            Tmout    : constant Integer := Get_Integer (PR.Root, "timeout", 120);
+            Role     : Agent_Role := General;
+            Req      : Delegation_Request;
+            Del_Res  : Delegation_Result;
+         begin
+            --  Parse role string.
+            if Role_Str = "researcher" then
+               Role := Researcher;
+            elsif Role_Str = "coder" then
+               Role := Coder;
+            elsif Role_Str = "reviewer" then
+               Role := Reviewer;
+            else
+               Role := General;
+            end if;
+
+            --  Check depth before delegating.
+            if not Can_Delegate (0) then
+               Set_Unbounded_String
+                 (Result.Error, "Maximum delegation depth reached");
+               return Result;
+            end if;
+
+            Req := (Role         => Role,
+                    Task_Prompt  => To_Unbounded_String (Task_Str),
+                    Parent_Depth => 0,
+                    Timeout_Sec  => (if Tmout > 0 then Tmout else 120));
+
+            Del_Res := Delegate (Req, Cfg);
+
+            if Del_Res.Success then
+               Result.Success := True;
+               Result.Output  := Del_Res.Output;
+            else
+               Set_Unbounded_String
+                 (Result.Error, To_String (Del_Res.Error));
+            end if;
          end;
 
       elsif Name = "browser_browse" then

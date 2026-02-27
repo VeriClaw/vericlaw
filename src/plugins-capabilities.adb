@@ -79,4 +79,12 @@ package body Plugins.Capabilities with SPARK_Mode is
            Operator_Consent_Allow_Not_Required
            | Operator_Consent_Allow_Approved;
    end Operator_Consent_Allowed;
+
+   function Delegation_Allowed
+     (Depth : Natural;
+      Max   : Natural) return Boolean is
+   begin
+      return Depth < Max;
+   end Delegation_Allowed;
+
 end Plugins.Capabilities;

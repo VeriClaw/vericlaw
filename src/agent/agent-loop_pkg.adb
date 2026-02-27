@@ -221,7 +221,8 @@ package body Agent.Loop_Pkg is
                   return Name /= "cron_add"
                     and then Name /= "cron_list"
                     and then Name /= "cron_remove"
-                    and then Name /= "spawn";
+                    and then Name /= "spawn"
+                    and then Name /= "delegate";
                end Is_Parallel_Safe;
 
                type Output_Array is

@@ -127,4 +127,12 @@ package Plugins.Capabilities with SPARK_Mode is
              Operator_Consent => Operator_Consent) in
                Operator_Consent_Allow_Not_Required
                | Operator_Consent_Allow_Approved);
+
+   --  SPARK-verified depth bound for multi-agent delegation.
+   function Delegation_Allowed
+     (Depth : Natural;
+      Max   : Natural) return Boolean
+   with
+     Post => Delegation_Allowed'Result = (Depth < Max);
+
 end Plugins.Capabilities;
