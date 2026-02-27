@@ -84,6 +84,24 @@ package body Metrics is
       end if;
    end Label_Key;
 
+   function Get_Counter (Name : String; Label : String := "") return Natural is
+      Data  : Counter_Array;
+      Num   : Natural;
+      Total : Natural := 0;
+   begin
+      Store.Snapshot (Data, Num);
+      for I in 1 .. Num loop
+         if Data (I).Active
+           and then To_String (Data (I).Name) = Name
+           and then (Label = "*"
+                     or else To_String (Data (I).Label) = Label)
+         then
+            Total := Total + Data (I).Count;
+         end if;
+      end loop;
+      return Total;
+   end Get_Counter;
+
    function Render return String is
       Data      : Counter_Array;
       Num       : Natural;

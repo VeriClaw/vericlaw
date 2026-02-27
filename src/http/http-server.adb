@@ -4,6 +4,8 @@ with AWS.Status;
 with AWS.Messages;
 with AWS.Config;
 with AWS.Config.Set;
+with Ada.Calendar;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Config.JSON_Parser;
 with Config.Schema;      use Config.Schema;
@@ -22,6 +24,38 @@ package body HTTP.Server is
 
    Shared_Cfg     : Config.Schema.Agent_Config;
    Shared_Mem_Ptr : Mem_Ptr := null;
+
+   Start_Time : Ada.Calendar.Time;
+
+   --  -----------------------------------------------------------------------
+   --  Local helpers
+   --  -----------------------------------------------------------------------
+
+   function Img (N : Natural) return String is
+      S : constant String := Natural'Image (N);
+   begin
+      return S (S'First + 1 .. S'Last);
+   end Img;
+
+   function Kind_To_String (K : Channel_Kind) return String is
+   begin
+      case K is
+         when CLI      => return "cli";
+         when Telegram => return "telegram";
+         when Signal   => return "signal";
+         when WhatsApp => return "whatsapp";
+         when Discord  => return "discord";
+         when Slack    => return "slack";
+         when Email    => return "email";
+         when IRC      => return "irc";
+         when Matrix   => return "matrix";
+      end case;
+   end Kind_To_String;
+
+   function Bool_Image (B : Boolean) return String is
+   begin
+      if B then return "true"; else return "false"; end if;
+   end Bool_Image;
 
    --  -----------------------------------------------------------------------
    --  Request dispatcher
@@ -165,6 +199,85 @@ package body HTTP.Server is
             AWS.Messages.S200);
       end if;
 
+      --  Localhost guard for operator API endpoints
+      if AWS.Status.IP_Addr (Request) /= "127.0.0.1"
+        and then
+          (URI = "/api/status"
+           or else URI = "/api/channels"
+           or else URI = "/api/metrics/summary")
+      then
+         return AWS.Response.Build
+           ("application/json",
+            "{""error"":""forbidden""}",
+            AWS.Messages.S403);
+      end if;
+
+      --  GET /api/status
+      if URI = "/api/status" and then Method = "GET" then
+         declare
+            use type Ada.Calendar.Time;
+            Elapsed : constant Duration :=
+              Ada.Calendar.Clock - Start_Time;
+            Uptime  : constant Natural  := Natural (Elapsed);
+            Active  : Natural           := 0;
+         begin
+            for I in 1 .. Shared_Cfg.Num_Channels loop
+               if Shared_Cfg.Channels (I).Enabled then
+                  Active := Active + 1;
+               end if;
+            end loop;
+            return AWS.Response.Build
+              ("application/json",
+               "{""status"":""running"",""version"":""0.2.0"","
+               & """uptime_s"":" & Img (Uptime) & ","
+               & """channels_active"":" & Img (Active) & "}",
+               AWS.Messages.S200);
+         end;
+      end if;
+
+      --  GET /api/channels
+      if URI = "/api/channels" and then Method = "GET" then
+         declare
+            Result : Unbounded_String;
+         begin
+            Set_Unbounded_String (Result, "{""channels"":[");
+            for I in 1 .. Shared_Cfg.Num_Channels loop
+               if I > 1 then
+                  Append (Result, ",");
+               end if;
+               Append (Result,
+                 "{""kind"":"""
+                 & Kind_To_String (Shared_Cfg.Channels (I).Kind) & ""","
+                 & """enabled"":"
+                 & Bool_Image (Shared_Cfg.Channels (I).Enabled) & ","
+                 & """max_rps"":"
+                 & Img (Natural (Shared_Cfg.Channels (I).Max_RPS)) & "}");
+            end loop;
+            Append (Result, "]}");
+            return AWS.Response.Build
+              ("application/json", To_String (Result), AWS.Messages.S200);
+         end;
+      end if;
+
+      --  GET /api/metrics/summary
+      if URI = "/api/metrics/summary" and then Method = "GET" then
+         declare
+            Prov_Req : constant Natural :=
+              Metrics.Get_Counter ("provider_requests_total", "*");
+            Prov_Err : constant Natural :=
+              Metrics.Get_Counter ("provider_errors_total", "*");
+            Tool_C   : constant Natural :=
+              Metrics.Get_Counter ("tool_calls_total", "*");
+         begin
+            return AWS.Response.Build
+              ("application/json",
+               "{""provider_requests_total"":" & Img (Prov_Req) & ","
+               & """provider_errors_total"":" & Img (Prov_Err) & ","
+               & """tool_calls_total"":" & Img (Tool_C) & "}",
+               AWS.Messages.S200);
+         end;
+      end if;
+
       --  404 for everything else
       return AWS.Response.Build
         ("application/json",
@@ -180,6 +293,7 @@ package body HTTP.Server is
       Host    : constant String := To_String (Cfg.Gateway.Bind_Host);
       Port    : constant Positive := Cfg.Gateway.Bind_Port;
    begin
+      Start_Time := Ada.Calendar.Clock;
       Shared_Cfg := Cfg;
       Shared_Mem_Ptr := Mem'Unchecked_Access;
 

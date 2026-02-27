@@ -11,4 +11,8 @@ package Metrics is
    --  Return all counters and the uptime gauge in Prometheus text format.
    function Render return String;
 
+   --  Return the sum of all counters matching Name.
+   --  Pass Label = "*" to aggregate across all label values.
+   function Get_Counter (Name : String; Label : String := "") return Natural;
+
 end Metrics;

@@ -151,3 +151,49 @@ renderLiveSnapshots().catch((error) => {
   setListItems("health-snapshot", ["Unable to render local health snapshot due to a local runtime error."]);
 });
 document.getElementById("rendered-at").textContent = new Date().toLocaleString();
+
+async function connectToGateway(baseUrl) {
+  const statusDiv = document.getElementById("gateway-status");
+  const tbody = document.querySelector("#channels-table tbody");
+  try {
+    const [statusRes, channelsRes, metricsRes] = await Promise.all([
+      fetch(baseUrl + "/api/status"),
+      fetch(baseUrl + "/api/channels"),
+      fetch(baseUrl + "/api/metrics/summary")
+    ]);
+    if (!statusRes.ok || !channelsRes.ok || !metricsRes.ok) {
+      throw new Error("One or more API requests failed");
+    }
+    const [status, channels, metrics] = await Promise.all([
+      statusRes.json(),
+      channelsRes.json(),
+      metricsRes.json()
+    ]);
+    statusDiv.textContent =
+      `Status: ${status.status} | Version: ${status.version}`
+      + ` | Uptime: ${status.uptime_s}s | Active channels: ${status.channels_active}`
+      + ` | Provider requests: ${metrics.provider_requests_total}`
+      + ` | Errors: ${metrics.provider_errors_total}`
+      + ` | Tool calls: ${metrics.tool_calls_total}`;
+    tbody.textContent = "";
+    (channels.channels || []).forEach((ch) => {
+      const row = document.createElement("tr");
+      const kindCell = document.createElement("td");
+      const enabledCell = document.createElement("td");
+      const rpsCell = document.createElement("td");
+      kindCell.textContent = ch.kind;
+      enabledCell.textContent = ch.enabled ? "yes" : "no";
+      rpsCell.textContent = ch.max_rps;
+      row.append(kindCell, enabledCell, rpsCell);
+      tbody.appendChild(row);
+    });
+  } catch (_err) {
+    statusDiv.textContent = "Not connected";
+    tbody.textContent = "";
+  }
+}
+
+document.getElementById("connect-btn").addEventListener("click", () => {
+  const baseUrl = document.getElementById("gateway-url").value.trim();
+  connectToGateway(baseUrl);
+});
