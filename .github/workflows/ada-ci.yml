@@ -74,6 +74,53 @@ jobs:
           path: |
             tests/competitive_benchmark_report.json
 
+  spark-proofs:
+    runs-on: ubuntu-latest
+    container:
+      image: alire/gnat:community-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: SPARK Silver level 2 proofs
+        run: |
+          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
+          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+          make prove
+
+  fuzz-suite:
+    needs: spark-proofs
+    runs-on: ubuntu-latest
+    container:
+      image: alire/gnat:community-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Security regression fuzz testing
+        run: |
+          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
+          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+          make fuzz-suite
+
+  integration-test:
+    needs: build-and-prove
+    runs-on: ubuntu-latest
+    container:
+      image: alire/gnat:community-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: End-to-end test with mock LLM
+        run: |
+          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
+          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+          make docker-dev-integration-test
+
   # Warnings-as-errors gate: zero-warning build enforced with -gnatwe.
   warnings-gate:
     runs-on: ubuntu-latest
@@ -199,3 +246,22 @@ jobs:
             tests/competitive_benchmark_report_linux_arm_v7.json
             tests/competitive_direct_benchmark_report_linux_arm64.json
             tests/competitive_direct_benchmark_report_linux_arm_v7.json
+
+  bridge-audit:
+    runs-on: ubuntu-latest
+    container:
+      image: node:20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Audit and test bridges
+        run: |
+          set -euo pipefail
+          for dir in mcp-bridge browser-bridge slack-bridge discord-bridge email-bridge irc-bridge matrix-bridge wa-bridge; do
+            echo "=== $dir ==="
+            cd "$dir"
+            npm ci
+            npm audit --audit-level=high
+            npm test
+            cd ..
+          done
