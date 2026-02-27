@@ -205,7 +205,7 @@ package body HTTP.Client is
 
       --  Extract host from http(s)://host/...
       function Extract_Host return String is
-         Start : Natural := 0;
+         Start : Natural;
       begin
          if Has_Prefix (L, "http://") then
             Start := L'First + 7;
@@ -307,6 +307,7 @@ package body HTTP.Client is
 
       Body_Buf    : Unbounded_String;
       Result      : Response;
+      pragma Warnings (Off, Code);  --  curl_easy_setopt return values intentionally discarded
    begin
       --  SSRF guard: reject private/loopback URLs before any libcurl call.
       if not Is_Safe_URL (URL) then
@@ -470,6 +471,7 @@ package body HTTP.Client is
         (if Timeout_Ms = 0 then long (Default_Timeout_Ms)
          else long (Timeout_Ms));
       Result : Response;
+      pragma Warnings (Off, Code);  --  curl_easy_setopt return values intentionally discarded
    begin
       All_Headers (1) := CT_Header;
       All_Headers (2 .. All_Headers'Last) := Headers;

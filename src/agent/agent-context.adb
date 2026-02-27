@@ -1,4 +1,3 @@
-with Ada.Calendar;
 with Ada.Numerics.Discrete_Random;
 
 pragma SPARK_Mode (Off);

@@ -74,15 +74,12 @@ jobs:
           path: |
             tests/competitive_benchmark_report.json
 
-  # Warnings-as-errors gate: tracks progress toward zero-warning build.
-  # Currently continue-on-error: true (existing warnings pre-date -gnatwa).
-  # Once the codebase is warning-clean, set continue-on-error: false to
-  # make this a hard gate and enforce -gnatwe permanently.
+  # Warnings-as-errors gate: zero-warning build enforced with -gnatwe.
   warnings-gate:
     runs-on: ubuntu-latest
     container:
       image: alire/gnat:community-latest
-    continue-on-error: true  # TODO: set false once warning-clean (prod-ci-gnatwe)
+    continue-on-error: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -29,7 +29,6 @@ with Channels.IRC;
 with Channels.Matrix;
 with HTTP.Server;
 with Config.Reload;
-with Metrics;
 with Tools.Cron;
 with Audit.Syslog;
 

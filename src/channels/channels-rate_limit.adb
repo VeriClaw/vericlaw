@@ -1,5 +1,4 @@
 with Ada.Calendar; use Ada.Calendar;
-with Ada.Strings.Fixed;
 
 package body Channels.Rate_Limit is
 

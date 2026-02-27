@@ -4,7 +4,6 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
-with Agent.Tools;
 with Config.Schema;
 with Memory.SQLite;
 
