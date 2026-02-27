@@ -12,7 +12,7 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Provider_Kind is
-     (OpenAI, Anthropic, Azure_Foundry, OpenAI_Compatible);
+     (OpenAI, Anthropic, Azure_Foundry, OpenAI_Compatible, Gemini);
 
    type Provider_Config is record
       Kind       : Provider_Kind       := OpenAI;
@@ -66,9 +66,10 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Memory_Config is record
-      DB_Path          : Unbounded_String;  -- "" = ~/.vericlaw/memory.db
-      Max_History      : Positive := 50;    -- messages kept per session
-      Facts_Enabled    : Boolean  := True;
+      DB_Path               : Unbounded_String;  -- "" = ~/.vericlaw/memory.db
+      Max_History           : Positive := 50;    -- messages kept per session
+      Facts_Enabled         : Boolean  := True;
+      Session_Retention_Days : Natural := 30;    -- auto-prune sessions older than N days (0 = never)
    end record;
 
    --  -----------------------------------------------------------------------

@@ -29,6 +29,8 @@ package body Config.Loader is
          Dest.Kind := Azure_Foundry;
       elsif Kind_Str = "openai_compatible" then
          Dest.Kind := OpenAI_Compatible;
+      elsif Kind_Str = "gemini" then
+         Dest.Kind := Gemini;
       else
          Dest.Kind := OpenAI;
       end if;
@@ -174,6 +176,14 @@ package body Config.Loader is
                end;
                Result.Config.Memory.Facts_Enabled :=
                  Get_Boolean (M, "facts_enabled", True);
+               declare
+                  Rd : constant Integer :=
+                    Get_Integer (M, "session_retention_days", 30);
+               begin
+                  if Rd >= 0 then
+                     Result.Config.Memory.Session_Retention_Days := Natural (Rd);
+                  end if;
+               end;
             end;
          end if;
 

@@ -3,6 +3,7 @@ with Providers.Interface_Pkg;       use Providers.Interface_Pkg;
 with Providers.OpenAI;
 with Providers.Anthropic;
 with Providers.OpenAI_Compatible;
+with Providers.Gemini;
 with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
 
@@ -33,6 +34,9 @@ package body Agent.Loop_Pkg is
          when Azure_Foundry | OpenAI_Compatible =>
             return new Providers.OpenAI_Compatible.OpenAI_Compat_Provider'
               (Providers.OpenAI_Compatible.Create (Cfg));
+         when Gemini =>
+            return new Providers.Gemini.Gemini_Provider'
+              (Providers.Gemini.Create (Cfg));
       end case;
    end Make_Provider;
 
