@@ -5,6 +5,9 @@ with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
+with Ada.Interrupts;
+with Ada.Interrupts.Names;
+with Logging;
 
 --  Existing SPARK-verified security layer (unchanged)
 with Channels.Security;
@@ -37,7 +40,7 @@ procedure Main is
 
    use type Config.Schema.Channel_Kind;
 
-   procedure Print_Usage is
+    procedure Print_Usage is
    begin
       Put_Line ("Usage: vericlaw <command> [options]");
       New_Line;
@@ -47,9 +50,16 @@ procedure Main is
       Put_Line ("  chat                             Interactive CLI chat (default)");
       Put_Line ("  agent <message>                  One-shot agent: send a message and print reply");
       Put_Line ("  gateway                          Run HTTP gateway + all configured channels");
+      Put_Line ("  status                           Show runtime status summary");
+      Put_Line ("  export --session <id> [--format] Export conversation (md or json)");
+      Put_Line ("  config validate                  Validate config file without starting agent");
       Put_Line ("  doctor                           Print configuration and health status");
       Put_Line ("  version                          Print version information");
       Put_Line ("  help                             Show this help message");
+      New_Line;
+      Put_Line ("Global flags:");
+      Put_Line ("  --json       Machine-readable JSON output (agent, status)");
+      Put_Line ("  --no-color   Disable ANSI colors (auto-detected for pipes)");
       New_Line;
       Put_Line ("Config: ~/.vericlaw/config.json  (or VERICLAW_CONFIG env var)");
       Put_Line ("WhatsApp: see docs/setup/whatsapp.md for full setup guide");
@@ -166,11 +176,70 @@ procedure Main is
       Put_Line ("SPARK security core: OK");
    end Cmd_Doctor;
 
+   --  Signal handler for graceful shutdown (SIGTERM / SIGINT).
+   protected Shutdown_Handler is
+      procedure Handle_Term
+        with Attach_Handler => Ada.Interrupts.Names.SIGTERM;
+      procedure Handle_Int
+        with Attach_Handler => Ada.Interrupts.Names.SIGINT;
+      function Requested return Boolean;
+   private
+      Flag : Boolean := False;
+   end Shutdown_Handler;
+
+   protected body Shutdown_Handler is
+      procedure Handle_Term is
+      begin
+         Flag := True;
+      end Handle_Term;
+      procedure Handle_Int is
+      begin
+         Flag := True;
+      end Handle_Int;
+      function Requested return Boolean is
+      begin
+         return Flag;
+      end Requested;
+   end Shutdown_Handler;
+
    --  Entry point
    Cmd    : Unbounded_String := To_Unbounded_String ("chat");
    CR     : Config.Loader.Load_Result;
    Mem    : aliased Memory.SQLite.Memory_Handle;
    Mem_OK : Boolean;
+
+   --  Global flags
+   JSON_Mode : Boolean := False;
+   No_Color  : Boolean := False;
+
+   procedure Parse_Global_Flags is
+   begin
+      for I in 1 .. Argument_Count loop
+         if Argument (I) = "--json" then
+            JSON_Mode := True;
+         elsif Argument (I) = "--no-color" then
+            No_Color := True;
+         end if;
+      end loop;
+      --  Auto-detect non-TTY: disable color when stdout is piped.
+      --  Ada doesn't expose isatty directly; we check TERM env var as proxy.
+      if not No_Color then
+         declare
+            Term : constant String :=
+              (if Ada.Environment_Variables.Exists ("TERM")
+               then Ada.Environment_Variables.Value ("TERM")
+               else "");
+         begin
+            if Term = "dumb" or else Term = "" then
+               No_Color := True;
+            end if;
+         end;
+         --  Also disable color if NO_COLOR env var is set (https://no-color.org/)
+         if Ada.Environment_Variables.Exists ("NO_COLOR") then
+            No_Color := True;
+         end if;
+      end if;
+   end Parse_Global_Flags;
 
 begin
    --  SPARK security assertion runs unconditionally on startup.
@@ -179,8 +248,13 @@ begin
    --  Open syslog connection for audit event forwarding.
    Audit.Syslog.Enable ("vericlaw");
 
-   --  Parse subcommand.
-   if Argument_Count >= 1 then
+   --  Parse global flags (--json, --no-color).
+   Parse_Global_Flags;
+
+   --  Parse subcommand (skip flags starting with --).
+   if Argument_Count >= 1
+     and then Argument (1) (Argument (1)'First) /= '-'
+   then
       Set_Unbounded_String (Cmd, Argument (1));
    end if;
 
@@ -335,7 +409,9 @@ begin
       begin
          Memory.SQLite.Load_Vec_Extension (Mem, "vec0");
       exception
-         when others => null;  -- extension might not be installed; skip silently
+         when others =>
+            Logging.Warning
+              ("sqlite-vec extension not available, RAG disabled");
       end;
    end if;
 
@@ -351,16 +427,51 @@ begin
             Put_Line ("Usage: vericlaw agent <message>");
             Set_Exit_Status (Failure);
          else
-            --  Concatenate remaining arguments as the message.
+            --  Concatenate remaining arguments (skip flags).
             declare
                Input : Unbounded_String;
             begin
                for I in 2 .. Argument_Count loop
-                  if I > 2 then Append (Input, " "); end if;
-                  Append (Input, Argument (I));
+                  declare
+                     A : constant String := Argument (I);
+                  begin
+                     if A (A'First) /= '-' then
+                        if Length (Input) > 0 then
+                           Append (Input, " ");
+                        end if;
+                        Append (Input, A);
+                     end if;
+                  end;
                end loop;
-               Channels.CLI.Run_Once
-                 (To_String (Input), CR.Config, Mem);
+               if JSON_Mode then
+                  --  Non-streaming: capture full reply as JSON object.
+                  declare
+                     Conv  : Agent.Context.Conversation;
+                     Reply : Agent.Loop_Pkg.Agent_Reply;
+                  begin
+                     Set_Unbounded_String
+                       (Conv.Session_ID,
+                        Agent.Context.Make_Session_ID);
+                     Set_Unbounded_String (Conv.Channel, "cli");
+                     Reply := Agent.Loop_Pkg.Process_Message
+                       (User_Input => To_String (Input),
+                        Conv       => Conv,
+                        Cfg        => CR.Config,
+                        Mem        => Mem);
+                     Put_Line ("{""success"":" & Boolean'Image (Reply.Success)
+                       & ",""content"":"
+                       & Config.JSON_Parser.Escape_JSON_String
+                           (To_String (Reply.Content))
+                       & (if Reply.Success then ""
+                          else ",""error"":"
+                            & Config.JSON_Parser.Escape_JSON_String
+                                (To_String (Reply.Error)))
+                       & "}");
+                  end;
+               else
+                  Channels.CLI.Run_Once
+                    (To_String (Input), CR.Config, Mem);
+               end if;
             end;
          end if;
 
@@ -574,18 +685,186 @@ begin
                      end loop;
                   end Cron_Heartbeat;
                begin
-                  null;
-                  --  Block waits for all pollers to terminate.
-                  --  Enabled channels loop forever; disabled ones return quickly.
+                  loop
+                     delay 1.0;
+                     exit when Shutdown_Handler.Requested;
+                  end loop;
+                  Logging.Info ("Shutdown signal received, stopping gateway...");
+                  abort Telegram_Poller, Signal_Poller, WhatsApp_Poller,
+                        Discord_Poller, Slack_Poller, Email_Poller,
+                        IRC_Poller, Matrix_Poller, Cron_Heartbeat;
                end;
             else
                --  No channels configured: run HTTP server for webhooks.
-               HTTP.Server.Run (CR.Config, Mem);
+               declare
+                  task HTTP_Runner;
+                  task body HTTP_Runner is
+                  begin
+                     HTTP.Server.Run (CR.Config, Mem);
+                  end HTTP_Runner;
+               begin
+                  loop
+                     delay 1.0;
+                     exit when Shutdown_Handler.Requested;
+                  end loop;
+                  Logging.Info ("Shutdown signal received, stopping gateway...");
+                  HTTP.Server.Stop;
+                  abort HTTP_Runner;
+               end;
             end if;
          end;
 
       elsif C = "doctor" then
          Cmd_Doctor (CR.Config);
+
+      elsif C = "status" then
+         --  Show runtime status: version, active channels, provider, memory.
+         declare
+            Active : Natural := 0;
+         begin
+            for I in 1 .. CR.Config.Num_Channels loop
+               if CR.Config.Channels (I).Enabled then
+                  Active := Active + 1;
+               end if;
+            end loop;
+            if JSON_Mode then
+               Put_Line ("{""version"":""0.2.0"""
+                 & ",""channels_active"":" & Natural'Image (Active)
+                 & ",""channels_total"":" & Natural'Image (CR.Config.Num_Channels)
+                 & ",""provider"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (Config.Schema.Provider_Kind'Image
+                        (CR.Config.Providers (1).Kind))
+                 & ",""model"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (To_String (CR.Config.Providers (1).Model))
+                 & ",""memory"":"
+                 & (if Mem_OK then """ok""" else """unavailable""")
+                 & ",""gateway"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (To_String (CR.Config.Gateway.Bind_Host) & ":"
+                      & Positive'Image (CR.Config.Gateway.Bind_Port))
+                 & "}");
+            else
+               Put_Line ("VeriClaw status");
+               Put_Line ("  version   : 0.2.0");
+               Put_Line ("  channels  : "
+                          & Natural'Image (Active) & " active /"
+                          & Natural'Image (CR.Config.Num_Channels) & " configured");
+               Put_Line ("  provider  : "
+                          & Config.Schema.Provider_Kind'Image
+                              (CR.Config.Providers (1).Kind));
+               Put_Line ("  model     : "
+                          & To_String (CR.Config.Providers (1).Model));
+               Put_Line ("  memory    : "
+                          & (if Mem_OK then "ok" else "unavailable"));
+               Put_Line ("  gateway   : "
+                          & To_String (CR.Config.Gateway.Bind_Host) & ":"
+                          & Positive'Image (CR.Config.Gateway.Bind_Port));
+            end if;
+         end;
+
+      elsif C = "config" then
+         --  Sub-commands: config validate
+         if Argument_Count >= 2
+           and then Argument (2) = "validate"
+         then
+            Put_Line ("Config loaded and validated successfully.");
+            Put_Line ("  provider : "
+                       & Config.Schema.Provider_Kind'Image
+                           (CR.Config.Providers (1).Kind));
+            Put_Line ("  channels : "
+                       & Natural'Image (CR.Config.Num_Channels));
+            Put_Line ("  tools    : "
+                       & (if CR.Config.Tools.Shell_Enabled
+                          then "shell " else "")
+                       & (if CR.Config.Tools.File_Enabled
+                          then "file " else "")
+                       & (if CR.Config.Tools.Git_Enabled
+                          then "git " else "")
+                       & (if CR.Config.Tools.Web_Fetch_Enabled
+                          then "web_fetch " else "")
+                       & (if CR.Config.Tools.RAG_Enabled
+                          then "rag " else ""));
+         else
+            Put_Line ("Usage: vericlaw config validate");
+            Set_Exit_Status (Failure);
+         end if;
+
+      elsif C = "export" then
+         --  vericlaw export --session <id> --format md|json
+         declare
+            Sess_ID : Unbounded_String;
+            Format  : Unbounded_String := To_Unbounded_String ("md");
+            I       : Natural := 2;
+         begin
+            while I <= Argument_Count loop
+               if Argument (I) = "--session" and I < Argument_Count then
+                  I := I + 1;
+                  Set_Unbounded_String (Sess_ID, Argument (I));
+               elsif Argument (I) = "--format" and I < Argument_Count then
+                  I := I + 1;
+                  Set_Unbounded_String (Format, Argument (I));
+               end if;
+               I := I + 1;
+            end loop;
+
+            if Length (Sess_ID) = 0 then
+               Put_Line ("Usage: vericlaw export --session <id> [--format md|json]");
+               Set_Exit_Status (Failure);
+            elsif not Mem_OK then
+               Put_Line ("Error: memory database unavailable");
+               Set_Exit_Status (Failure);
+            else
+               declare
+                  Conv : Agent.Context.Conversation;
+                  Fmt  : constant String := To_String (Format);
+               begin
+                  Memory.SQLite.Export_Session
+                    (Mem, To_String (Sess_ID), Conv);
+                  if Conv.Msg_Count = 0 then
+                     Put_Line ("No messages found for session "
+                       & To_String (Sess_ID));
+                  elsif Fmt = "json" then
+                     Put_Line ("{""session_id"":"
+                       & Config.JSON_Parser.Escape_JSON_String
+                           (To_String (Sess_ID))
+                       & ",""messages"":[");
+                     for J in 1 .. Conv.Msg_Count loop
+                        if J > 1 then Put (","); end if;
+                        Put_Line ("{""role"":"
+                          & Config.JSON_Parser.Escape_JSON_String
+                              (Agent.Context.Role'Image
+                                 (Conv.Messages (J).Role))
+                          & ",""content"":"
+                          & Config.JSON_Parser.Escape_JSON_String
+                              (To_String (Conv.Messages (J).Content))
+                          & "}");
+                     end loop;
+                     Put_Line ("]}");
+                  else
+                     --  Markdown format
+                     Put_Line ("# Session " & To_String (Sess_ID));
+                     New_Line;
+                     for J in 1 .. Conv.Msg_Count loop
+                        case Conv.Messages (J).Role is
+                           when Agent.Context.User =>
+                              Put_Line ("## User");
+                           when Agent.Context.Assistant =>
+                              Put_Line ("## Assistant");
+                           when Agent.Context.System_Role =>
+                              Put_Line ("## System");
+                           when Agent.Context.Tool_Result =>
+                              Put_Line ("## Tool Result");
+                        end case;
+                        New_Line;
+                        Put_Line (To_String (Conv.Messages (J).Content));
+                        New_Line;
+                     end loop;
+                  end if;
+               end;
+            end if;
+         end;
 
       else
          Put_Line ("Unknown command: " & C);

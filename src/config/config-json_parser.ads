@@ -53,6 +53,10 @@ package Config.JSON_Parser is
    --  Serialisation
    function To_JSON_String (V : JSON_Value_Type) return String;
 
+   --  Escape a plain string as a JSON string literal (with surrounding quotes).
+   --  E.g. Escape_JSON_String("hello ""world""") => """hello \""world\""""".
+   function Escape_JSON_String (S : String) return String;
+
    --  Build helpers
    function Build_Object return JSON_Value_Type;
    procedure Set_Field (V : in out JSON_Value_Type; Key : String; Value : String);

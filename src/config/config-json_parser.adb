@@ -94,6 +94,13 @@ package body Config.JSON_Parser is
       return V.Write;
    end To_JSON_String;
 
+   function Escape_JSON_String (S : String) return String is
+      --  Use GNATCOLL.JSON to properly escape the string.
+      V : constant JSON_Value_Type := Create (S);
+   begin
+      return V.Write;
+   end Escape_JSON_String;
+
    function Build_Object return JSON_Value_Type is
    begin
       return Create_Object;
