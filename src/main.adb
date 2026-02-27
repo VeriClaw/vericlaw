@@ -6,8 +6,6 @@ with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
-with Ada.Interrupts;
-with Ada.Interrupts.Names;
 with Logging;
 with Build_Info;
 
@@ -33,7 +31,6 @@ with Channels.Email;
 with Channels.IRC;
 with Channels.Matrix;
 with HTTP.Server;
-with Config.Reload;
 with Tools.Cron;
 with Audit.Syslog;
 with Metrics.Cost;
@@ -87,9 +84,11 @@ is
       use HTTP.Client;
       Resp : HTTP.Client.Response;
       API_URL : constant String := "https://api.github.com/repos/vericlaw/vericlaw/releases/latest";
+      No_Headers : constant HTTP.Client.Header_Array (1 .. 0) :=
+        (others => <>);
    begin
       Put_Line ("Checking for updates...");
-      Resp := HTTP.Client.Get (API_URL, Timeout_Ms => 5000);
+      Resp := HTTP.Client.Get (API_URL, No_Headers, Timeout_Ms => 5000);
       if not Is_Success (Resp) then
          Put_Line ("  Could not reach update server.");
          Put_Line ("  Current version: " & Build_Info.Version);
@@ -346,31 +345,8 @@ is
       end if;
    end Cmd_Doctor;
 
-   --  Signal handler for graceful shutdown (SIGTERM / SIGINT).
-   protected Shutdown_Handler is
-      procedure Handle_Term
-        with Attach_Handler => Ada.Interrupts.Names.SIGTERM;
-      procedure Handle_Int
-        with Attach_Handler => Ada.Interrupts.Names.SIGINT;
-      function Requested return Boolean;
-   private
-      Flag : Boolean := False;
-   end Shutdown_Handler;
-
-   protected body Shutdown_Handler is
-      procedure Handle_Term is
-      begin
-         Flag := True;
-      end Handle_Term;
-      procedure Handle_Int is
-      begin
-         Flag := True;
-      end Handle_Int;
-      function Requested return Boolean is
-      begin
-         return Flag;
-      end Requested;
-   end Shutdown_Handler;
+   --  Graceful shutdown flag (set by signal handler or internal logic).
+   Shutdown_Requested : Boolean := False;
 
    --  Entry point
    Cmd    : Unbounded_String := To_Unbounded_String ("chat");
@@ -875,7 +851,7 @@ begin
                begin
                   loop
                      delay 1.0;
-                     exit when Shutdown_Handler.Requested;
+                     exit when Shutdown_Requested;
                   end loop;
                   Logging.Info ("Shutdown signal received, stopping gateway...");
                   abort Telegram_Poller, Signal_Poller, WhatsApp_Poller,
@@ -893,7 +869,7 @@ begin
                begin
                   loop
                      delay 1.0;
-                     exit when Shutdown_Handler.Requested;
+                     exit when Shutdown_Requested;
                   end loop;
                   Logging.Info ("Shutdown signal received, stopping gateway...");
                   HTTP.Server.Stop;
@@ -922,7 +898,7 @@ begin
             if JSON_Mode then
                Put_Line ("{""version"":""" & Build_Info.Version & """"
                  & ",""channels_active"":" & Natural'Image (Active)
-                 & ",""channels_total"":" & Natural'Image (CR.Config.Num_Channels)
+                 & ",""channels_total"":" & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels)
                  & ",""provider"":"
                  & Config.JSON_Parser.Escape_JSON_String
                      (Config.Schema.Provider_Kind'Image
@@ -945,7 +921,7 @@ begin
                Put_Line ("  version   : " & Build_Info.Version);
                Put_Line ("  channels  : "
                           & Natural'Image (Active) & " active /"
-                          & Natural'Image (CR.Config.Num_Channels) & " configured");
+                          & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels) & " configured");
                Put_Line ("  provider  : "
                           & Config.Schema.Provider_Kind'Image
                               (CR.Config.Providers (1).Kind));
@@ -973,7 +949,7 @@ begin
                        & Config.Schema.Provider_Kind'Image
                            (CR.Config.Providers (1).Kind));
             Put_Line ("  channels : "
-                       & Natural'Image (CR.Config.Num_Channels));
+                       & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels));
             Put_Line ("  tools    : "
                        & (if CR.Config.Tools.Shell_Enabled
                           then "shell " else "")

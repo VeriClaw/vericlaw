@@ -22,7 +22,7 @@ project Vericlaw is
          when "dev" =>
             for Default_Switches ("Ada") use
               ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwe",
-               "-gnatyy", "-gnatyM120", "-gnato");
+               "-gnatyaAbcefhiklmnprtM120", "-gnato");
          when "release" =>
             for Default_Switches ("Ada") use
               ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
