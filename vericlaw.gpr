@@ -4,7 +4,8 @@ with "aws";
 project Vericlaw is
    for Source_Dirs use ("src", "src/http", "src/config", "src/agent",
                         "src/providers", "src/tools", "src/memory",
-                        "src/channels", "src/sandbox");
+                        "src/channels", "src/sandbox",
+                        "src/observability");
    for Languages use ("Ada", "C");
    for Main use ("main.adb");
    for Exec_Dir use ".";
