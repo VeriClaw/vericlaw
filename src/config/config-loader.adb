@@ -384,11 +384,10 @@ package body Config.Loader is
       end if;
 
       TL := 0;
-      if CL >= 8 and then
-        (Channel_Buf (1 .. 8) = "telegram" or else
-         Channel_Buf (1 .. 8) = "whatsapp")
-      then
-         Prompt ("Bot token", "", Token_Buf, TL);
+      if CL >= 8 and then Channel_Buf (1 .. 8) = "telegram" then
+         Prompt ("Telegram bot token", "", Token_Buf, TL);
+      elsif CL >= 8 and then Channel_Buf (1 .. 8) = "whatsapp" then
+         Prompt ("Bridge URL", "http://localhost:3000", Token_Buf, TL);
       elsif CL >= 6 and then Channel_Buf (1 .. 6) = "signal" then
          Prompt ("Signal bridge URL", "http://localhost:8080", Token_Buf, TL);
       end if;
@@ -438,7 +437,9 @@ package body Config.Loader is
          Put_Line (File, "      ""enabled"": true" &
            (if TL > 0 then "," else ""));
          if TL > 0 then
-            if CL >= 6 and then Channel_Buf (1 .. 6) = "signal" then
+            if (CL >= 6 and then Channel_Buf (1 .. 6) = "signal") or else
+               (CL >= 8 and then Channel_Buf (1 .. 8) = "whatsapp")
+            then
                Put_Line (File, "      ""bridge_url"": " & Q (Token_Buf, TL));
             else
                Put_Line (File, "      ""token"": " & Q (Token_Buf, TL));
@@ -464,9 +465,21 @@ package body Config.Loader is
          Ada.Text_IO.Close (File);
       end;
 
+
       New_Line;
       Put_Line ("Config written to: " & Path);
-      Put_Line ("Run ""vericlaw chat"" to start.");
+      New_Line;
+      if CL >= 8 and then Channel_Buf (1 .. 8) = "whatsapp" then
+         Put_Line ("Next steps:");
+         Put_Line ("  1. Start the WhatsApp bridge:");
+         Put_Line ("       docker compose up wa-bridge -d");
+         Put_Line ("  2. Pair your phone:");
+         Put_Line ("       vericlaw channels login --channel whatsapp");
+         Put_Line ("  3. Start the agent gateway:");
+         Put_Line ("       vericlaw gateway");
+      else
+         Put_Line ("Run ""vericlaw chat"" to start.");
+      end if;
       New_Line;
    end Run_Onboard;
 

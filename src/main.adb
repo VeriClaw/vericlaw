@@ -205,7 +205,9 @@ begin
          declare
             Phone_Buf  : String (1 .. 32);
             Phone_Last : Natural := 0;
-            Bridge     : constant String := "http://localhost:3000";
+            Bridge     : constant String :=
+               Ada.Environment_Variables.Value
+                 ("VERICLAW_BRIDGE", "http://localhost:3000");
          begin
             Put_Line ("VeriClaw — WhatsApp pairing");
             New_Line;
