@@ -50,6 +50,14 @@ jobs:
             cd ../..
           fi
           
+          # Linux ARMv7 (Raspberry Pi)
+          if [ -d artifacts/vericlaw-linux-armv7 ]; then
+            cd artifacts/vericlaw-linux-armv7
+            chmod +x vericlaw
+            tar czf ../../release/vericlaw-v${VERSION}-linux-armv7.tar.gz vericlaw
+            cd ../..
+          fi
+          
           # macOS universal
           if [ -d artifacts/vericlaw-macos-universal ]; then
             cd artifacts/vericlaw-macos-universal
@@ -110,3 +118,145 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build .deb and .rpm packages
+  build-packages:
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            target: linux-x86_64
+          - arch: arm64
+            target: linux-aarch64
+          - arch: armhf
+            target: linux-armv7
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vericlaw-${{ matrix.target }}
+          path: .
+
+      - name: Install nfpm
+        run: |
+          curl -sfL https://goreleaser.com/static/run | \
+            BINDIR=/usr/local/bin bash -s -- nfpm
+
+      - name: Build packages
+        env:
+          VERSION: ${{ github.ref_name }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          VERSION="${VERSION#v}"
+          chmod +x vericlaw
+
+          # Build .deb
+          VERSION="${VERSION}" GOARCH="${{ matrix.arch }}" nfpm package \
+            --config packaging/nfpm.yaml \
+            --packager deb \
+            --target "vericlaw_${VERSION}_${{ matrix.arch }}.deb"
+
+          # Build .rpm
+          VERSION="${VERSION}" GOARCH="${{ matrix.arch }}" nfpm package \
+            --config packaging/nfpm.yaml \
+            --packager rpm \
+            --target "vericlaw-${VERSION}-1.${{ matrix.arch }}.rpm"
+
+      - name: Upload packages to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.deb
+            *.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Update Homebrew tap
+  update-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download checksums
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/checksums-sha256.txt" \
+            -o checksums.txt
+          cat checksums.txt
+
+      - name: Update Homebrew formula
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          # Extract SHA-256 hashes from checksums file
+          SHA_MACOS=$(grep 'macos-universal' checksums.txt | cut -d' ' -f1)
+          SHA_LINUX_X86=$(grep 'linux-x86_64' checksums.txt | cut -d' ' -f1)
+          SHA_LINUX_ARM64=$(grep 'linux-aarch64' checksums.txt | cut -d' ' -f1)
+
+          # Clone tap repo
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/vericlaw/homebrew-vericlaw.git" tap
+          
+          # Copy and update formula
+          cp packaging/homebrew/vericlaw.rb tap/Formula/vericlaw.rb
+          cd tap/Formula
+          
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" vericlaw.rb
+          sed -i "s/PLACEHOLDER_SHA256_MACOS_ARM64/${SHA_MACOS}/" vericlaw.rb
+          sed -i "s/PLACEHOLDER_SHA256_MACOS_X86_64/${SHA_MACOS}/" vericlaw.rb
+          sed -i "s/PLACEHOLDER_SHA256_LINUX_X86_64/${SHA_LINUX_X86}/" vericlaw.rb
+          sed -i "s/PLACEHOLDER_SHA256_LINUX_AARCH64/${SHA_LINUX_ARM64}/" vericlaw.rb
+          
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/vericlaw.rb
+          git commit -m "Update vericlaw to ${VERSION}" || echo "No changes"
+          git push
+
+  # Update Scoop bucket
+  update-scoop:
+    needs: release
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download checksums
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/checksums-sha256.txt" \
+            -o checksums.txt
+
+      - name: Update Scoop manifest
+        env:
+          BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA_WIN=$(grep 'windows-x86_64' checksums.txt | cut -d' ' -f1)
+
+          # Clone bucket repo
+          git clone "https://x-access-token:${BUCKET_TOKEN}@github.com/vericlaw/scoop-vericlaw.git" bucket
+
+          # Update manifest from template
+          cp packaging/scoop/vericlaw.json bucket/bucket/vericlaw.json
+          cd bucket/bucket
+
+          # Replace version and hash
+          sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" vericlaw.json
+          sed -i "s|v1.0.0|v${VERSION}|g" vericlaw.json
+          sed -i "s/PLACEHOLDER_SHA256/${SHA_WIN}/" vericlaw.json
+
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bucket/vericlaw.json
+          git commit -m "Update vericlaw to ${VERSION}" || echo "No changes"
+          git push
