@@ -164,10 +164,10 @@ is
          --  Find closing bracket.
          declare
             Path_Start : constant Positive := Pos + Marker'Length;
-            Close      : constant Natural :=
+            Close_Pos  : constant Natural :=
               Index (Input (Path_Start .. Input'Last), "]");
          begin
-            if Close = 0 then
+            if Close_Pos = 0 then
                --  No closing bracket; treat as literal text.
                Append (Text_Out, Input (Pos .. Input'Last));
                Start := Input'Last + 1;
@@ -175,7 +175,7 @@ is
             end if;
 
             declare
-               Ref : constant String := Input (Path_Start .. Close - 1);
+               Ref : constant String := Input (Path_Start .. Close_Pos - 1);
                Max_Image_Size : constant := 10_000_000;  -- 10 MB
 
                function Is_Safe_Image_Path (P : String) return Boolean is
@@ -251,7 +251,7 @@ is
             end;
 
             <<Continue_Image>>
-            Start := Close + 1;
+            Start := Close_Pos + 1;
          end;
       end loop;
 

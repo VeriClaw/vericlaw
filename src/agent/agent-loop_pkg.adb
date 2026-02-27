@@ -87,8 +87,10 @@ is
       Num_Tools     : Natural := 0;
       Round         : Natural := 0;
    begin
-      --  Guard: need at least one provider.
-      if Cfg.Num_Providers = 0 then
+      --  Guard: need at least one provider (defensive; Provider_Index >= 1).
+      pragma Warnings (Off, "condition can only be");
+      if Cfg.Num_Providers < 1 then
+      pragma Warnings (On, "condition can only be");
          Set_Unbounded_String
            (Reply.Error, "No providers configured. Add a provider to config.");
          return Reply;
@@ -157,7 +159,7 @@ is
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
                --  Try failover provider.
                declare
-                  Failover       : access Provider_Type'Class :=
+                  Failover       : constant access Provider_Type'Class :=
                     Make_Provider (Cfg.Providers (2));
                   Failover_Label : constant String :=
                     Provider_Label (Cfg.Providers (2).Kind);
@@ -386,7 +388,9 @@ is
       Num_Tools    : Natural := 0;
       Round        : Natural := 0;
    begin
-      if Cfg.Num_Providers = 0 then
+      pragma Warnings (Off, "condition can only be");
+      if Cfg.Num_Providers < 1 then
+      pragma Warnings (On, "condition can only be");
          Set_Unbounded_String
            (Reply.Error, "No providers configured. Add a provider to config.");
          return Reply;
@@ -446,7 +450,7 @@ is
             Observability.Tracing.End_Span (LLM_Span_S);
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
                declare
-                  Failover : access Provider_Type'Class :=
+                  Failover : constant access Provider_Type'Class :=
                     Make_Provider (Cfg.Providers (2));
                   FR2      : constant Provider_Response :=
                     Failover.Chat (Conv, Tool_Schemas, Num_Tools);
