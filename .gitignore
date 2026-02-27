@@ -66,3 +66,11 @@ tests/security_gate/*_licenses.json
 tests/security_gate/*_licenses.log
 tests/security_gate/*_vulnerabilities.json
 tests/security_gate/*_vulnerabilities.log
+
+# WhatsApp bridge (Node.js)
+wa-bridge/node_modules/
+wa-bridge/sessions/
+wa-bridge/package-lock.json
+
+# Local runtime config (user fills in their API keys)
+config/config.json

@@ -1,0 +1,50 @@
+# VeriClaw + WhatsApp Bridge
+#
+# Quick start (headless pairing):
+#   1. cp config/whatsapp.example.json config/config.json  # fill in your API key
+#   2. WA_PHONE=+1234567890 docker compose up wa-bridge    # get pairing code
+#   3. Enter the code in WhatsApp -> Settings -> Linked Devices -> Link with phone number
+#   4. docker compose up                                   # start full stack
+#
+# See docs/setup/whatsapp.md for detailed instructions.
+
+services:
+  wa-bridge:
+    build:
+      context: ./wa-bridge
+      dockerfile: Dockerfile
+    environment:
+      - WA_PHONE=${WA_PHONE:-}           # set to +1234567890 for headless pairing
+      - WA_SESSION=vericlaw
+      - SESSIONS_DIR=/app/sessions
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - wa-sessions:/app/sessions        # persists WhatsApp auth across restarts
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  vericlaw:
+    build:
+      context: .
+      dockerfile: Dockerfile.release
+    platform: linux/amd64
+    command: ["gateway"]
+    environment:
+      - HOME=/tmp
+    volumes:
+      - ./config:/tmp/.vericlaw:ro       # mount your config.json here
+    depends_on:
+      wa-bridge:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  wa-sessions:
+    driver: local

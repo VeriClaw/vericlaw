@@ -11,6 +11,8 @@ with Core.Agent;
 --  New runtime modules
 with Config.Loader;
 with Config.Schema;
+with Config.JSON_Parser;
+with HTTP.Client;
 with Memory.SQLite;
 with Agent.Context;
 with Agent.Loop_Pkg;
@@ -27,15 +29,17 @@ procedure Main is
       Put_Line ("Usage: vericlaw <command> [options]");
       New_Line;
       Put_Line ("Commands:");
-      Put_Line ("  onboard           Interactive setup wizard (run this first)");
-      Put_Line ("  chat              Interactive CLI chat (default)");
-      Put_Line ("  agent <message>   One-shot agent: send a message and print reply");
-      Put_Line ("  gateway           Run HTTP gateway + all configured channels");
-      Put_Line ("  doctor            Print configuration and health status");
-      Put_Line ("  version           Print version information");
-      Put_Line ("  help              Show this help message");
+      Put_Line ("  onboard                          Interactive setup wizard (run this first)");
+      Put_Line ("  channels login --channel <name>  Link a messaging channel (e.g. whatsapp)");
+      Put_Line ("  chat                             Interactive CLI chat (default)");
+      Put_Line ("  agent <message>                  One-shot agent: send a message and print reply");
+      Put_Line ("  gateway                          Run HTTP gateway + all configured channels");
+      Put_Line ("  doctor                           Print configuration and health status");
+      Put_Line ("  version                          Print version information");
+      Put_Line ("  help                             Show this help message");
       New_Line;
       Put_Line ("Config: ~/.vericlaw/config.json  (or VERICLAW_CONFIG env var)");
+      Put_Line ("WhatsApp: see docs/setup/whatsapp.md for full setup guide");
    end Print_Usage;
 
    procedure Cmd_Version is
@@ -185,6 +189,116 @@ begin
       begin
          Config.Loader.Run_Onboard (Path);
       end;
+      return;
+   end if;
+
+   --  channels login --channel whatsapp
+   --  Guides the user through pairing a messaging channel. Currently supports
+   --  whatsapp via the wa-bridge Baileys sidecar (see docs/setup/whatsapp.md).
+   if To_String (Cmd) = "channels" then
+      if Argument_Count >= 3
+        and then Ada.Command_Line.Argument (2) = "login"
+        and then Ada.Command_Line.Argument (3) = "--channel"
+        and then Argument_Count >= 4
+        and then Ada.Command_Line.Argument (4) = "whatsapp"
+      then
+         declare
+            Phone_Buf  : String (1 .. 32);
+            Phone_Last : Natural := 0;
+            Bridge     : constant String := "http://localhost:3000";
+         begin
+            Put_Line ("VeriClaw — WhatsApp pairing");
+            New_Line;
+            Put_Line ("Prerequisites:");
+            Put_Line ("  1. Start the wa-bridge: docker compose up wa-bridge -d");
+            Put_Line ("     or: cd wa-bridge && npm install && node index.js");
+            New_Line;
+            Put ("Enter your WhatsApp phone number (e.g. +447700900000): ");
+            Ada.Text_IO.Get_Line (Phone_Buf, Phone_Last);
+
+            if Phone_Last = 0 then
+               Put_Line ("Error: phone number is required.");
+               Ada.Command_Line.Set_Exit_Status (1);
+               return;
+            end if;
+
+            declare
+               Phone     : constant String := Phone_Buf (1 .. Phone_Last);
+               Body_JSON : constant String :=
+                 "{""phone"":""" & Phone & """}";
+               Pair_Resp : constant HTTP.Client.Response :=
+                 HTTP.Client.Post_JSON
+                   (URL       => Bridge & "/sessions/vericlaw/pair",
+                    Headers   => (1 .. 0 => <>),
+                    Body_JSON => Body_JSON);
+            begin
+               if HTTP.Client.Is_Success (Pair_Resp) then
+                  declare
+                     use Config.JSON_Parser;
+                     PR   : constant Parse_Result :=
+                       Parse (Ada.Strings.Unbounded.To_String
+                                (Pair_Resp.Body_Text));
+                     Code : constant String :=
+                       (if PR.Valid
+                        then Get_String (PR.Root, "code")
+                        else "");
+                  begin
+                     if Code'Length > 0 then
+                        New_Line;
+                        Put_Line ("WhatsApp pairing code: " & Code);
+                        New_Line;
+                        Put_Line ("On your phone:");
+                        Put_Line ("  1. Open WhatsApp");
+                        Put_Line ("  2. Go to Settings -> Linked Devices");
+                        Put_Line ("  3. Tap 'Link a Device'");
+                        Put_Line ("  4. Tap 'Link with phone number instead'");
+                        Put_Line ("  5. Enter: " & Code);
+                        New_Line;
+                        Put_Line ("Waiting for pairing confirmation...");
+                        --  Poll status until open or timeout (120s)
+                        for Attempt in 1 .. 40 loop
+                           delay 3.0;
+                           declare
+                              St_Resp : constant HTTP.Client.Response :=
+                                HTTP.Client.Get
+                                  (URL        => Bridge & "/sessions/vericlaw/status",
+                                   Headers    => (1 .. 0 => <>),
+                                   Timeout_Ms => 5_000);
+                              St_PR   : constant Parse_Result :=
+                                Parse (Ada.Strings.Unbounded.To_String
+                                         (St_Resp.Body_Text));
+                              Status  : constant String :=
+                                (if St_PR.Valid
+                                 then Get_String (St_PR.Root, "status")
+                                 else "");
+                           begin
+                              if Status = "open" then
+                                 New_Line;
+                                 Put_Line ("Paired successfully!");
+                                 Put_Line
+                                   ("Run 'vericlaw gateway' to start the agent.");
+                                 return;
+                              end if;
+                           end;
+                        end loop;
+                        Put_Line ("Timeout waiting for pairing. " &
+                                  "Try again or check wa-bridge logs.");
+                     else
+                        Put_Line ("Bridge returned success but no pairing code. " &
+                                  "Check wa-bridge logs.");
+                     end if;
+                  end;
+               else
+                  Put_Line ("Could not reach wa-bridge at " & Bridge);
+                  Put_Line ("Start it first: docker compose up wa-bridge -d");
+               end if;
+            end;
+         end;
+      else
+         Put_Line ("Usage: vericlaw channels login --channel whatsapp");
+         Put_Line ("See docs/setup/whatsapp.md for full guide.");
+         Ada.Command_Line.Set_Exit_Status (1);
+      end if;
       return;
    end if;
 

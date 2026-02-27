@@ -240,14 +240,17 @@ On first run without a config, VeriClaw creates `~/.vericlaw/config.json` with d
 ### 4. Use
 
 ```bash
-vericlaw onboard                   # interactive setup wizard (first-time setup)
-vericlaw chat                      # interactive CLI conversation
-vericlaw agent "What is 2+2?"     # one-shot, prints reply
-vericlaw gateway                   # start HTTP gateway + all enabled channels
-vericlaw doctor                    # print config and health status
-vericlaw version                   # print version
-vericlaw help                      # show all commands
+vericlaw onboard                                      # interactive setup wizard (first-time setup)
+vericlaw channels login --channel whatsapp            # link WhatsApp (headless pairing code)
+vericlaw chat                                         # interactive CLI conversation
+vericlaw agent "What is 2+2?"                        # one-shot, prints reply
+vericlaw gateway                                      # start HTTP gateway + all enabled channels
+vericlaw doctor                                       # print config and health status
+vericlaw version                                      # print version
+vericlaw help                                         # show all commands
 ```
+
+**WhatsApp setup:** see [docs/setup/whatsapp.md](docs/setup/whatsapp.md) for the full headless guide (no QR code scan required — uses pairing code entered in your WhatsApp app).
 
 ## Providers
 
