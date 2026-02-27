@@ -18,6 +18,11 @@
             "64bit": {
                 "url": "https://github.com/vericlaw/vericlaw/releases/download/v$version/vericlaw-v$version-windows-x86_64.zip"
             }
+        },
+        "hash": {
+            "url": "https://github.com/vericlaw/vericlaw/releases/download/v$version/checksums-sha256.txt",
+            "regex": "([a-fA-F0-9]{64})\\s+vericlaw-v[\\d.]+-windows-x86_64\\.zip"
         }
-    }
+    },
+    "notes": "Run 'vericlaw doctor' after installation to verify setup."
 }

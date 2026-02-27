@@ -6,6 +6,8 @@ class Vericlaw < Formula
   homepage "https://github.com/vericlaw/vericlaw"
   version "1.0.0"
   license "Apache-2.0"
+  # Pre-built binaries — no source compilation required
+  bottle :unneeded
 
   on_macos do
     on_arm do
@@ -42,6 +44,10 @@ class Vericlaw < Formula
       
       Configuration: ~/.vericlaw/config/agent.json
       Documentation: https://github.com/vericlaw/vericlaw#readme
+
+      Note: Homebrew requires 64-bit ARM (aarch64). For 32-bit ARM
+      (Raspberry Pi 2/3 with Raspbian), use the install script:
+        curl -fsSL https://get.vericlaw.dev | sh
     EOS
   end
 
