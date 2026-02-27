@@ -75,7 +75,10 @@ procedure Main is
 
    procedure Cmd_Version is
    begin
-      Put_Line ("vericlaw " & Build_Info.Version & " (" & Build_Info.Git_Commit & " " & Build_Info.Build_Date & " " & Build_Info.Target_Triple & ")");
+      Put_Line ("vericlaw " & Build_Info.Version & " (" &
+                Build_Info.Git_Commit & " " &
+                Build_Info.Build_Date & " " &
+                Build_Info.Target_Triple & ")");
       Put_Line ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw");
    end Cmd_Version;
 
@@ -86,7 +89,7 @@ procedure Main is
    begin
       Put_Line ("Checking for updates...");
       Resp := HTTP.Client.Get (API_URL, Timeout_Ms => 5000);
-      if not Resp.Success then
+      if not Is_Success (Resp) then
          Put_Line ("  Could not reach update server.");
          Put_Line ("  Current version: " & Build_Info.Version);
          return;
@@ -94,7 +97,7 @@ procedure Main is
 
       --  Parse tag_name from response JSON
       declare
-         Resp_Body : constant String := To_String (Resp.Body);
+         Resp_Body : constant String := To_String (Resp.Body_Text);
          Tag_Key  : constant String := """tag_name"":""";
          Tag_Pos  : Natural;
          Tag_End  : Natural;
