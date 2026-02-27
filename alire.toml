@@ -10,9 +10,9 @@ gnatcoll = "^24.0.0"
 aws = "^24.0.0"
 
 [gpr-externals]
-BUILD_PROFILE = "dev"
-BUILD_TARGET = "native"
-BINDER_MODE = "portable"
+BUILD_PROFILE = ["dev", "release", "small", "edge-size", "edge-speed", "coverage"]
+BUILD_TARGET = ["native", "x86_64-linux-gnu", "aarch64-linux-gnu", "arm-linux-gnueabihf", "x86_64-w64-mingw32"]
+BINDER_MODE = ["portable", "minimal"]
 
 [gpr-set-externals]
 BUILD_PROFILE = "dev"
