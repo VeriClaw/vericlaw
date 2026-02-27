@@ -102,3 +102,6 @@ browser-bridge/package-lock.json
 
 # Local runtime config (user fills in their API keys)
 config/config.json
+
+# Copilot session notes (internal reference)
+COPILOT_SESSION_NOTES.md
