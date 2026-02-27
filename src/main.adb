@@ -20,6 +20,7 @@ with Channels.CLI;
 with Channels.Telegram;
 with Channels.Signal;
 with Channels.WhatsApp;
+with Channels.Discord;
 with HTTP.Server;
 
 procedure Main is
@@ -104,7 +105,8 @@ procedure Main is
          else Home & "/.vericlaw/memory.db");
       Err    : Unbounded_String;
    begin
-      OK := Memory.SQLite.Open (Mem, DB_Path, Err);
+      OK := Memory.SQLite.Open (Mem, DB_Path, Err,
+                                Cfg.Memory.Session_Retention_Days);
       if not OK then
          Put_Line ("Warning: memory unavailable: " & To_String (Err));
       end if;
@@ -346,6 +348,7 @@ begin
             Has_Telegram  : Boolean := False;
             Has_Signal    : Boolean := False;
             Has_WhatsApp  : Boolean := False;
+            Has_Discord   : Boolean := False;
          begin
             for I in 1 .. CR.Config.Num_Channels loop
                case CR.Config.Channels (I).Kind is
@@ -357,6 +360,9 @@ begin
                        or else CR.Config.Channels (I).Enabled;
                   when Config.Schema.WhatsApp =>
                      Has_WhatsApp := Has_WhatsApp
+                       or else CR.Config.Channels (I).Enabled;
+                  when Config.Schema.Discord =>
+                     Has_Discord := Has_Discord
                        or else CR.Config.Channels (I).Enabled;
                   when Config.Schema.CLI =>
                      null;
@@ -371,6 +377,8 @@ begin
                Channels.Signal.Run_Polling (CR.Config, Mem);
             elsif Has_WhatsApp then
                Channels.WhatsApp.Run_Polling (CR.Config, Mem);
+            elsif Has_Discord then
+               Channels.Discord.Run_Polling (CR.Config, Mem);
             else
                --  No channels: run HTTP server for webhook registration.
                HTTP.Server.Run (CR.Config, Mem);

@@ -1,0 +1,12 @@
+{
+  "agent_name": "VeriClaw",
+  "system_prompt": "You are VeriClaw, a helpful AI assistant.",
+  "providers": [{
+    "kind": "openai_compatible",
+    "base_url": "https://api.groq.com/openai/v1",
+    "token": "${GROQ_API_KEY}",
+    "model": "llama-3.3-70b-versatile"
+  }],
+  "channels": [{"kind": "cli", "enabled": true}],
+  "memory": {"max_history": 50}
+}

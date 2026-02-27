@@ -62,6 +62,8 @@ package body Config.Loader is
          Dest.Kind := Signal;
       elsif Kind_Str = "whatsapp" then
          Dest.Kind := WhatsApp;
+      elsif Kind_Str = "discord" then
+         Dest.Kind := Discord;
       else
          Dest.Kind := CLI;
       end if;
@@ -157,6 +159,9 @@ package body Config.Loader is
                Set_Unbounded_String
                  (Result.Config.Tools.Brave_API_Key,
                   Get_String (T, "brave_api_key"));
+               Set_Unbounded_String
+                 (Result.Config.Tools.MCP_Bridge_URL,
+                  Get_String (T, "mcp_bridge_url"));
             end;
          end if;
 

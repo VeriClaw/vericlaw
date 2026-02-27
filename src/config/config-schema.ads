@@ -34,7 +34,7 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Channel_Kind is
-     (CLI, Telegram, Signal, WhatsApp);
+     (CLI, Telegram, Signal, WhatsApp, Discord);
 
    type Channel_Config is record
       Kind       : Channel_Kind    := CLI;
@@ -59,6 +59,7 @@ package Config.Schema is
       Web_Fetch_Enabled  : Boolean := False;
       Brave_Search_Enabled : Boolean := False;
       Brave_API_Key      : Unbounded_String;
+      MCP_Bridge_URL     : Unbounded_String;  -- e.g. "http://mcp-bridge:3004"
    end record;
 
    --  -----------------------------------------------------------------------
