@@ -163,8 +163,52 @@ package body Providers.Anthropic is
                   end;
                else
                   Set_Field (M, "role",    Role);
-                  Set_Field (M, "content",
-                    To_String (Msgs_Raw (I).Content));
+                  if Msgs_Raw (I).Num_Images > 0
+                    and then Msgs_Raw (I).Role = Agent.Context.User
+                  then
+                     --  Multimodal: Anthropic content array format.
+                     declare
+                        Parts : JSON_Value_Type := Build_Array;
+                     begin
+                        for J in 1 .. Msgs_Raw (I).Num_Images loop
+                           declare
+                              Img_Part : JSON_Value_Type := Build_Object;
+                              Src_Obj  : JSON_Value_Type := Build_Object;
+                           begin
+                              Set_Field (Img_Part, "type", "image");
+                              if Length (Msgs_Raw (I).Images (J).Data) > 0
+                              then
+                                 Set_Field (Src_Obj, "type", "base64");
+                                 Set_Field (Src_Obj, "media_type",
+                                   To_String
+                                     (Msgs_Raw (I).Images (J).Media_Type));
+                                 Set_Field (Src_Obj, "data",
+                                   To_String
+                                     (Msgs_Raw (I).Images (J).Data));
+                              else
+                                 Set_Field (Src_Obj, "type", "url");
+                                 Set_Field (Src_Obj, "url",
+                                   To_String
+                                     (Msgs_Raw (I).Images (J).Source_URL));
+                              end if;
+                              Set_Field (Img_Part, "source", Src_Obj);
+                              Append_Array (Parts, Img_Part);
+                           end;
+                        end loop;
+                        declare
+                           Text_Part : JSON_Value_Type := Build_Object;
+                        begin
+                           Set_Field (Text_Part, "type", "text");
+                           Set_Field (Text_Part, "text",
+                             To_String (Msgs_Raw (I).Content));
+                           Append_Array (Parts, Text_Part);
+                        end;
+                        Set_Field (M, "content", Parts);
+                     end;
+                  else
+                     Set_Field (M, "content",
+                       To_String (Msgs_Raw (I).Content));
+                  end if;
                end if;
                Append_Array (Msgs, M);
             end;

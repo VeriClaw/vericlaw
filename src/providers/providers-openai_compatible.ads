@@ -20,6 +20,12 @@ package Providers.OpenAI_Compatible is
       Tools     : Tool_Schema_Array;
       Num_Tools : Natural) return Provider_Response;
 
+   overriding function Chat_Streaming
+     (Provider  : in out OpenAI_Compat_Provider;
+      Conv      : Agent.Context.Conversation;
+      Tools     : Tool_Schema_Array;
+      Num_Tools : Natural) return Provider_Response;
+
    overriding function Name (Provider : OpenAI_Compat_Provider) return String;
 
 private

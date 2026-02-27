@@ -1,6 +1,7 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
+with Ada.Text_IO;
 
 pragma SPARK_Mode (Off);
 package body Providers.Gemini is
@@ -254,5 +255,142 @@ package body Providers.Gemini is
       end;
       return Result;
    end Chat;
+
+   function Chat_Streaming
+     (Provider  : in out Gemini_Provider;
+      Conv      : Agent.Context.Conversation;
+      Tools     : Tool_Schema_Array;
+      Num_Tools : Natural) return Provider_Response
+   is
+      --  Gemini streaming endpoint uses streamGenerateContent with SSE.
+      URL      : constant String :=
+        Gemini_Base_URL
+        & To_String (Provider.Model)
+        & ":streamGenerateContent?alt=sse&key="
+        & To_String (Provider.API_Key);
+      No_Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) := (others => <>);
+      Body_Str : constant String :=
+        Build_Request_Body (Provider, Conv, Tools, Num_Tools);
+
+      Result        : Provider_Response;
+      Accumulated   : Unbounded_String;
+      Http_Resp     : HTTP.Client.Response;
+
+      procedure On_SSE_Line (Line : String) is
+         --  Gemini SSE sends "data: {json}" lines.
+         Prefix : constant String := "data: ";
+      begin
+         if Line'Length > Prefix'Length
+           and then Line (Line'First .. Line'First + Prefix'Length - 1) = Prefix
+         then
+            declare
+               Payload : constant String :=
+                 Line (Line'First + Prefix'Length .. Line'Last);
+               PR : constant Parse_Result := Parse (Payload);
+            begin
+               if PR.Valid and then Has_Key (PR.Root, "candidates") then
+                  declare
+                     Cands     : constant JSON_Value_Type :=
+                       Get_Object (PR.Root, "candidates");
+                     Cands_Arr : constant JSON_Array_Type :=
+                       Value_To_Array (Cands);
+                  begin
+                     if Array_Length (Cands_Arr) > 0 then
+                        declare
+                           First     : constant JSON_Value_Type :=
+                             Array_Item (Cands_Arr, 1);
+                           Content   : constant JSON_Value_Type :=
+                             Get_Object (First, "content");
+                           Parts     : constant JSON_Value_Type :=
+                             Get_Object (Content, "parts");
+                           Parts_Arr : constant JSON_Array_Type :=
+                             Value_To_Array (Parts);
+                        begin
+                           for I in 1 .. Array_Length (Parts_Arr) loop
+                              declare
+                                 Part : constant JSON_Value_Type :=
+                                   Array_Item (Parts_Arr, I);
+                              begin
+                                 if Has_Key (Part, "text") then
+                                    declare
+                                       Chunk : constant String :=
+                                         Get_String (Part, "text");
+                                    begin
+                                       Ada.Text_IO.Put (Chunk);
+                                       Append (Accumulated, Chunk);
+                                    end;
+                                 elsif Has_Key (Part, "functionCall") then
+                                    if Result.Num_Tool_Calls < Max_Tool_Calls then
+                                       declare
+                                          FC : constant JSON_Value_Type :=
+                                            Get_Object (Part, "functionCall");
+                                          FN : constant String :=
+                                            Get_String (FC, "name");
+                                       begin
+                                          Result.Num_Tool_Calls :=
+                                            Result.Num_Tool_Calls + 1;
+                                          Set_Unbounded_String
+                                            (Result.Tool_Calls
+                                               (Result.Num_Tool_Calls).ID, FN);
+                                          Set_Unbounded_String
+                                            (Result.Tool_Calls
+                                               (Result.Num_Tool_Calls).Name, FN);
+                                          Set_Unbounded_String
+                                            (Result.Tool_Calls
+                                               (Result.Num_Tool_Calls).Arguments,
+                                             To_JSON_String
+                                               (Get_Object (FC, "args")));
+                                       end;
+                                    end if;
+                                 end if;
+                              end;
+                           end loop;
+
+                           if Has_Key (First, "finishReason") then
+                              Set_Unbounded_String
+                                (Result.Stop_Reason,
+                                 Get_String (First, "finishReason"));
+                           end if;
+                        end;
+                     end if;
+                  end;
+               end if;
+
+               if PR.Valid and then Has_Key (PR.Root, "usageMetadata") then
+                  declare
+                     U : constant JSON_Value_Type :=
+                       Get_Object (PR.Root, "usageMetadata");
+                  begin
+                     Result.Input_Tokens  :=
+                       Get_Integer (U, "promptTokenCount");
+                     Result.Output_Tokens :=
+                       Get_Integer (U, "candidatesTokenCount");
+                  end;
+               end if;
+            end;
+         end if;
+      exception
+         when others => null;  -- discard malformed SSE chunk; streaming continues
+      end On_SSE_Line;
+   begin
+      Http_Resp := HTTP.Client.Post_JSON_Streaming
+        (URL        => URL,
+         Headers    => No_Hdrs,
+         Body_JSON  => Body_Str,
+         On_Chunk   => On_SSE_Line'Access,
+         Timeout_Ms => Provider.Timeout_Ms);
+
+      if not HTTP.Client.Is_Success (Http_Resp) then
+         Set_Unbounded_String
+           (Result.Error, "Gemini streaming HTTP error:"
+            & Natural'Image (Http_Resp.Status_Code));
+         return Result;
+      end if;
+
+      Ada.Text_IO.New_Line;
+      Result.Content := Accumulated;
+      Result.Success := True;
+      return Result;
+   end Chat_Streaming;
 
 end Providers.Gemini;

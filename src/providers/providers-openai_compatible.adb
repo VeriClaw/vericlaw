@@ -1,6 +1,7 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
+with Ada.Text_IO;
 
 pragma SPARK_Mode (Off);
 package body Providers.OpenAI_Compatible is
@@ -229,5 +230,139 @@ package body Providers.OpenAI_Compatible is
       end;
       return Result;
    end Chat;
+
+   function Chat_Streaming
+     (Provider  : in out OpenAI_Compat_Provider;
+      Conv      : Agent.Context.Conversation;
+      Tools     : Tool_Schema_Array;
+      Num_Tools : Natural) return Provider_Response
+   is
+      URL       : constant String := Build_Endpoint (Provider);
+      Auth_Val  : constant String :=
+        (if Provider.Is_Azure
+         then To_String (Provider.API_Key)
+         else "Bearer " & To_String (Provider.API_Key));
+      Auth_Hdr_Name : constant String :=
+        (if Provider.Is_Azure then "api-key" else "Authorization");
+      Hdrs      : constant HTTP.Client.Header_Array :=
+        (1 => (Name  => To_Unbounded_String (Auth_Hdr_Name),
+               Value => To_Unbounded_String (Auth_Val)));
+
+      --  Build request body with stream=true.
+      Root     : JSON_Value_Type := Build_Object;
+      Msgs     : JSON_Value_Type := Build_Array;
+      Msgs_Raw : constant Agent.Context.Message_Array :=
+        Agent.Context.Format_For_Provider (Conv);
+
+      Result      : Provider_Response;
+      Accumulated : Unbounded_String;
+      Http_Resp   : HTTP.Client.Response;
+
+      procedure On_SSE_Line (Line : String) is
+         Prefix : constant String := "data: ";
+      begin
+         if Line'Length > Prefix'Length
+           and then Line (Line'First .. Line'First + Prefix'Length - 1) = Prefix
+         then
+            declare
+               Payload : constant String :=
+                 Line (Line'First + Prefix'Length .. Line'Last);
+            begin
+               if Payload = "[DONE]" then return; end if;
+               declare
+                  PR : constant Parse_Result := Parse (Payload);
+               begin
+                  if PR.Valid and then Has_Key (PR.Root, "choices") then
+                     declare
+                        Choices     : constant JSON_Value_Type :=
+                          Get_Object (PR.Root, "choices");
+                        Choices_Arr : constant JSON_Array_Type :=
+                          Value_To_Array (Choices);
+                     begin
+                        if Array_Length (Choices_Arr) > 0 then
+                           declare
+                              First : constant JSON_Value_Type :=
+                                Array_Item (Choices_Arr, 1);
+                           begin
+                              if Has_Key (First, "delta") then
+                                 declare
+                                    Delta_Obj : constant JSON_Value_Type :=
+                                      Get_Object (First, "delta");
+                                    Content   : constant String :=
+                                      Get_String (Delta_Obj, "content");
+                                 begin
+                                    if Content'Length > 0 then
+                                       Ada.Text_IO.Put (Content);
+                                       Append (Accumulated, Content);
+                                    end if;
+                                 end;
+                              end if;
+                              declare
+                                 FR : constant String :=
+                                   Get_String (First, "finish_reason");
+                              begin
+                                 if FR'Length > 0 then
+                                    Set_Unbounded_String
+                                      (Result.Stop_Reason, FR);
+                                 end if;
+                              end;
+                           end;
+                        end if;
+                     end;
+                  end if;
+               end;
+            end;
+         end if;
+      exception
+         when others => null;  -- discard malformed SSE chunk; streaming continues
+      end On_SSE_Line;
+   begin
+      Set_Field (Root, "model",
+        (if Length (Provider.Deployment) > 0
+         then To_String (Provider.Deployment)
+         else To_String (Provider.Model)));
+      Set_Field (Root, "max_tokens", Provider.Max_Tokens);
+      Set_Field (Root, "stream", True);
+
+      for I in Msgs_Raw'Range loop
+         declare
+            M    : JSON_Value_Type := Build_Object;
+            Role : constant String :=
+              (case Msgs_Raw (I).Role is
+               when Agent.Context.System_Role  => "system",
+               when Agent.Context.User         => "user",
+               when Agent.Context.Assistant    => "assistant",
+               when Agent.Context.Tool_Result  => "tool");
+         begin
+            Set_Field (M, "role",    Role);
+            Set_Field (M, "content", To_String (Msgs_Raw (I).Content));
+            if Msgs_Raw (I).Role = Agent.Context.Tool_Result then
+               Set_Field (M, "tool_call_id",
+                 To_String (Msgs_Raw (I).Name));
+            end if;
+            Append_Array (Msgs, M);
+         end;
+      end loop;
+      Set_Field (Root, "messages", Msgs);
+
+      Http_Resp := HTTP.Client.Post_JSON_Streaming
+        (URL        => URL,
+         Headers    => Hdrs,
+         Body_JSON  => To_JSON_String (Root),
+         On_Chunk   => On_SSE_Line'Access,
+         Timeout_Ms => Provider.Timeout_Ms);
+
+      if not HTTP.Client.Is_Success (Http_Resp) then
+         Set_Unbounded_String
+           (Result.Error, "OpenAI-compatible streaming HTTP error:"
+            & Natural'Image (Http_Resp.Status_Code));
+         return Result;
+      end if;
+
+      Ada.Text_IO.New_Line;
+      Result.Content := Accumulated;
+      Result.Success := True;
+      return Result;
+   end Chat_Streaming;
 
 end Providers.OpenAI_Compatible;

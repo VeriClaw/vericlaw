@@ -186,7 +186,46 @@ package body Providers.OpenAI is
                when Agent.Context.Tool_Result  => "tool");
          begin
             Set_Field (M, "role",    Role);
-            Set_Field (M, "content", To_String (Msgs_Raw (I).Content));
+            if Msgs_Raw (I).Num_Images > 0
+              and then Msgs_Raw (I).Role = Agent.Context.User
+            then
+               --  Multimodal: content is an array of parts.
+               declare
+                  Parts : JSON_Value_Type := Build_Array;
+                  Text_Part : JSON_Value_Type := Build_Object;
+               begin
+                  Set_Field (Text_Part, "type", "text");
+                  Set_Field (Text_Part, "text",
+                    To_String (Msgs_Raw (I).Content));
+                  Append_Array (Parts, Text_Part);
+                  for J in 1 .. Msgs_Raw (I).Num_Images loop
+                     declare
+                        Img_Part : JSON_Value_Type := Build_Object;
+                        Img_URL  : JSON_Value_Type := Build_Object;
+                        Src : constant String :=
+                          To_String (Msgs_Raw (I).Images (J).Source_URL);
+                     begin
+                        Set_Field (Img_Part, "type", "image_url");
+                        if Length (Msgs_Raw (I).Images (J).Data) > 0 then
+                           --  Base64 inline image.
+                           Set_Field (Img_URL, "url",
+                             "data:"
+                             & To_String (Msgs_Raw (I).Images (J).Media_Type)
+                             & ";base64,"
+                             & To_String (Msgs_Raw (I).Images (J).Data));
+                        else
+                           --  URL reference.
+                           Set_Field (Img_URL, "url", Src);
+                        end if;
+                        Set_Field (Img_Part, "image_url", Img_URL);
+                        Append_Array (Parts, Img_Part);
+                     end;
+                  end loop;
+                  Set_Field (M, "content", Parts);
+               end;
+            else
+               Set_Field (M, "content", To_String (Msgs_Raw (I).Content));
+            end if;
             if Msgs_Raw (I).Role = Agent.Context.Tool_Result then
                Set_Field (M, "tool_call_id", To_String (Msgs_Raw (I).Name));
             end if;
