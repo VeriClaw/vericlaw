@@ -4,7 +4,16 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 
 ## [Unreleased]
 ### Added
-- (next release items go here)
+- Secret scan (trufflehog) in CI pipeline
+- GCOV/LCOV coverage reporting in CI
+- Constrained subtypes for domain values (RPS_Limit, Token_Count, Timeout_Ms_Type, Port_Number, Depth_Limit)
+- Tool name allowlist validation with Pre contract on Agent.Tools.Dispatch
+- `.pre-commit-config.yaml` with shellcheck, trufflehog, detect-secrets
+
+### Changed
+- All runtime/IO packages annotated with pragma SPARK_Mode(Off) for explicit boundary
+- Compiler flags: -gnatwa, -gnatyy, -gnato, -fstack-protector-strong
+- Magic number literals replaced with named constants in cron and Telegram packages
 
 ## [0.2.0] - 2026-02-27
 ### Added

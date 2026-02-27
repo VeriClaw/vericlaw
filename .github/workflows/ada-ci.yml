@@ -12,6 +12,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history needed for trufflehog
+      - name: Secret scan (trufflehog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
       - name: Validate shell scripts
         run: >
           bash -n
@@ -41,6 +50,22 @@ jobs:
           make config-test
           make context-test
           make tools-test
+      - name: Coverage report
+        run: |
+          export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+          BUILD_PROFILE=coverage make check config-test context-test tools-test || true
+          gcov obj/*.gcda 2>/dev/null || true
+          lcov --capture --directory obj --output-file coverage.info 2>/dev/null || true
+          genhtml coverage.info --output-directory coverage-html 2>/dev/null || true
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.info
+            coverage-html/
       - name: Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4

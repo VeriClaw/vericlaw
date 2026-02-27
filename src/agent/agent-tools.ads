@@ -16,14 +16,37 @@ package Agent.Tools is
       Error   : Unbounded_String;
    end record;
 
+   --  Complete set of tool name prefixes the dispatcher recognises.
+   --  Any Name not in this set (and not starting with "mcp__") is rejected.
+   --  Defined here for documentation and used in Is_Allowed_Tool_Name below.
+   subtype Tool_Name_String is String;
+   Known_Tool_Names : constant array (1 .. 10) of access constant String :=
+     (new String'("shell"),
+      new String'("file_read"),
+      new String'("file_write"),
+      new String'("file_list"),
+      new String'("brave_search"),
+      new String'("cron_add"),
+      new String'("cron_list"),
+      new String'("cron_remove"),
+      new String'("git_operations"),
+      new String'("spawn"));
+
+   --  Return True if Name is a known built-in tool name OR starts with "mcp__".
+   --  Enforced via Pre on Dispatch; also callable for proactive validation.
+   function Is_Allowed_Tool_Name (Name : String) return Boolean;
+
    --  Dispatch a tool call.  Returns an error result if the tool is not
    --  enabled in config or if security policy denies the call.
+   --  Pre: Name must be a known tool name or an MCP tool (prefix "mcp__").
+   --  This is checked at runtime with -gnata; violation raises Assertion_Error.
    function Dispatch
      (Name      : String;
       Args_JSON : String;
       Cfg       : Agent_Config;
       Mem       : Memory.SQLite.Memory_Handle;
-      Workspace : String) return Tool_Result;
+      Workspace : String) return Tool_Result
+   with Pre => Is_Allowed_Tool_Name (Name);
 
    --  Build the tool schema array to pass to providers.
    procedure Build_Schemas

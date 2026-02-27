@@ -9,6 +9,25 @@ pragma SPARK_Mode (Off);
 package Config.Schema is
 
    --  -----------------------------------------------------------------------
+   --  Domain-constrained subtypes — catch misconfiguration at compile time.
+   --  These are used as field types in config records below.
+   --  -----------------------------------------------------------------------
+
+   --  Provider-level limits
+   subtype Token_Count    is Positive range 1 .. 2_000_000;  -- LLM max_tokens
+   subtype Timeout_Ms     is Positive range 100 .. 600_000;  -- HTTP timeout
+
+   --  Channel-level limits
+   subtype RPS_Limit      is Positive range 1 .. 1_000;      -- messages per second
+
+   --  Gateway-level limits
+   subtype Port_Number    is Positive range 1 .. 65_535;     -- TCP/UDP port
+   subtype History_Limit  is Positive range 1 .. 10_000;     -- conversation turns kept
+
+   --  Agent-level limits
+   subtype Depth_Limit    is Natural  range 0 .. 10;         -- spawn depth cap
+
+   --  -----------------------------------------------------------------------
    --  Provider config
    --  -----------------------------------------------------------------------
 
@@ -16,14 +35,14 @@ package Config.Schema is
      (OpenAI, Anthropic, Azure_Foundry, OpenAI_Compatible, Gemini);
 
    type Provider_Config is record
-      Kind       : Provider_Kind       := OpenAI;
-      API_Key    : Unbounded_String;           -- never logged
-      Base_URL   : Unbounded_String;           -- for Azure/Compat overrides
-      Model      : Unbounded_String;
-      Deployment : Unbounded_String;           -- Azure: deployment name
-      API_Version : Unbounded_String;          -- Azure: e.g. "2024-02-15-preview"
-      Max_Tokens : Positive              := 4096;
-      Timeout_Ms : Positive              := 60_000;
+      Kind        : Provider_Kind   := OpenAI;
+      API_Key     : Unbounded_String;              -- never logged
+      Base_URL    : Unbounded_String;              -- for Azure/Compat overrides
+      Model       : Unbounded_String;
+      Deployment  : Unbounded_String;              -- Azure: deployment name
+      API_Version : Unbounded_String;              -- Azure: e.g. "2024-02-15-preview"
+      Max_Tokens  : Token_Count   := 4_096;
+      Timeout_Ms  : Timeout_Ms    := 60_000;
    end record;
 
    Max_Providers : constant := 8;
@@ -43,7 +62,7 @@ package Config.Schema is
       Token      : Unbounded_String;   -- bot token / auth credential
       Bridge_URL : Unbounded_String;   -- for Signal/WhatsApp bridge
       Allowlist  : Unbounded_String;   -- comma-separated user IDs; empty = deny all
-      Max_RPS    : Positive        := 5;
+      Max_RPS    : RPS_Limit       := 5;
    end record;
 
    Max_Channels : constant := 8;
@@ -69,10 +88,10 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Memory_Config is record
-      DB_Path               : Unbounded_String;  -- "" = ~/.vericlaw/memory.db
-      Max_History           : Positive := 50;    -- messages kept per session
-      Facts_Enabled         : Boolean  := True;
-      Session_Retention_Days : Natural := 30;    -- auto-prune sessions older than N days (0 = never)
+      DB_Path                : Unbounded_String;    -- "" = ~/.vericlaw/memory.db
+      Max_History            : History_Limit := 50; -- messages kept per session
+      Facts_Enabled          : Boolean       := True;
+      Session_Retention_Days : Natural       := 30; -- auto-prune sessions older than N days (0 = never)
    end record;
 
    --  -----------------------------------------------------------------------
@@ -81,7 +100,7 @@ package Config.Schema is
 
    type Gateway_Config is record
       Bind_Host    : Unbounded_String;  -- default: "127.0.0.1"
-      Bind_Port    : Positive  := 8787;
+      Bind_Port    : Port_Number := 8787;
       TLS_Cert     : Unbounded_String;
       TLS_Key      : Unbounded_String;
    end record;

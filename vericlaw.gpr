@@ -8,7 +8,7 @@ project Vericlaw is
    for Main use ("main.adb");
    for Exec_Dir use ".";
    for Object_Dir use "obj";
-   type Build_Profile_Kind is ("dev", "small", "edge-size", "edge-speed");
+   type Build_Profile_Kind is ("dev", "small", "edge-size", "edge-speed", "coverage");
    Build_Profile : Build_Profile_Kind := external ("BUILD_PROFILE", "dev");
    type Binder_Mode_Kind is ("portable", "minimal");
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");
@@ -29,12 +29,17 @@ project Vericlaw is
          when "edge-speed" =>
             for Default_Switches ("Ada") use
               ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato", "-O2");
+         when "coverage" =>
+            --  Debug build with GCOV instrumentation for LCOV reporting.
+            for Default_Switches ("Ada") use
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+               "-O0", "-g", "--coverage", "-fprofile-arcs", "-ftest-coverage");
       end case;
    end Compiler;
 
    package Binder is
       case Build_Profile is
-         when "dev" =>
+         when "dev" | "coverage" =>
             for Default_Switches ("Ada") use ();
          when "small" | "edge-size" =>
             case Binder_Mode is
@@ -52,6 +57,9 @@ project Vericlaw is
       case Build_Profile is
          when "dev" =>
             for Default_Switches ("Ada") use ("-lcurl", "-lsqlite3");
+         when "coverage" =>
+            for Default_Switches ("Ada") use
+              ("-lcurl", "-lsqlite3", "--coverage");
          when "small" | "edge-size" =>
             for Default_Switches ("Ada") use
               ("-lcurl", "-lsqlite3", "-Wl,--gc-sections", "-s",

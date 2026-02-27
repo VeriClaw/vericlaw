@@ -135,6 +135,23 @@ package body Agent.Tools is
          Parameters  => To_Unbounded_String (P));
    end Make_Schema;
 
+   function Is_Allowed_Tool_Name (Name : String) return Boolean is
+   begin
+      --  Accept any MCP-bridged tool (dynamically discovered at runtime).
+      if Name'Length > 5
+        and then Name (Name'First .. Name'First + 4) = "mcp__"
+      then
+         return True;
+      end if;
+      --  Check against the compile-time known tool list.
+      for I in Known_Tool_Names'Range loop
+         if Known_Tool_Names (I).all = Name then
+            return True;
+         end if;
+      end loop;
+      return False;
+   end Is_Allowed_Tool_Name;
+
    procedure Build_Schemas
      (Cfg     : Tool_Config;
       Schemas : out Tool_Schema_Array;
