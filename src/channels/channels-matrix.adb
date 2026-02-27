@@ -9,45 +9,12 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
+with Channels.Message_Dedup;
 
 pragma SPARK_Mode (Off);
 package body Channels.Matrix is
 
-   --  Client-side dedup: track last 100 message IDs.
-   Max_Seen_IDs : constant := 100;
-   type Seen_Index is mod Max_Seen_IDs;
-   type Seen_Array is array (Seen_Index) of Unbounded_String;
-   Seen_IDs  : Seen_Array;
-   Seen_Next : Seen_Index := 0;
-
-   function Was_Seen (Msg_ID : String) return Boolean is
-   begin
-      for S of Seen_IDs loop
-         if To_String (S) = Msg_ID then
-            return True;
-         end if;
-      end loop;
-      return False;
-   end Was_Seen;
-
-   procedure Mark_Seen (Msg_ID : String) is
-   begin
-      Set_Unbounded_String (Seen_IDs (Seen_Next), Msg_ID);
-      Seen_Next := Seen_Next + 1;
-   end Mark_Seen;
-
-   function Get_Chan_Config
-     (Cfg : Config.Schema.Agent_Config)
-      return Config.Schema.Channel_Config
-   is
-   begin
-      for I in 1 .. Cfg.Num_Channels loop
-         if Cfg.Channels (I).Kind = Config.Schema.Matrix then
-            return Cfg.Channels (I);
-         end if;
-      end loop;
-      return (Kind => Config.Schema.Matrix, others => <>);
-   end Get_Chan_Config;
+   Seen : Channels.Message_Dedup.Dedup_Buffer;
 
    function Send_Message
      (Bridge_URL : String;
@@ -74,7 +41,7 @@ package body Channels.Matrix is
    is
       Current_Cfg : Config.Schema.Agent_Config := Cfg;
       Chan_Cfg    : Config.Schema.Channel_Config :=
-        Get_Chan_Config (Current_Cfg);
+        Find_Channel (Current_Cfg, Matrix);
       Bridge_URL  : Unbounded_String :=
         Chan_Cfg.Bridge_URL;
    begin
@@ -95,7 +62,7 @@ package body Channels.Matrix is
             begin
                if New_CR.Success then
                   Current_Cfg := New_CR.Config;
-                  Chan_Cfg    := Get_Chan_Config (Current_Cfg);
+                  Chan_Cfg    := Find_Channel (Current_Cfg, Matrix);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
                   Ada.Text_IO.Put_Line ("Config reloaded.");
                end if;
@@ -135,10 +102,10 @@ package body Channels.Matrix is
                              Get_String (Item, "text");
                         begin
                            --  Skip already-processed messages.
-                           if Was_Seen (Msg_ID) then
+                           if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
                               goto Next_Item;
                            end if;
-                           Mark_Seen (Msg_ID);
+                           Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
                            if Sender'Length > 0 and then Text'Length > 0 then
                               --  Allowlist check.

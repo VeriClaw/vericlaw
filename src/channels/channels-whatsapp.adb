@@ -10,6 +10,7 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
+with Channels.Message_Dedup;
 with Metrics;
 
 pragma SPARK_Mode (Off);
@@ -17,42 +18,7 @@ package body Channels.WhatsApp is
 
    Default_Session : constant String := "vericlaw";
 
-   --  Client-side dedup: track last 100 message IDs to guard against
-   --  re-delivery if the bridge buffer is not fully drained each poll.
-   Max_Seen_IDs : constant := 100;
-   type Seen_Index is mod Max_Seen_IDs;
-   type Seen_Array is array (Seen_Index) of Unbounded_String;
-   Seen_IDs   : Seen_Array;
-   Seen_Next  : Seen_Index := 0;
-
-   function Was_Seen (Msg_ID : String) return Boolean is
-   begin
-      for S of Seen_IDs loop
-         if To_String (S) = Msg_ID then
-            return True;
-         end if;
-      end loop;
-      return False;
-   end Was_Seen;
-
-   procedure Mark_Seen (Msg_ID : String) is
-   begin
-      Set_Unbounded_String (Seen_IDs (Seen_Next), Msg_ID);
-      Seen_Next := Seen_Next + 1;
-   end Mark_Seen;
-
-   function Get_Chan_Config
-     (Cfg : Config.Schema.Agent_Config)
-      return Config.Schema.Channel_Config
-   is
-   begin
-      for I in 1 .. Cfg.Num_Channels loop
-         if Cfg.Channels (I).Kind = Config.Schema.WhatsApp then
-            return Cfg.Channels (I);
-         end if;
-      end loop;
-      return (Kind => Config.Schema.WhatsApp, others => <>);
-   end Get_Chan_Config;
+   Seen : Channels.Message_Dedup.Dedup_Buffer;
 
    function Send_Message
      (Bridge_URL : String;
@@ -80,7 +46,7 @@ package body Channels.WhatsApp is
    is
       Current_Cfg : Config.Schema.Agent_Config := Cfg;
       Chan_Cfg    : Config.Schema.Channel_Config :=
-        Get_Chan_Config (Current_Cfg);
+        Find_Channel (Current_Cfg, WhatsApp);
       Bridge_URL  : Unbounded_String :=
         Chan_Cfg.Bridge_URL;
    begin
@@ -100,7 +66,7 @@ package body Channels.WhatsApp is
             begin
                if New_CR.Success then
                   Current_Cfg := New_CR.Config;
-                  Chan_Cfg    := Get_Chan_Config (Current_Cfg);
+                  Chan_Cfg    := Find_Channel (Current_Cfg, WhatsApp);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
                   Logging.Info ("Config reloaded.");
                end if;
@@ -142,10 +108,10 @@ package body Channels.WhatsApp is
                            Is_Operator : Boolean := False;
                         begin
                            --  Skip already-processed messages (client-side dedup)
-                           if Was_Seen (Msg_ID) then
+                           if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
                               goto Next_Item;
                            end if;
-                           Mark_Seen (Msg_ID);
+                           Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
                            if not From_Me and then Text'Length > 0 then
                               --  Allowlist check

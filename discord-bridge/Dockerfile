@@ -1,10 +1,11 @@
 FROM node:20-slim
 
 WORKDIR /app
-COPY package*.json ./
+COPY bridge-common/ ./bridge-common/
+COPY discord-bridge/package*.json ./
 RUN npm install --omit=dev
 
-COPY index.js ./
+COPY discord-bridge/index.js ./
 
 RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app \

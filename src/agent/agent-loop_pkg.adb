@@ -229,17 +229,12 @@ package body Agent.Loop_Pkg is
                         declare
                            TName : constant String := To_String (My_TC.Name);
                            TRes  : constant Agent.Tools.Tool_Result :=
-                             (if Agent.Tools.Is_Allowed_Tool_Name (TName)
-                              then Agent.Tools.Dispatch
-                                (Name      => TName,
-                                 Args_JSON => To_String (My_TC.Arguments),
-                                 Cfg       => Cfg,
-                                 Mem       => Mem,
-                                 Workspace => Home_Workspace)
-                              else (Success => False,
-                                    Output  => Null_Unbounded_String,
-                                    Error   => To_Unbounded_String
-                                      ("Unknown tool: " & TName)));
+                             Agent.Tools.Safe_Dispatch
+                               (Name      => TName,
+                                Args_JSON => To_String (My_TC.Arguments),
+                                Cfg       => Cfg,
+                                Mem       => Mem,
+                                Workspace => Home_Workspace);
                         begin
                            Res := To_Unbounded_String
                              (if TRes.Success
@@ -273,17 +268,12 @@ package body Agent.Loop_Pkg is
                           Prov_Resp.Tool_Calls (I);
                         TName : constant String := To_String (TC.Name);
                         TRes  : constant Agent.Tools.Tool_Result :=
-                          (if Agent.Tools.Is_Allowed_Tool_Name (TName)
-                           then Agent.Tools.Dispatch
-                             (Name      => TName,
-                              Args_JSON => To_String (TC.Arguments),
-                              Cfg       => Cfg,
-                              Mem       => Mem,
-                              Workspace => Home_Workspace)
-                           else (Success => False,
-                                 Output  => Null_Unbounded_String,
-                                 Error   => To_Unbounded_String
-                                   ("Unknown tool: " & TName)));
+                          Agent.Tools.Safe_Dispatch
+                            (Name      => TName,
+                             Args_JSON => To_String (TC.Arguments),
+                             Cfg       => Cfg,
+                             Mem       => Mem,
+                             Workspace => Home_Workspace);
                      begin
                         Outputs (I) :=
                           To_Unbounded_String
@@ -408,17 +398,12 @@ package body Agent.Loop_Pkg is
                   TC    : constant Tool_Call := Prov_Resp.Tool_Calls (I);
                   TName : constant String    := To_String (TC.Name);
                   TRes  : constant Agent.Tools.Tool_Result :=
-                    (if Agent.Tools.Is_Allowed_Tool_Name (TName)
-                     then Agent.Tools.Dispatch
-                       (Name      => TName,
-                        Args_JSON => To_String (TC.Arguments),
-                        Cfg       => Cfg,
-                        Mem       => Mem,
-                        Workspace => Home_Workspace)
-                     else (Success => False,
-                           Output  => Null_Unbounded_String,
-                           Error   => To_Unbounded_String
-                             ("Unknown tool: " & TName)));
+                    Agent.Tools.Safe_Dispatch
+                      (Name      => TName,
+                       Args_JSON => To_String (TC.Arguments),
+                       Cfg       => Cfg,
+                       Mem       => Mem,
+                       Workspace => Home_Workspace);
                   Output : constant String :=
                     (if TRes.Success
                      then To_String (TRes.Output)

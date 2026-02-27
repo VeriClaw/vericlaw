@@ -617,4 +617,20 @@ package body Agent.Tools is
       return Result;
    end Dispatch;
 
+   function Safe_Dispatch
+     (Name      : String;
+      Args_JSON : String;
+      Cfg       : Agent_Config;
+      Mem       : Memory.SQLite.Memory_Handle;
+      Workspace : String) return Tool_Result
+   is
+   begin
+      if not Is_Allowed_Tool_Name (Name) then
+         return (Success => False,
+                 Output  => Null_Unbounded_String,
+                 Error   => To_Unbounded_String ("Unknown tool: " & Name));
+      end if;
+      return Dispatch (Name, Args_JSON, Cfg, Mem, Workspace);
+   end Safe_Dispatch;
+
 end Agent.Tools;

@@ -14,19 +14,6 @@ with Metrics;
 pragma SPARK_Mode (Off);
 package body Channels.Signal is
 
-   function Get_Chan_Config
-     (Cfg : Config.Schema.Agent_Config)
-      return Config.Schema.Channel_Config
-   is
-   begin
-      for I in 1 .. Cfg.Num_Channels loop
-         if Cfg.Channels (I).Kind = Config.Schema.Signal then
-            return Cfg.Channels (I);
-         end if;
-      end loop;
-      return (Kind => Config.Schema.Signal, others => <>);
-   end Get_Chan_Config;
-
    function Send_Message
      (Bridge_URL  : String;
       Sender      : String;
@@ -58,7 +45,7 @@ package body Channels.Signal is
    is
       PR      : constant Parse_Result := Parse (Msg_JSON);
       Chan    : constant Config.Schema.Channel_Config :=
-        Get_Chan_Config (Cfg);
+        Find_Channel (Cfg, Signal);
    begin
       if not PR.Valid then
          return "";
@@ -156,7 +143,7 @@ package body Channels.Signal is
    is
       Current_Cfg : Config.Schema.Agent_Config := Cfg;
       Chan_Cfg    : Config.Schema.Channel_Config :=
-        Get_Chan_Config (Current_Cfg);
+        Find_Channel (Current_Cfg, Signal);
       Bridge_URL  : Unbounded_String := Chan_Cfg.Bridge_URL;
       Our_Number  : Unbounded_String := Chan_Cfg.Token;
    begin
@@ -177,7 +164,7 @@ package body Channels.Signal is
             begin
                if New_CR.Success then
                   Current_Cfg := New_CR.Config;
-                  Chan_Cfg    := Get_Chan_Config (Current_Cfg);
+                  Chan_Cfg    := Find_Channel (Current_Cfg, Signal);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
                   Our_Number  := Chan_Cfg.Token;
                   Ada.Text_IO.Put_Line ("Config reloaded.");

@@ -20,4 +20,17 @@ package body Config.Schema is
       return C;
    end Default_Config;
 
+   function Find_Channel
+     (Cfg  : Agent_Config;
+      Kind : Channel_Kind) return Channel_Config
+   is
+   begin
+      for I in 1 .. Cfg.Num_Channels loop
+         if Cfg.Channels (I).Kind = Kind then
+            return Cfg.Channels (I);
+         end if;
+      end loop;
+      return (Kind => Kind, others => <>);
+   end Find_Channel;
+
 end Config.Schema;

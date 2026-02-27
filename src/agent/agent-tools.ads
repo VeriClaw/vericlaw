@@ -51,6 +51,16 @@ package Agent.Tools is
       Workspace : String) return Tool_Result
    with Pre => Is_Allowed_Tool_Name (Name);
 
+   --  Safe dispatch: check allowlist then call Dispatch. Returns an error
+   --  result (Success => False) for unknown tools instead of raising.
+   --  Use this at call sites that cannot propagate Assertion_Error.
+   function Safe_Dispatch
+     (Name      : String;
+      Args_JSON : String;
+      Cfg       : Agent_Config;
+      Mem       : Memory.SQLite.Memory_Handle;
+      Workspace : String) return Tool_Result;
+
    --  Build the tool schema array to pass to providers.
    procedure Build_Schemas
      (Cfg       : Tool_Config;

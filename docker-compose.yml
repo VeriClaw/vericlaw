@@ -31,8 +31,8 @@
 services:
   discord-bridge:
     build:
-      context: ./discord-bridge
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: discord-bridge/Dockerfile
     environment:
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
     ports:
@@ -68,8 +68,8 @@ services:
 
   slack-bridge:
     build:
-      context: ./slack-bridge
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: slack-bridge/Dockerfile
     environment:
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
@@ -86,8 +86,8 @@ services:
 
   email-bridge:
     build:
-      context: ./email-bridge
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: email-bridge/Dockerfile
     environment:
       - EMAIL_USER=${EMAIL_USER:-}
       - EMAIL_PASS=${EMAIL_PASS:-}
@@ -107,8 +107,8 @@ services:
 
   irc-bridge:
     build:
-      context: ./irc-bridge
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: irc-bridge/Dockerfile
     environment:
       - IRC_HOST=${IRC_HOST:-irc.libera.chat}
       - IRC_PORT=${IRC_PORT:-6697}
@@ -128,8 +128,8 @@ services:
 
   matrix-bridge:
     build:
-      context: ./matrix-bridge
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: matrix-bridge/Dockerfile
     environment:
       - MATRIX_HOMESERVER=${MATRIX_HOMESERVER:-https://matrix.org}
       - MATRIX_TOKEN=${MATRIX_TOKEN:-}

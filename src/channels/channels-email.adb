@@ -7,45 +7,12 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
+with Channels.Message_Dedup;
 
 pragma SPARK_Mode (Off);
 package body Channels.Email is
 
-   --  Client-side dedup: track last 100 message IDs.
-   Max_Seen_IDs : constant := 100;
-   type Seen_Index is mod Max_Seen_IDs;
-   type Seen_Array is array (Seen_Index) of Unbounded_String;
-   Seen_IDs  : Seen_Array;
-   Seen_Next : Seen_Index := 0;
-
-   function Was_Seen (Msg_ID : String) return Boolean is
-   begin
-      for S of Seen_IDs loop
-         if To_String (S) = Msg_ID then
-            return True;
-         end if;
-      end loop;
-      return False;
-   end Was_Seen;
-
-   procedure Mark_Seen (Msg_ID : String) is
-   begin
-      Set_Unbounded_String (Seen_IDs (Seen_Next), Msg_ID);
-      Seen_Next := Seen_Next + 1;
-   end Mark_Seen;
-
-   function Get_Chan_Config
-     (Cfg : Config.Schema.Agent_Config)
-      return Config.Schema.Channel_Config
-   is
-   begin
-      for I in 1 .. Cfg.Num_Channels loop
-         if Cfg.Channels (I).Kind = Config.Schema.Email then
-            return Cfg.Channels (I);
-         end if;
-      end loop;
-      return (Kind => Config.Schema.Email, others => <>);
-   end Get_Chan_Config;
+   Seen : Channels.Message_Dedup.Dedup_Buffer;
 
    function Send_Message
      (Bridge_URL : String;
@@ -73,7 +40,7 @@ package body Channels.Email is
       Mem : Memory.SQLite.Memory_Handle)
    is
       Chan_Cfg   : constant Config.Schema.Channel_Config :=
-        Get_Chan_Config (Cfg);
+        Find_Channel (Cfg, Email);
       Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
    begin
       if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
@@ -115,10 +82,10 @@ package body Channels.Email is
                              Get_String (Item, "text");
                         begin
                            --  Skip already-processed messages.
-                           if Was_Seen (Msg_ID) then
+                           if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
                               goto Next_Item;
                            end if;
-                           Mark_Seen (Msg_ID);
+                           Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
                            if From'Length > 0 and then Text'Length > 0 then
                               --  Allowlist check.

@@ -136,4 +136,11 @@ package Config.Schema is
 
    function Default_Config return Agent_Config;
 
+   --  Find the channel config for the given Kind.
+   --  Returns a default-initialized Channel_Config (Kind set, all else default)
+   --  if no matching channel is present in Cfg.
+   function Find_Channel
+     (Cfg  : Agent_Config;
+      Kind : Channel_Kind) return Channel_Config;
+
 end Config.Schema;
