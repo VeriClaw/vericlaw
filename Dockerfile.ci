@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Cross-compilers
     gcc-aarch64-linux-gnu \
     gnat-14-aarch64-linux-gnu \
+    gcc-arm-linux-gnueabihf \
+    gnat-14-arm-linux-gnueabihf \
     gcc-mingw-w64-x86-64 \
     # Build dependencies
     libsqlite3-dev \

@@ -20,6 +20,8 @@ jobs:
             triple: x86_64-linux-gnu
           - target: linux-aarch64
             triple: aarch64-linux-gnu
+          - target: linux-armv7
+            triple: arm-linux-gnueabihf
     steps:
       - uses: actions/checkout@v4
       - uses: alire-project/setup-alire@v4
@@ -30,6 +32,9 @@ jobs:
           sudo apt-get install -y --no-install-recommends libsqlite3-dev libcurl4-openssl-dev
           if [ "${{ matrix.triple }}" = "aarch64-linux-gnu" ]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
+          if [ "${{ matrix.triple }}" = "arm-linux-gnueabihf" ]; then
+            sudo apt-get install -y gcc-arm-linux-gnueabihf
           fi
       - name: Generate build info
         run: |

@@ -11,7 +11,7 @@ project Vericlaw is
    for Object_Dir use "obj";
    type Build_Profile_Kind is ("dev", "release", "small", "edge-size", "edge-speed", "coverage");
    Build_Profile : Build_Profile_Kind := external ("BUILD_PROFILE", "dev");
-   type Target_Kind is ("native", "x86_64-linux-gnu", "aarch64-linux-gnu", "x86_64-w64-mingw32");
+   type Target_Kind is ("native", "x86_64-linux-gnu", "aarch64-linux-gnu", "arm-linux-gnueabihf", "x86_64-w64-mingw32");
    Build_Target : Target_Kind := external ("BUILD_TARGET", "native");
    type Binder_Mode_Kind is ("portable", "minimal");
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");

@@ -34,6 +34,7 @@ ARCH="$(uname -m)"
 case "$ARCH" in
   x86_64|amd64)  ARCH_NAME="x86_64" ;;
   aarch64|arm64)  ARCH_NAME="aarch64" ;;
+  armv7l|armhf)   ARCH_NAME="armv7" ;;
   *) echo "Error: Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
