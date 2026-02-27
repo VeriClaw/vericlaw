@@ -34,9 +34,12 @@ with HTTP.Server;
 with Config.Reload;
 with Tools.Cron;
 with Audit.Syslog;
+with Metrics.Cost;
 
 pragma SPARK_Mode (Off);
 procedure Main is
+
+   Version : constant String := "1.0.0-rc2";
 
    use type Config.Schema.Channel_Kind;
 
@@ -67,7 +70,7 @@ procedure Main is
 
    procedure Cmd_Version is
    begin
-      Put_Line ("vericlaw 1.0.0  |  Ada/SPARK  |  SPARK-verified security core");
+      Put_Line ("vericlaw " & Version & "  |  Ada/SPARK  |  SPARK-verified security core");
       Put_Line ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw");
    end Cmd_Version;
 
@@ -135,25 +138,41 @@ procedure Main is
    end Open_Memory_Or_Warn;
 
    procedure Cmd_Doctor (Cfg : Config.Schema.Agent_Config) is
+      Home : constant String :=
+        Ada.Environment_Variables.Value ("HOME", ".");
+      DB_Path : constant String :=
+        (if Length (Cfg.Memory.DB_Path) > 0
+         then To_String (Cfg.Memory.DB_Path)
+         else Home & "/.vericlaw/memory.db");
+      Workspace_Path : constant String :=
+        Home & "/.vericlaw/workspace/";
+
+      Total  : Natural := 0;
+      Passed : Natural := 0;
    begin
       Put_Line ("=== VeriClaw Doctor ===");
       New_Line;
-      Put_Line ("Agent name  : " & To_String (Cfg.Agent_Name));
-      Put_Line ("Providers   : " & Config.Schema.Provider_Index'Image
+
+      --  1. Config check (already loaded by caller via Load_Config_Or_Die)
+      Put_Line ("Config:");
+      Put_Line ("  config      : OK");
+      Total  := Total + 1;
+      Passed := Passed + 1;
+      Put_Line ("  agent_name  : " & To_String (Cfg.Agent_Name));
+      Put_Line ("  providers   : " & Config.Schema.Provider_Index'Image
         (Cfg.Num_Providers));
       for I in 1 .. Cfg.Num_Providers loop
-         Put_Line ("  [" & Config.Schema.Provider_Index'Image (I) & "] "
+         Put_Line ("    [" & Config.Schema.Provider_Index'Image (I) & "] "
            & Config.Schema.Provider_Kind'Image (Cfg.Providers (I).Kind)
            & "  model=" & To_String (Cfg.Providers (I).Model)
            & (if Length (Cfg.Providers (I).Base_URL) > 0
               then "  url=" & To_String (Cfg.Providers (I).Base_URL)
               else ""));
       end loop;
-      New_Line;
-      Put_Line ("Channels    : " & Config.Schema.Channel_Index'Image
+      Put_Line ("  channels    : " & Config.Schema.Channel_Index'Image
         (Cfg.Num_Channels));
       for I in 1 .. Cfg.Num_Channels loop
-         Put ("  [" & Config.Schema.Channel_Index'Image (I) & "] "
+         Put ("    [" & Config.Schema.Channel_Index'Image (I) & "] "
            & Config.Schema.Channel_Kind'Image (Cfg.Channels (I).Kind));
          if Cfg.Channels (I).Enabled then
             Put_Line ("  ENABLED");
@@ -162,18 +181,103 @@ procedure Main is
          end if;
       end loop;
       New_Line;
-      Put_Line ("Tools:");
-      Put_Line ("  shell       : " & Boolean'Image (Cfg.Tools.Shell_Enabled));
-      Put_Line ("  file        : " & Boolean'Image (Cfg.Tools.File_Enabled));
-      Put_Line ("  web_fetch   : " & Boolean'Image
-        (Cfg.Tools.Web_Fetch_Enabled));
-      Put_Line ("  brave_search: " & Boolean'Image
-        (Cfg.Tools.Brave_Search_Enabled));
+
+      --  2. Database connectivity
+      Put_Line ("Database:");
+      Total := Total + 1;
+      declare
+         Test_Mem : Memory.SQLite.Memory_Handle;
+         Test_OK  : Boolean;
+         Err      : Unbounded_String;
+      begin
+         Test_OK := Memory.SQLite.Open (Test_Mem, DB_Path, Err);
+         if Test_OK then
+            Put_Line ("  database    : OK (" & DB_Path & ")");
+            Memory.SQLite.Close (Test_Mem);
+            Passed := Passed + 1;
+         else
+            Put_Line ("  database    : FAIL (" & To_String (Err) & ")");
+         end if;
+      end;
       New_Line;
-      Put_Line ("Gateway: " & To_String (Cfg.Gateway.Bind_Host)
-        & ":" & Positive'Image (Cfg.Gateway.Bind_Port));
+
+      --  3. Bridge health — check each enabled bridge channel
+      Put_Line ("Bridges:");
+      for I in 1 .. Cfg.Num_Channels loop
+         if Cfg.Channels (I).Enabled
+           and then Length (Cfg.Channels (I).Bridge_URL) > 0
+         then
+            Total := Total + 1;
+            declare
+               URL : constant String :=
+                 To_String (Cfg.Channels (I).Bridge_URL) & "/health";
+               Resp : constant HTTP.Client.Response :=
+                 HTTP.Client.Get
+                   (URL, HTTP.Client.Header_Array'(1 .. 0 => <>),
+                    Timeout_Ms => 5000);
+            begin
+               if HTTP.Client.Is_Success (Resp) then
+                  Put_Line ("  "
+                    & Config.Schema.Channel_Kind'Image
+                        (Cfg.Channels (I).Kind)
+                    & " bridge : OK (" & URL & ")");
+                  Passed := Passed + 1;
+               else
+                  Put_Line ("  "
+                    & Config.Schema.Channel_Kind'Image
+                        (Cfg.Channels (I).Kind)
+                    & " bridge : FAIL (" & URL & " => "
+                    & (if Length (Resp.Error) > 0
+                       then To_String (Resp.Error)
+                       else "HTTP" & Natural'Image (Resp.Status_Code))
+                    & ")");
+               end if;
+            end;
+         end if;
+      end loop;
       New_Line;
-      Put_Line ("SPARK security core: OK");
+
+      --  4. SPARK security core (compile-time verified)
+      Put_Line ("SPARK:");
+      Put_Line ("  security core: OK (compile-time verified)");
+      Total  := Total + 1;
+      Passed := Passed + 1;
+      New_Line;
+
+      --  5. Workspace directory
+      Put_Line ("Workspace:");
+      Total := Total + 1;
+      if Ada.Directories.Exists (Workspace_Path) then
+         declare
+            Test_File : constant String :=
+              Workspace_Path & ".doctor_probe";
+         begin
+            declare
+               F : Ada.Text_IO.File_Type;
+            begin
+               Ada.Text_IO.Create (F, Ada.Text_IO.Out_File, Test_File);
+               Ada.Text_IO.Close (F);
+               Ada.Directories.Delete_File (Test_File);
+               Put_Line ("  workspace   : OK (" & Workspace_Path & ")");
+               Passed := Passed + 1;
+            exception
+               when others =>
+                  Put_Line ("  workspace   : FAIL (not writable: "
+                    & Workspace_Path & ")");
+            end;
+         end;
+      else
+         Put_Line ("  workspace   : FAIL (missing: "
+           & Workspace_Path & ")");
+      end if;
+      New_Line;
+
+      --  Summary
+      Put_Line ("Summary: " & Natural'Image (Passed) & " /"
+        & Natural'Image (Total) & " checks passed");
+      if Passed < Total then
+         Ada.Command_Line.Set_Exit_Status (1);
+      end if;
    end Cmd_Doctor;
 
    --  Signal handler for graceful shutdown (SIGTERM / SIGINT).
@@ -718,9 +822,13 @@ begin
          Cmd_Doctor (CR.Config);
 
       elsif C = "status" then
-         --  Show runtime status: version, active channels, provider, memory.
+         --  Show runtime status: version, active channels, provider, memory, cost.
          declare
-            Active : Natural := 0;
+            Active    : Natural := 0;
+            Tok_In    : constant Natural := Metrics.Cost.Total_Tokens_In;
+            Tok_Out   : constant Natural := Metrics.Cost.Total_Tokens_Out;
+            Tot_Cost  : constant Float   := Metrics.Cost.Total_Cost;
+            Cost_Img  : constant String  := Float'Image (Tot_Cost);
          begin
             for I in 1 .. CR.Config.Num_Channels loop
                if CR.Config.Channels (I).Enabled then
@@ -728,7 +836,7 @@ begin
                end if;
             end loop;
             if JSON_Mode then
-               Put_Line ("{""version"":""0.2.0"""
+               Put_Line ("{""version"":""" & Version & """"
                  & ",""channels_active"":" & Natural'Image (Active)
                  & ",""channels_total"":" & Natural'Image (CR.Config.Num_Channels)
                  & ",""provider"":"
@@ -744,10 +852,13 @@ begin
                  & Config.JSON_Parser.Escape_JSON_String
                      (To_String (CR.Config.Gateway.Bind_Host) & ":"
                       & Positive'Image (CR.Config.Gateway.Bind_Port))
+                 & ",""tokens_in"":" & Natural'Image (Tok_In)
+                 & ",""tokens_out"":" & Natural'Image (Tok_Out)
+                 & ",""total_cost"":" & Cost_Img
                  & "}");
             else
                Put_Line ("VeriClaw status");
-               Put_Line ("  version   : 0.2.0");
+               Put_Line ("  version   : " & Version);
                Put_Line ("  channels  : "
                           & Natural'Image (Active) & " active /"
                           & Natural'Image (CR.Config.Num_Channels) & " configured");
@@ -761,6 +872,10 @@ begin
                Put_Line ("  gateway   : "
                           & To_String (CR.Config.Gateway.Bind_Host) & ":"
                           & Positive'Image (CR.Config.Gateway.Bind_Port));
+               Put_Line ("  tokens    : "
+                          & Natural'Image (Tok_In) & " in /"
+                          & Natural'Image (Tok_Out) & " out");
+               Put_Line ("  cost      : $" & Cost_Img);
             end if;
          end;
 

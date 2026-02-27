@@ -7,6 +7,7 @@ with Providers.Gemini;
 with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
 with Metrics;
+with Metrics.Cost;
 
 pragma SPARK_Mode (Off);
 package body Agent.Loop_Pkg is
@@ -134,6 +135,7 @@ package body Agent.Loop_Pkg is
               Provider_Label (Cfg.Providers (1).Kind);
             Prov_Resp : Provider_Response :=
               Provider.Chat (Conv, Tool_Schemas, Num_Tools);
+            Used_Failover : Boolean := False;
          begin
             Metrics.Increment ("provider_calls_total", Prov_Label);
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
@@ -149,6 +151,13 @@ package body Agent.Loop_Pkg is
                   Metrics.Increment ("provider_calls_total", Failover_Label);
                   if FR2.Success then
                      Prov_Resp := FR2;
+                     Used_Failover := True;
+                     Metrics.Cost.Record_Usage
+                       (Failover_Label,
+                        FR2.Input_Tokens,
+                        FR2.Output_Tokens,
+                        Cfg.Providers (2).Price_Per_1K_Input,
+                        Cfg.Providers (2).Price_Per_1K_Output);
                   else
                      Metrics.Increment ("provider_errors_total", Failover_Label);
                   end if;
@@ -160,6 +169,16 @@ package body Agent.Loop_Pkg is
                Set_Unbounded_String
                  (Reply.Error, To_String (Prov_Resp.Error));
                return Reply;
+            end if;
+
+            --  Record cost for the primary provider call (skip if failover was used).
+            if not Used_Failover then
+               Metrics.Cost.Record_Usage
+                 (Prov_Label,
+                  Prov_Resp.Input_Tokens,
+                  Prov_Resp.Output_Tokens,
+                  Cfg.Providers (1).Price_Per_1K_Input,
+                  Cfg.Providers (1).Price_Per_1K_Output);
             end if;
 
             --  No tool calls → done.
@@ -269,9 +288,19 @@ package body Agent.Loop_Pkg is
                         Workers (I).Start (Prov_Resp.Tool_Calls (I));
                      end loop;
                      --  Collect results in original call order.
-                     for I in 1 .. N loop
-                        Workers (I).Get_Result (Outputs (I));
-                     end loop;
+                     begin
+                        for I in 1 .. N loop
+                           Workers (I).Get_Result (Outputs (I));
+                        end loop;
+                     exception
+                        when others =>
+                           for I in 1 .. N loop
+                              if not Workers (I)'Terminated then
+                                 abort Workers (I).all;
+                              end if;
+                           end loop;
+                           raise;
+                     end;
                   end;
                else
                   --  Sequential path: single call or ordering-sensitive tools.
@@ -374,6 +403,7 @@ package body Agent.Loop_Pkg is
          declare
             Prov_Resp : Provider_Response :=
               Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
+            Used_Failover : Boolean := False;
          begin
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
                declare
@@ -384,6 +414,13 @@ package body Agent.Loop_Pkg is
                begin
                   if FR2.Success then
                      Prov_Resp := FR2;
+                     Used_Failover := True;
+                     Metrics.Cost.Record_Usage
+                       (Provider_Label (Cfg.Providers (2).Kind),
+                        FR2.Input_Tokens,
+                        FR2.Output_Tokens,
+                        Cfg.Providers (2).Price_Per_1K_Input,
+                        Cfg.Providers (2).Price_Per_1K_Output);
                   end if;
                end;
             end if;
@@ -392,6 +429,16 @@ package body Agent.Loop_Pkg is
                Set_Unbounded_String
                  (Reply.Error, To_String (Prov_Resp.Error));
                return Reply;
+            end if;
+
+            --  Record cost for the primary provider call (skip if failover was used).
+            if not Used_Failover then
+               Metrics.Cost.Record_Usage
+                 (Provider_Label (Cfg.Providers (1).Kind),
+                  Prov_Resp.Input_Tokens,
+                  Prov_Resp.Output_Tokens,
+                  Cfg.Providers (1).Price_Per_1K_Input,
+                  Cfg.Providers (1).Price_Per_1K_Output);
             end if;
 
             if Prov_Resp.Num_Tool_Calls = 0 then
