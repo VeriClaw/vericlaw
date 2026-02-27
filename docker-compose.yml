@@ -1,4 +1,4 @@
-# VeriClaw + WhatsApp Bridge + Discord Bridge
+# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge
 #
 # Quick start (headless pairing):
 #   1. cp config/whatsapp.example.json config/config.json  # fill in your API key
@@ -9,7 +9,10 @@
 # For Discord: set DISCORD_BOT_TOKEN env var and run:
 #   docker compose up discord-bridge vericlaw
 #
-# See docs/setup/whatsapp.md and docs/setup/discord.md for detailed instructions.
+# For Slack: set SLACK_BOT_TOKEN and SLACK_APP_TOKEN env vars and run:
+#   docker compose up slack-bridge vericlaw
+#
+# See docs/setup/whatsapp.md, docs/setup/discord.md, and docs/setup/slack.md for details.
 
 services:
   discord-bridge:
@@ -49,6 +52,24 @@ services:
       retries: 5
       start_period: 15s
 
+  slack-bridge:
+    build:
+      context: ./slack-bridge
+      dockerfile: Dockerfile
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   vericlaw:
     build:
       context: .
@@ -63,6 +84,25 @@ services:
       wa-bridge:
         condition: service_healthy
     restart: unless-stopped
+
+  mcp-bridge:
+    build:
+      context: ./mcp-bridge
+      dockerfile: Dockerfile
+    profiles:
+      - mcp
+    environment:
+      - MCP_SERVERS=${MCP_SERVERS:-[]}   # JSON array of MCP server configs
+      - PORT=3004
+    ports:
+      - "3004:3004"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3004/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   wa-sessions:

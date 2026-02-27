@@ -64,6 +64,10 @@ package body Config.Loader is
          Dest.Kind := WhatsApp;
       elsif Kind_Str = "discord" then
          Dest.Kind := Discord;
+      elsif Kind_Str = "slack" then
+         Dest.Kind := Slack;
+      elsif Kind_Str = "email" then
+         Dest.Kind := Email;
       else
          Dest.Kind := CLI;
       end if;

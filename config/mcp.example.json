@@ -1,0 +1,29 @@
+{
+  "agent_name": "VeriClaw",
+  "system_prompt": "You are VeriClaw, a helpful AI assistant.",
+  "providers": [
+    {
+      "kind": "openai",
+      "api_key": "sk-...",
+      "model": "gpt-4o"
+    }
+  ],
+  "channels": [
+    { "kind": "cli", "enabled": true }
+  ],
+  "tools": {
+    "file": true,
+    "shell": false,
+    "web_fetch": false,
+    "brave_search": false,
+    "mcp_bridge_url": "http://mcp-bridge:3004"
+  },
+  "memory": {
+    "max_history": 50,
+    "facts_enabled": true
+  },
+  "gateway": {
+    "bind_host": "127.0.0.1",
+    "bind_port": 8787
+  }
+}

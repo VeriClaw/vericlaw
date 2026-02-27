@@ -1,6 +1,7 @@
 with Tools.Shell;
 with Tools.File_IO;
 with Tools.Brave_Search;
+with Tools.MCP;
 with Config.JSON_Parser; use Config.JSON_Parser;
 
 package body Agent.Tools is
@@ -9,6 +10,7 @@ package body Agent.Tools is
    package Shell_Pkg   renames Standard.Tools.Shell;
    package File_IO_Pkg renames Standard.Tools.File_IO;
    package Search_Pkg  renames Standard.Tools.Brave_Search;
+   package MCP_Pkg     renames Standard.Tools.MCP;
 
    --  JSON Schema strings for each tool (passed to LLM providers).
    Shell_Params : constant String :=
@@ -98,6 +100,17 @@ package body Agent.Tools is
          Num := Num + 1;
          Schemas (Num) := Make_Schema
            ("brave_search", "Search the web using Brave Search", Brave_Params);
+      end if;
+      --  MCP tools via bridge
+      if Length (Cfg.MCP_Bridge_URL) > 0 then
+         declare
+            MCP_Tools : MCP_Pkg.MCP_Tool_Array (1 .. MCP_Pkg.Max_MCP_Tools);
+            MCP_Count : Natural;
+         begin
+            MCP_Pkg.Fetch_Tools
+              (To_String (Cfg.MCP_Bridge_URL), MCP_Tools, MCP_Count);
+            MCP_Pkg.Append_Schemas (MCP_Tools, MCP_Count, Schemas, Num);
+         end;
       end if;
    end Build_Schemas;
 
@@ -229,8 +242,27 @@ package body Agent.Tools is
          end;
 
       else
-         Set_Unbounded_String
-           (Result.Error, "Unknown tool: " & Name);
+         --  Check for MCP tool (prefix "mcp__").
+         if Name'Length > 5
+           and then Name (Name'First .. Name'First + 4) = "mcp__"
+         then
+            if Length (Cfg.MCP_Bridge_URL) = 0 then
+               Set_Unbounded_String
+                 (Result.Error, "MCP bridge URL not configured");
+            else
+               declare
+                  MCP_Result : constant String :=
+                    MCP_Pkg.Execute
+                      (To_String (Cfg.MCP_Bridge_URL), Name, Args_JSON);
+               begin
+                  Result.Success := True;
+                  Set_Unbounded_String (Result.Output, MCP_Result);
+               end;
+            end if;
+         else
+            Set_Unbounded_String
+              (Result.Error, "Unknown tool: " & Name);
+         end if;
       end if;
 
       return Result;

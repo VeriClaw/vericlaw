@@ -34,7 +34,7 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Channel_Kind is
-     (CLI, Telegram, Signal, WhatsApp, Discord);
+     (CLI, Telegram, Signal, WhatsApp, Discord, Slack, Email);
 
    type Channel_Config is record
       Kind       : Channel_Kind    := CLI;
