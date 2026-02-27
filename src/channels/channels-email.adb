@@ -6,6 +6,7 @@ with Config.Schema;      use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
+with Channels.Security;
 with Channels.Rate_Limit;
 with Channels.Message_Dedup;
 
@@ -88,16 +89,19 @@ package body Channels.Email is
                            Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
                            if From'Length > 0 and then Text'Length > 0 then
-                              --  Allowlist check.
+                              --  Allowlist check via SPARK-proved policy.
                               declare
                                  Allowlist : constant String :=
                                    To_String (Chan_Cfg.Allowlist);
+                                 Matches   : constant Boolean :=
+                                   Allowlist = "*"
+                                   or else Index (Allowlist, From) > 0;
                               begin
-                                 if Allowlist'Length = 0 then
-                                    goto Next_Item;
-                                 end if;
-                                 if Allowlist /= "*"
-                                   and then Index (Allowlist, From) = 0
+                                 if not Channels.Security.Allowlist_Allows
+                                   (Channel           =>
+                                      Channels.Security.Email_Channel,
+                                    Allowlist_Size    => Allowlist'Length,
+                                    Candidate_Matches => Matches)
                                  then
                                     goto Next_Item;
                                  end if;

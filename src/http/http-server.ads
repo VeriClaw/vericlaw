@@ -1,10 +1,12 @@
 --  HTTP gateway server using AWS (Ada Web Server).
 --  Endpoints:
---    GET  /health          -- returns 200 OK with JSON status
---    POST /pair            -- pairing handshake (delegates to gateway-auth)
---    POST /webhook/telegram -- receives Telegram webhook updates
---    POST /webhook/signal  -- receives signal-cli push notifications
---    POST /webhook/whatsapp -- receives WA-Bridge push notifications
+--    GET  /health             -- returns 200 OK with JSON status
+--    POST /pair               -- pairing handshake (delegates to gateway-auth)
+--    POST /webhook/telegram   -- receives Telegram webhook updates
+--    POST /webhook/signal     -- receives signal-cli push notifications
+--    POST /webhook/whatsapp   -- receives WA-Bridge push notifications
+--    POST /api/chat           -- non-streaming chat (localhost only)
+--    POST /api/chat/stream    -- SSE streaming chat (localhost only)
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;

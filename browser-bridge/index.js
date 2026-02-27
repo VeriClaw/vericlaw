@@ -47,14 +47,18 @@ async function checkPrivateURL(rawURL) {
   try {
     parsed = new URL(rawURL);
   } catch {
-    return { blocked: false }; // let Puppeteer handle malformed URLs
+    return { blocked: true, reason: 'malformed URL' };
+  }
+  // Only allow http and https schemes.
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { blocked: true, reason: 'disallowed scheme: ' + parsed.protocol };
   }
   const hostname = parsed.hostname;
   // Quick check for obvious literals.
-  if (isPrivateIP(hostname)) return { blocked: true };
+  if (isPrivateIP(hostname)) return { blocked: true, reason: 'private IP' };
   try {
     const { address } = await dns.lookup(hostname);
-    if (isPrivateIP(address)) return { blocked: true };
+    if (isPrivateIP(address)) return { blocked: true, reason: 'resolves to private IP' };
   } catch {
     // DNS failure — let Puppeteer handle it.
   }
@@ -72,7 +76,8 @@ async function getBrowser() {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--single-process',
+        '--disable-extensions',
+        '--disable-background-networking',
       ],
     });
   }
@@ -99,8 +104,8 @@ app.post('/browse', async (req, res) => {
   const { url, timeout_ms = 15000 } = req.body || {};
   if (!url) return res.status(400).json({ ok: false, error: 'url required' });
 
-  const { blocked } = await checkPrivateURL(url);
-  if (blocked) return res.status(403).json({ ok: false, error: 'private IP blocked' });
+  const { blocked, reason } = await checkPrivateURL(url);
+  if (blocked) return res.status(403).json({ ok: false, error: reason || 'blocked URL' });
 
   if (concurrentRequests >= MAX_CONCURRENT) {
     return res.status(429).json({ ok: false, error: 'too many concurrent requests' });
@@ -125,8 +130,8 @@ app.post('/screenshot', async (req, res) => {
   const { url, timeout_ms = 15000 } = req.body || {};
   if (!url) return res.status(400).json({ ok: false, error: 'url required' });
 
-  const { blocked } = await checkPrivateURL(url);
-  if (blocked) return res.status(403).json({ ok: false, error: 'private IP blocked' });
+  const { blocked: blocked2, reason: reason2 } = await checkPrivateURL(url);
+  if (blocked2) return res.status(403).json({ ok: false, error: reason2 || 'blocked URL' });
 
   if (concurrentRequests >= MAX_CONCURRENT) {
     return res.status(429).json({ ok: false, error: 'too many concurrent requests' });
@@ -147,8 +152,8 @@ app.post('/screenshot', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`VeriClaw browser bridge listening on port ${PORT}`);
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`VeriClaw browser bridge listening on 127.0.0.1:${PORT}`);
 });
 
 // Graceful shutdown — close the browser on exit.

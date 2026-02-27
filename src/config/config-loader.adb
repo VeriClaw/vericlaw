@@ -18,6 +18,38 @@ package body Config.Loader is
       return Home_Dir & "/" & Default_Config_Dir & "/" & Default_Config_File;
    end Default_Config_Path;
 
+   --  Validate that a string field does not contain control characters
+   --  or obvious injection patterns.
+   function Is_Safe_String (S : String) return Boolean is
+   begin
+      for C of S loop
+         --  Reject control characters (except space and common whitespace).
+         if Character'Pos (C) < 32 and then C /= ASCII.LF
+           and then C /= ASCII.CR and then C /= ASCII.HT
+         then
+            return False;
+         end if;
+      end loop;
+      return True;
+   end Is_Safe_String;
+
+   --  Validate that a URL string looks reasonable (no control chars, starts
+   --  with http:// or https://, bounded length).
+   function Is_Safe_URL (S : String) return Boolean is
+      Max_URL_Length : constant := 2048;
+   begin
+      if S'Length = 0 then return True; end if;  -- empty is OK (optional field)
+      if S'Length > Max_URL_Length then return False; end if;
+      if not Is_Safe_String (S) then return False; end if;
+      if S'Length >= 7 and then S (S'First .. S'First + 6) = "http://" then
+         return True;
+      end if;
+      if S'Length >= 8 and then S (S'First .. S'First + 7) = "https://" then
+         return True;
+      end if;
+      return False;
+   end Is_Safe_URL;
+
    procedure Parse_Provider
      (V    : JSON_Value_Type;
       Dest : out Provider_Config)
@@ -231,6 +263,56 @@ package body Config.Loader is
             end;
          end if;
       end;
+
+      --  Post-parse validation: reject unsafe values.
+      for I in 1 .. Result.Config.Num_Providers loop
+         declare
+            P : constant Provider_Config := Result.Config.Providers (I);
+         begin
+            if not Is_Safe_String (To_String (P.Model)) then
+               Set_Unbounded_String
+                 (Result.Error, "Provider model contains invalid characters");
+               return Result;
+            end if;
+            if Length (P.Base_URL) > 0
+              and then not Is_Safe_URL (To_String (P.Base_URL))
+            then
+               Set_Unbounded_String
+                 (Result.Error, "Provider base_url is invalid: "
+                  & To_String (P.Base_URL));
+               return Result;
+            end if;
+         end;
+      end loop;
+
+      for I in 1 .. Result.Config.Num_Channels loop
+         declare
+            Ch : constant Channel_Config := Result.Config.Channels (I);
+         begin
+            if Length (Ch.Bridge_URL) > 0
+              and then not Is_Safe_URL (To_String (Ch.Bridge_URL))
+            then
+               Set_Unbounded_String
+                 (Result.Error, "Channel bridge_url is invalid: "
+                  & To_String (Ch.Bridge_URL));
+               return Result;
+            end if;
+            if not Is_Safe_String (To_String (Ch.Allowlist)) then
+               Set_Unbounded_String
+                 (Result.Error, "Channel allowlist contains invalid characters");
+               return Result;
+            end if;
+         end;
+      end loop;
+
+      if Length (Result.Config.Gateway.Bind_Host) > 0
+        and then not Is_Safe_String
+          (To_String (Result.Config.Gateway.Bind_Host))
+      then
+         Set_Unbounded_String
+           (Result.Error, "Gateway bind_host contains invalid characters");
+         return Result;
+      end if;
 
       Result.Success := True;
       return Result;

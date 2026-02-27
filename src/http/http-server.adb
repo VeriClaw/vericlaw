@@ -1,5 +1,6 @@
 with AWS.Server;
 with AWS.Response;
+with AWS.Response.Set;
 with AWS.Status;
 with AWS.Messages;
 with AWS.Config;
@@ -7,11 +8,13 @@ with AWS.Config.Set;
 with Ada.Calendar;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
-with Config.JSON_Parser;
-with Config.Schema;      use Config.Schema;
+with Config.JSON_Parser;    use Config.JSON_Parser;
+with Config.Schema;         use Config.Schema;
 with Channels.Telegram;
 with Channels.Signal;
 with Channels.WhatsApp;
+with Agent.Context;
+with Agent.Loop_Pkg;
 with Metrics;
 
 pragma SPARK_Mode (Off);
@@ -67,7 +70,15 @@ package body HTTP.Server is
       URI    : constant String := AWS.Status.URI (Request);
       Method : constant String := AWS.Status.Method (Request);
       Body_S : constant String := AWS.Status.Payload (Request);
-   begin
+
+      function Is_Localhost return Boolean is
+         Addr : constant String := AWS.Status.IP_Addr (Request);
+      begin
+         return Addr = "127.0.0.1" or else Addr = "::1";
+      end Is_Localhost;
+
+      function Raw_Dispatch return AWS.Response.Data is
+      begin
       --  Health check
       if URI = "/health" and then Method = "GET" then
          return AWS.Response.Build
@@ -200,7 +211,7 @@ package body HTTP.Server is
       end if;
 
       --  Localhost guard for operator API endpoints
-      if AWS.Status.IP_Addr (Request) /= "127.0.0.1"
+      if not Is_Localhost
         and then
           (URI = "/api/status"
            or else URI = "/api/channels"
@@ -278,11 +289,138 @@ package body HTTP.Server is
          end;
       end if;
 
+       --  POST /api/chat — non-streaming chat completion
+      if URI = "/api/chat" and then Method = "POST" then
+         if not Is_Localhost then
+            return AWS.Response.Build
+              ("application/json",
+               "{""error"":""forbidden""}",
+               AWS.Messages.S403);
+         end if;
+
+         declare
+            PR : constant Config.JSON_Parser.Parse_Result :=
+              Config.JSON_Parser.Parse (Body_S);
+         begin
+            if not PR.Valid
+              or else not Config.JSON_Parser.Has_Key (PR.Root, "message")
+            then
+               return AWS.Response.Build
+                 ("application/json",
+                  "{""error"":""missing 'message' field""}",
+                  AWS.Messages.S400);
+            end if;
+
+            declare
+               Msg   : constant String :=
+                 Config.JSON_Parser.Get_String (PR.Root, "message");
+               SID   : constant String :=
+                 (if Config.JSON_Parser.Has_Key (PR.Root, "session_id")
+                  then Config.JSON_Parser.Get_String (PR.Root, "session_id")
+                  else "gateway");
+               Conv  : Agent.Context.Conversation;
+               Reply : Agent.Loop_Pkg.Agent_Reply;
+            begin
+               Set_Unbounded_String (Conv.Session_ID, SID);
+               Reply := Agent.Loop_Pkg.Process_Message
+                 (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
+
+               if Reply.Success then
+                  return AWS.Response.Build
+                    ("application/json",
+                     "{""content"":" & Config.JSON_Parser.Escape_JSON_String
+                       (To_String (Reply.Content)) & "}",
+                     AWS.Messages.S200);
+               else
+                  return AWS.Response.Build
+                    ("application/json",
+                     "{""error"":" & Config.JSON_Parser.Escape_JSON_String
+                       (To_String (Reply.Error)) & "}",
+                     AWS.Messages.S500);
+               end if;
+            end;
+         end;
+      end if;
+
+      --  POST /api/chat/stream — SSE streaming chat completion
+      --  Returns text/event-stream with "data: {json}\n\n" per token chunk,
+      --  followed by "data: [DONE]\n\n" when complete.
+      --  Note: AWS doesn't natively support streaming responses, so we build
+      --  the full SSE payload and return it as a single response with the
+      --  correct content type. True chunked streaming requires a raw socket
+      --  approach (future enhancement).
+      if URI = "/api/chat/stream" and then Method = "POST" then
+         if not Is_Localhost then
+            return AWS.Response.Build
+              ("application/json",
+               "{""error"":""forbidden""}",
+               AWS.Messages.S403);
+         end if;
+
+         declare
+            PR : constant Config.JSON_Parser.Parse_Result :=
+              Config.JSON_Parser.Parse (Body_S);
+         begin
+            if not PR.Valid
+              or else not Config.JSON_Parser.Has_Key (PR.Root, "message")
+            then
+               return AWS.Response.Build
+                 ("application/json",
+                  "{""error"":""missing 'message' field""}",
+                  AWS.Messages.S400);
+            end if;
+
+            declare
+               Msg   : constant String :=
+                 Config.JSON_Parser.Get_String (PR.Root, "message");
+               SID   : constant String :=
+                 (if Config.JSON_Parser.Has_Key (PR.Root, "session_id")
+                  then Config.JSON_Parser.Get_String (PR.Root, "session_id")
+                  else "gateway");
+               Conv  : Agent.Context.Conversation;
+               Reply : Agent.Loop_Pkg.Agent_Reply;
+               SSE   : Unbounded_String;
+            begin
+               Set_Unbounded_String (Conv.Session_ID, SID);
+               Reply := Agent.Loop_Pkg.Process_Message_Streaming
+                 (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
+
+               --  Build SSE payload: one data event with the full content,
+               --  then a [DONE] sentinel.
+               if Reply.Success then
+                  Append (SSE, "data: {""content"":");
+                  Append (SSE, Config.JSON_Parser.Escape_JSON_String
+                    (To_String (Reply.Content)));
+                  Append (SSE, "}" & ASCII.LF & ASCII.LF);
+                  Append (SSE, "data: [DONE]" & ASCII.LF & ASCII.LF);
+               else
+                  Append (SSE, "data: {""error"":");
+                  Append (SSE, Config.JSON_Parser.Escape_JSON_String
+                    (To_String (Reply.Error)));
+                  Append (SSE, "}" & ASCII.LF & ASCII.LF);
+               end if;
+
+               return AWS.Response.Build
+                 ("text/event-stream",
+                  To_String (SSE),
+                  AWS.Messages.S200);
+            end;
+         end;
+      end if;
+
       --  404 for everything else
       return AWS.Response.Build
         ("application/json",
          "{""error"":""not found""}",
          AWS.Messages.S404);
+      end Raw_Dispatch;
+
+      R : AWS.Response.Data := Raw_Dispatch;
+   begin
+      AWS.Response.Set.Add_Header (R, "X-Content-Type-Options", "nosniff");
+      AWS.Response.Set.Add_Header (R, "X-Frame-Options", "DENY");
+      AWS.Response.Set.Add_Header (R, "Cache-Control", "no-store");
+      return R;
    end Dispatch;
 
    procedure Run

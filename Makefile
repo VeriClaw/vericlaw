@@ -38,7 +38,7 @@ COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test
 
 build:
 	$(TOOLCHAIN_CHECK)
@@ -46,12 +46,12 @@ build:
 
 prove:
 	$(TOOLCHAIN_CHECK)
-	gnatprove -P $(PROJECT) --mode=flow --level=1
+	gnatprove -P $(PROJECT) --level=2
 
 check:
 	$(TOOLCHAIN_CHECK)
 	gprbuild -P $(PROJECT)
-	gnatprove -P $(PROJECT) --mode=flow --level=1
+	gnatprove -P $(PROJECT) --level=2
 	$(AUDIT_LOG_CHECK)
 	$(SERVICE_SUPERVISOR_CHECK)
 
@@ -106,6 +106,11 @@ tools-test:
 	./tests/agent_tools_test
 
 runtime-tests: config-test context-test memory-test tools-test
+
+fuzz-suite:
+	$(TOOLCHAIN_CHECK)
+	gprbuild -P tests/competitive_v2_security_regression_fuzz_suite.gpr
+	./tests/competitive_v2_security_regression_fuzz_suite
 
 conformance-suite:
 	$(CONFORMANCE_RUNNER)
@@ -242,7 +247,7 @@ docker-dev-prove: docker-dev-image
 	  -v "$(PWD):/workspace" \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  gnatprove -P vericlaw.gpr --mode=flow -j0
+	  gnatprove -P vericlaw.gpr --level=2 -j0
 
 ## Build and smoke-test: vericlaw version + vericlaw doctor.
 ## Run with: make docker-dev-test

@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: discord-bridge/Dockerfile
     environment:
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:?DISCORD_BOT_TOKEN is required}
     ports:
       - "3002:3002"
     restart: unless-stopped
@@ -71,8 +71,8 @@ services:
       context: .
       dockerfile: slack-bridge/Dockerfile
     environment:
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:?SLACK_BOT_TOKEN is required}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:?SLACK_APP_TOKEN is required}
       - PORT=3001
     ports:
       - "3001:3001"
@@ -89,8 +89,8 @@ services:
       context: .
       dockerfile: email-bridge/Dockerfile
     environment:
-      - EMAIL_USER=${EMAIL_USER:-}
-      - EMAIL_PASS=${EMAIL_PASS:-}
+      - EMAIL_USER=${EMAIL_USER:?EMAIL_USER is required}
+      - EMAIL_PASS=${EMAIL_PASS:?EMAIL_PASS is required}
       - IMAP_HOST=${IMAP_HOST:-imap.gmail.com}
       - IMAP_PORT=${IMAP_PORT:-993}
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
@@ -114,7 +114,7 @@ services:
       - IRC_PORT=${IRC_PORT:-6697}
       - IRC_TLS=${IRC_TLS:-true}
       - IRC_NICK=${IRC_NICK:-vericlaw}
-      - IRC_PASS=${IRC_PASS:-}
+      - IRC_PASS=${IRC_PASS:?IRC_PASS is required}
       - IRC_CHANNELS=${IRC_CHANNELS:-#general}
     ports:
       - "3005:3005"
@@ -132,8 +132,8 @@ services:
       dockerfile: matrix-bridge/Dockerfile
     environment:
       - MATRIX_HOMESERVER=${MATRIX_HOMESERVER:-https://matrix.org}
-      - MATRIX_TOKEN=${MATRIX_TOKEN:-}
-      - MATRIX_USER_ID=${MATRIX_USER_ID:-}
+      - MATRIX_TOKEN=${MATRIX_TOKEN:?MATRIX_TOKEN is required}
+      - MATRIX_USER_ID=${MATRIX_USER_ID:?MATRIX_USER_ID is required}
     ports:
       - "3006:3006"
     restart: unless-stopped
