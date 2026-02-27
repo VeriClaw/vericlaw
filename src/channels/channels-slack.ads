@@ -7,8 +7,9 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package Channels.Slack is
+package Channels.Slack
+  with SPARK_Mode => Off
+is
 
    procedure Run_Polling
      (Cfg : Config.Schema.Agent_Config;

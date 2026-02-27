@@ -5,8 +5,9 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Agent.Context is
+package Agent.Context
+  with SPARK_Mode => Off
+is
 
    type Role is (System_Role, User, Assistant, Tool_Result);
 

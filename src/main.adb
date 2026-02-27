@@ -40,8 +40,9 @@ with Metrics.Cost;
 with Observability.Tracing;
 with Sandbox;
 
-pragma SPARK_Mode (Off);
-procedure Main is
+procedure Main
+  with SPARK_Mode => Off
+is
 
    Version : constant String := "1.0.0-rc2";
 

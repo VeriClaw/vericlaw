@@ -6,8 +6,9 @@ with Agent.Context;
 with Config.Schema;            use Config.Schema;
 with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Providers.OpenAI is
+package Providers.OpenAI
+  with SPARK_Mode => Off
+is
 
    type OpenAI_Provider is new Provider_Type with private;
 

@@ -7,8 +7,9 @@ with Agent.Context;
 with Config.Schema;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package Agent.Loop_Pkg is
+package Agent.Loop_Pkg
+  with SPARK_Mode => Off
+is
 
    --  A reply to be sent back to the channel.
    type Agent_Reply is record

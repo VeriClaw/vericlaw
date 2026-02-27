@@ -1,8 +1,9 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 
-pragma SPARK_Mode (Off);
-package body Tools.Brave_Search is
+package body Tools.Brave_Search
+  with SPARK_Mode => Off
+is
 
    Brave_Search_URL : constant String :=
      "https://api.search.brave.com/res/v1/web/search";

@@ -11,8 +11,9 @@ with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
 with Metrics;
 
-pragma SPARK_Mode (Off);
-package body Channels.Signal is
+package body Channels.Signal
+  with SPARK_Mode => Off
+is
 
    function Send_Message
      (Bridge_URL  : String;

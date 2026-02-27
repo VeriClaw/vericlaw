@@ -11,8 +11,9 @@ with Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;
 with Observability.Tracing;
 
-pragma SPARK_Mode (Off);
-package body Memory.SQLite is
+package body Memory.SQLite
+  with SPARK_Mode => Off
+is
 
    --  SQLite3 return codes
    SQLITE_OK   : constant int := 0;

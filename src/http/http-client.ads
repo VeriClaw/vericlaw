@@ -5,8 +5,9 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package HTTP.Client is
+package HTTP.Client
+  with SPARK_Mode => Off
+is
 
    --  Maximum response body accepted (4 MB) to prevent memory exhaustion.
    Max_Response_Bytes : constant := 4 * 1024 * 1024;

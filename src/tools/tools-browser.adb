@@ -1,8 +1,9 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 
-pragma SPARK_Mode (Off);
-package body Tools.Browser is
+package body Tools.Browser
+  with SPARK_Mode => Off
+is
 
    function Browse (URL : String; Timeout_Ms : Positive := 15_000)
      return Browse_Result

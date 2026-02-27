@@ -4,8 +4,9 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Agent.Blackboard is
+package Agent.Blackboard
+  with SPARK_Mode => Off
+is
 
    Max_Entries : constant := 64;
 

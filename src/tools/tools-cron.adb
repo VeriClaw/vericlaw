@@ -2,8 +2,9 @@ with Ada.Calendar;
 with Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;
 
-pragma SPARK_Mode (Off);
-package body Tools.Cron is
+package body Tools.Cron
+  with SPARK_Mode => Off
+is
 
    --  Escape a string for embedding in a JSON string value.
    function JSON_Escape (S : String) return String is

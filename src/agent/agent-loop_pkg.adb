@@ -10,8 +10,9 @@ with Metrics;
 with Metrics.Cost;
 with Observability.Tracing;
 
-pragma SPARK_Mode (Off);
-package body Agent.Loop_Pkg is
+package body Agent.Loop_Pkg
+  with SPARK_Mode => Off
+is
 
    Max_Schema_Count : constant := Max_Tool_Schemas;
 

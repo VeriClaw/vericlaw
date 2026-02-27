@@ -4,8 +4,9 @@ with Agent.Context;      use Agent.Context;
 with Ada.Text_IO;
 with Logging;
 
-pragma SPARK_Mode (Off);
-package body Providers.OpenAI_Compatible is
+package body Providers.OpenAI_Compatible
+  with SPARK_Mode => Off
+is
 
    function Create (Cfg : Provider_Config) return OpenAI_Compat_Provider is
       P : OpenAI_Compat_Provider;
@@ -16,7 +17,7 @@ package body Providers.OpenAI_Compatible is
       P.Deployment  := Cfg.Deployment;
       P.API_Version := Cfg.API_Version;
       P.Max_Tokens  := Cfg.Max_Tokens;
-      P.Timeout_Ms  := Cfg.Timeout_Ms;
+      P.Timeout_Ms  := Cfg.Timeout_Value;
       P.Is_Azure    := (Cfg.Kind = Azure_Foundry);
 
       if Length (P.Model) = 0 and then not P.Is_Azure then

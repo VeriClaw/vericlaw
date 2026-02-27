@@ -5,8 +5,9 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Config.Schema is
+package Config.Schema
+  with SPARK_Mode => Off
+is
 
    --  -----------------------------------------------------------------------
    --  Domain-constrained subtypes — catch misconfiguration at compile time.
@@ -43,7 +44,7 @@ package Config.Schema is
       Deployment  : Unbounded_String;              -- Azure: deployment name
       API_Version : Unbounded_String;              -- Azure: e.g. "2024-02-15-preview"
       Max_Tokens          : Token_Count := 4_096;
-      Timeout_Ms          : Timeout_Ms  := 60_000;
+      Timeout_Value       : Timeout_Ms  := 60_000;
       Price_Per_1K_Input  : Float       := 0.0;
       Price_Per_1K_Output : Float       := 0.0;
    end record;

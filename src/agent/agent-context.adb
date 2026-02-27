@@ -3,8 +3,9 @@ with Ada.Strings.Fixed;
 with Ada.Directories;
 with Ada.Streams.Stream_IO;
 
-pragma SPARK_Mode (Off);
-package body Agent.Context is
+package body Agent.Context
+  with SPARK_Mode => Off
+is
 
    package Rand_Char is new Ada.Numerics.Discrete_Random (Character);
    Rng : Rand_Char.Generator;

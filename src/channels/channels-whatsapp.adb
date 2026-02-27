@@ -12,8 +12,9 @@ with Channels.Rate_Limit;
 with Channels.Message_Dedup;
 with Metrics;
 
-pragma SPARK_Mode (Off);
-package body Channels.WhatsApp is
+package body Channels.WhatsApp
+  with SPARK_Mode => Off
+is
 
    Default_Session : constant String := "vericlaw";
 

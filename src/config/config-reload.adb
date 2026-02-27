@@ -1,8 +1,9 @@
 with Ada.Interrupts;
 with Ada.Interrupts.Names;
 
-pragma SPARK_Mode (Off);
-package body Config.Reload is
+package body Config.Reload
+  with SPARK_Mode => Off
+is
 
    --  Protected object at library level; pragma Attach_Handler installs the
    --  SIGHUP handler at elaboration time.

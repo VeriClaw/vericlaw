@@ -3,8 +3,9 @@ with Ada.Text_IO;
 with Config.JSON_Parser;  use Config.JSON_Parser;
 with Logging;
 
-pragma SPARK_Mode (Off);
-package body Plugins.Loader is
+package body Plugins.Loader
+  with SPARK_Mode => Off
+is
 
    function Parse_Tool_Kind (S : String) return Capabilities.Tool_Kind is
    begin

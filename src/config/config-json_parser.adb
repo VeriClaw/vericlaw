@@ -1,7 +1,8 @@
 with GNATCOLL.JSON; use GNATCOLL.JSON;
 
-pragma SPARK_Mode (Off);
-package body Config.JSON_Parser is
+package body Config.JSON_Parser
+  with SPARK_Mode => Off
+is
 
    function Parse (Source : String) return Parse_Result is
       Result : Parse_Result;

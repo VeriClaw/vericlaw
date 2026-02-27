@@ -4,8 +4,9 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 
-pragma SPARK_Mode (Off);
-package Agent.Orchestrator is
+package Agent.Orchestrator
+  with SPARK_Mode => Off
+is
 
    Max_Delegation_Depth   : constant := 3;
    Max_Concurrent_Agents  : constant := 4;

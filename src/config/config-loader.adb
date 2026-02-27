@@ -3,8 +3,9 @@ with Ada.Directories;
 with Ada.Text_IO;
 with Config.JSON_Parser;    use Config.JSON_Parser;
 
-pragma SPARK_Mode (Off);
-package body Config.Loader is
+package body Config.Loader
+  with SPARK_Mode => Off
+is
 
    function Home_Dir return String is
       Home : constant String :=
@@ -79,7 +80,7 @@ package body Config.Loader is
          TM : constant Integer := Get_Integer (V, "timeout_ms", 60_000);
       begin
          if MT > 0 then Dest.Max_Tokens := Positive (MT); end if;
-         if TM > 0 then Dest.Timeout_Ms := Positive (TM); end if;
+         if TM > 0 then Dest.Timeout_Value := Positive (TM); end if;
       end;
    end Parse_Provider;
 

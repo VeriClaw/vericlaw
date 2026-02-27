@@ -4,8 +4,9 @@ with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Interfaces.C;
 with Interfaces.C.Strings;
 
-pragma SPARK_Mode (Off);
-package body Tools.File_IO is
+package body Tools.File_IO
+  with SPARK_Mode => Off
+is
 
    --  Thin C binding to vericlaw_symlink.c for portable symlink detection.
    function vericlaw_is_symlink

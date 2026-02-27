@@ -15,8 +15,9 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Plugins.Capabilities;
 
-pragma SPARK_Mode (Off);
-package Plugins.Loader is
+package Plugins.Loader
+  with SPARK_Mode => Off
+is
 
    Max_Plugins : constant := 32;
 

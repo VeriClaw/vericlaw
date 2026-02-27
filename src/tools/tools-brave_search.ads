@@ -4,8 +4,9 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Tools.Brave_Search is
+package Tools.Brave_Search
+  with SPARK_Mode => Off
+is
 
    type Search_Result is record
       Title   : Unbounded_String;

@@ -4,8 +4,9 @@ with Agent.Context;      use Agent.Context;
 with Ada.Text_IO;
 with Logging;
 
-pragma SPARK_Mode (Off);
-package body Providers.Gemini is
+package body Providers.Gemini
+  with SPARK_Mode => Off
+is
 
    Gemini_Base_URL : constant String :=
      "https://generativelanguage.googleapis.com/v1beta/models/";
@@ -16,7 +17,7 @@ package body Providers.Gemini is
       P.API_Key    := Cfg.API_Key;
       P.Model      := Cfg.Model;
       P.Max_Tokens := Cfg.Max_Tokens;
-      P.Timeout_Ms := Cfg.Timeout_Ms;
+      P.Timeout_Ms := Cfg.Timeout_Value;
       if Length (P.Model) = 0 then
          Set_Unbounded_String (P.Model, "gemini-2.0-flash");
       end if;

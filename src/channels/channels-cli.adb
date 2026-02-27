@@ -4,8 +4,9 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Metrics;
 
-pragma SPARK_Mode (Off);
-package body Channels.CLI is
+package body Channels.CLI
+  with SPARK_Mode => Off
+is
 
    Prompt     : constant String := "you> ";
    Agent_Name : constant String := "vericlaw> ";

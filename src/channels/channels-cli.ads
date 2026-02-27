@@ -4,8 +4,9 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package Channels.CLI is
+package Channels.CLI
+  with SPARK_Mode => Off
+is
 
    --  Run interactive chat loop until EOF or "exit"/"quit".
    procedure Run_Interactive

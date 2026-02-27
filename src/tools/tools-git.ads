@@ -4,8 +4,9 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Tools.Git is
+package Tools.Git
+  with SPARK_Mode => Off
+is
 
    type Git_Result is record
       Success   : Boolean := False;

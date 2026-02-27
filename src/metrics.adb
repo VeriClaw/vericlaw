@@ -1,8 +1,9 @@
 with Ada.Calendar;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package body Metrics is
+package body Metrics
+  with SPARK_Mode => Off
+is
 
    use type Ada.Calendar.Time;
 

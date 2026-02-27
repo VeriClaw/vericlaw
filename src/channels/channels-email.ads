@@ -6,8 +6,9 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package Channels.Email is
+package Channels.Email
+  with SPARK_Mode => Off
+is
 
    procedure Run_Polling
      (Cfg : Config.Schema.Agent_Config;

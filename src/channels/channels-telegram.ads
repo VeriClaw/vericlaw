@@ -7,8 +7,9 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package Channels.Telegram is
+package Channels.Telegram
+  with SPARK_Mode => Off
+is
 
    --  Start long-polling loop (blocks; run in its own task or main thread).
    procedure Run_Polling

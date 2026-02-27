@@ -1,8 +1,9 @@
 with Ada.Calendar;
 with HTTP.Client;
 
-pragma SPARK_Mode (Off);
-package body Observability.Tracing is
+package body Observability.Tracing
+  with SPARK_Mode => Off
+is
 
    --  -----------------------------------------------------------------------
    --  Internal state

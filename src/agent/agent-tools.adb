@@ -12,8 +12,9 @@ with Memory.Vector;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;
 
-pragma SPARK_Mode (Off);
-package body Agent.Tools is
+package body Agent.Tools
+  with SPARK_Mode => Off
+is
 
    --  Renamings to avoid ambiguity between Agent.Tools (this pkg) and top-level Tools
    package Shell_Pkg   renames Standard.Tools.Shell;

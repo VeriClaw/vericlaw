@@ -2,8 +2,9 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package body Agent.Orchestrator is
+package body Agent.Orchestrator
+  with SPARK_Mode => Off
+is
 
    --  Protected counter to track active concurrent delegations.
    protected Active_Counter is

@@ -5,8 +5,9 @@ with Agent.Context;
 with Config.Schema;            use Config.Schema;
 with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 
-pragma SPARK_Mode (Off);
-package Providers.Anthropic is
+package Providers.Anthropic
+  with SPARK_Mode => Off
+is
 
    type Anthropic_Provider is new Provider_Type with private;
 

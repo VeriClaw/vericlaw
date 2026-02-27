@@ -6,8 +6,9 @@ with Config.Schema;      use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
-pragma SPARK_Mode (Off);
-package body Channels.Discord is
+package body Channels.Discord
+  with SPARK_Mode => Off
+is
 
    Seen : Channels.Message_Dedup.Dedup_Buffer;
 

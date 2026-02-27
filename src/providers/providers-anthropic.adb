@@ -4,8 +4,9 @@ with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 
-pragma SPARK_Mode (Off);
-package body Providers.Anthropic is
+package body Providers.Anthropic
+  with SPARK_Mode => Off
+is
 
    Anthropic_API_URL : constant String := "https://api.anthropic.com";
    Anthropic_Version : constant String := "2023-06-01";
@@ -106,7 +107,7 @@ package body Providers.Anthropic is
       P.API_Key    := Cfg.API_Key;
       P.Model      := Cfg.Model;
       P.Max_Tokens := Cfg.Max_Tokens;
-      P.Timeout_Ms := Cfg.Timeout_Ms;
+      P.Timeout_Ms := Cfg.Timeout_Value;
       if Length (P.Model) = 0 then
          Set_Unbounded_String (P.Model, "claude-3-5-sonnet-20241022");
       end if;

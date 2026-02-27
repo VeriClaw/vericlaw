@@ -5,8 +5,9 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Providers.Interface_Pkg; use Providers.Interface_Pkg;
 
-pragma SPARK_Mode (Off);
-package Tools.MCP is
+package Tools.MCP
+  with SPARK_Mode => Off
+is
 
    Max_MCP_Tools : constant := 50;
 

@@ -1,8 +1,9 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 
-pragma SPARK_Mode (Off);
-package body Tools.MCP is
+package body Tools.MCP
+  with SPARK_Mode => Off
+is
 
    --  Build the POST body for a tool call.
    function Build_Call_Body (Args_JSON : String) return String is

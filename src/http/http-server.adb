@@ -17,8 +17,9 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Metrics;
 
-pragma SPARK_Mode (Off);
-package body HTTP.Server is
+package body HTTP.Server
+  with SPARK_Mode => Off
+is
 
    WS : AWS.Server.HTTP;
 

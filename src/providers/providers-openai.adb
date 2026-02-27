@@ -4,8 +4,9 @@ with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 
-pragma SPARK_Mode (Off);
-package body Providers.OpenAI is
+package body Providers.OpenAI
+  with SPARK_Mode => Off
+is
 
    OpenAI_Default_URL : constant String := "https://api.openai.com";
 
@@ -141,7 +142,7 @@ package body Providers.OpenAI is
       P.API_Key    := Cfg.API_Key;
       P.Model      := Cfg.Model;
       P.Max_Tokens := Cfg.Max_Tokens;
-      P.Timeout_Ms := Cfg.Timeout_Ms;
+      P.Timeout_Ms := Cfg.Timeout_Value;
 
       if Length (Cfg.Base_URL) > 0 then
          P.Base_URL := Cfg.Base_URL;

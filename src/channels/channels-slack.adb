@@ -10,8 +10,9 @@ with Channels.Security;
 with Channels.Rate_Limit;
 with Channels.Message_Dedup;
 
-pragma SPARK_Mode (Off);
-package body Channels.Slack is
+package body Channels.Slack
+  with SPARK_Mode => Off
+is
 
    Seen : Channels.Message_Dedup.Dedup_Buffer;
 

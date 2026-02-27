@@ -12,8 +12,9 @@ with Channels.Rate_Limit;
 with Metrics;
 with Audit.Syslog;
 
-pragma SPARK_Mode (Off);
-package body Channels.Telegram is
+package body Channels.Telegram
+  with SPARK_Mode => Off
+is
 
    Telegram_API : constant String := "https://api.telegram.org/bot";
 

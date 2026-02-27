@@ -7,8 +7,9 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
 with System;
 
-pragma SPARK_Mode (Off);
-package Memory.SQLite is
+package Memory.SQLite
+  with SPARK_Mode => Off
+is
 
    type Memory_Handle is limited private;
 

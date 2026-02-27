@@ -5,8 +5,9 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
 
-pragma SPARK_Mode (Off);
-package Providers.Interface_Pkg is
+package Providers.Interface_Pkg
+  with SPARK_Mode => Off
+is
 
    type Tool_Call is record
       ID        : Unbounded_String;  -- provider-assigned call ID

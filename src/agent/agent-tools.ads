@@ -7,8 +7,9 @@ with Providers.Interface_Pkg; use Providers.Interface_Pkg;
 with Config.Schema;            use Config.Schema;
 with Memory.SQLite;
 
-pragma SPARK_Mode (Off);
-package Agent.Tools is
+package Agent.Tools
+  with SPARK_Mode => Off
+is
 
    type Tool_Result is record
       Success : Boolean := False;
