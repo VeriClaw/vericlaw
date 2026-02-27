@@ -139,7 +139,7 @@ is
 
    --  Verify SPARK security defaults still hold (keeps the proven layer active).
    procedure Assert_Security_Defaults is
-      Spark_Cfg      : constant Core.Agent.Agent_Config := [others => <>];
+      Spark_Cfg      : constant Core.Agent.Agent_Config := (others => <>);
       Channel_Result : constant Channels.Security.Channel_Request_Result :=
         Channels.Security.Evaluate_Channel_Request
           (Channel                 => Channels.Security.CLI_Channel,

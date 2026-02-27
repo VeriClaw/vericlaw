@@ -45,6 +45,7 @@ jobs:
 
       - name: Build with strict flags
         run: |
+          set -o pipefail
           alr build -- -XBUILD_PROFILE=dev 2>&1 | tee warnings-report.txt
           echo "--- Warning count ---"
           grep -c ": warning:" warnings-report.txt || echo "0 warnings"
@@ -91,7 +92,7 @@ jobs:
       - name: SPARK level 2 proofs (push/PR)
         if: github.event_name != 'schedule'
         run: |
-          eval $(alr printenv)
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
           gnatprove -P vericlaw.gpr \
             --level=2 \
             --prover=all \
@@ -103,7 +104,7 @@ jobs:
       - name: SPARK level 4 proofs (weekly)
         if: github.event_name == 'schedule'
         run: |
-          eval $(alr printenv)
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
           gnatprove -P vericlaw.gpr \
             --level=4 \
             --prover=all \
@@ -136,7 +137,7 @@ jobs:
 
       - name: Run GNATcheck
         run: |
-          eval $(alr printenv)
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
           gnatcheck -P vericlaw.gpr \
             -rules -from=config/gnatcheck.rules
 
@@ -174,7 +175,7 @@ jobs:
       - name: Run tests with GNATcov
         run: |
           alr toolchain --select ${{ env.GNAT_VERSION }}
-          eval $(alr printenv)
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
           # Install GNATcov
           alr get gnatcov || true
           
