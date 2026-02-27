@@ -1,4 +1,5 @@
 with Ada.Text_IO;
+with Logging;
 with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 with HTTP.Client;
 with Config.JSON_Parser;  use Config.JSON_Parser;
@@ -219,13 +220,11 @@ package body Channels.Telegram is
       end loop;
 
       if not Found or else Length (Bot_Token) = 0 then
-         Ada.Text_IO.Put_Line
-           ("Telegram: no bot token configured, skipping.");
+         Logging.Error ("Telegram: no bot token configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line
-        ("Telegram: starting long-polling loop...");
+      Logging.Info ("Telegram: starting long-polling loop...");
 
       declare
          Offset : Integer := 0;
@@ -239,7 +238,7 @@ package body Channels.Telegram is
                begin
                   if New_CR.Success then
                      Current_Cfg := New_CR.Config;
-                     Ada.Text_IO.Put_Line ("Config reloaded.");
+                     Logging.Info ("Config reloaded.");
                      for I in 1 .. Current_Cfg.Num_Channels loop
                         if Current_Cfg.Channels (I).Kind =
                           Config.Schema.Telegram
