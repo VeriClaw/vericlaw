@@ -1,0 +1,130 @@
+name: Cross-Platform Build
+
+on:
+  workflow_call:
+    inputs:
+      build_profile:
+        description: 'Build profile (dev, release)'
+        required: false
+        default: 'release'
+        type: string
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x86_64
+            triple: x86_64-linux-gnu
+          - target: linux-aarch64
+            triple: aarch64-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: alire-project/setup-alire@v4
+        with: { version: '2.0.2' }
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev libcurl4-openssl-dev
+          if [ "${{ matrix.triple }}" = "aarch64-linux-gnu" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
+      - name: Generate build info
+        run: |
+          chmod +x scripts/embed_version.sh
+          BUILD_TARGET=${{ matrix.triple }} ./scripts/embed_version.sh
+      - name: Build
+        run: |
+          alr toolchain --select gnat_native=14.2.1
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=${{ matrix.triple }}
+          # Strip debug symbols (keep separate)
+          objcopy --only-keep-debug vericlaw vericlaw.debug 2>/dev/null || true
+          strip --strip-all vericlaw 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vericlaw-${{ matrix.target }}
+          path: |
+            vericlaw
+            vericlaw.debug
+
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: macos-aarch64
+            arch: arm64
+          - runner: macos-13
+            target: macos-x86_64
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: alire-project/setup-alire@v4
+        with: { version: '2.0.2' }
+      - name: Install dependencies
+        run: brew install sqlite curl
+      - name: Generate build info
+        run: |
+          chmod +x scripts/embed_version.sh
+          BUILD_TARGET=${{ matrix.arch }}-apple-darwin ./scripts/embed_version.sh
+      - name: Build
+        run: |
+          alr toolchain --select gnat_native=14.2.1
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }}
+          strip vericlaw 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vericlaw-${{ matrix.target }}
+          path: vericlaw
+
+  build-macos-universal:
+    needs: build-macos
+    runs-on: macos-14
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: vericlaw-macos-aarch64, path: arm64/ }
+      - uses: actions/download-artifact@v4
+        with: { name: vericlaw-macos-x86_64, path: x86_64/ }
+      - name: Create universal binary
+        run: |
+          lipo -create -output vericlaw arm64/vericlaw x86_64/vericlaw
+          file vericlaw  # Should show "Mach-O universal binary"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vericlaw-macos-universal
+          path: vericlaw
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc-ada
+            mingw-w64-x86_64-gprbuild
+            mingw-w64-x86_64-sqlite3
+            mingw-w64-x86_64-curl
+            make
+      - name: Generate build info
+        run: |
+          chmod +x scripts/embed_version.sh
+          BUILD_TARGET=x86_64-w64-mingw32 ./scripts/embed_version.sh
+      - name: Build
+        run: |
+          gprbuild -P vericlaw.gpr -p \
+            -XBUILD_PROFILE=${{ inputs.build_profile }} \
+            -XBUILD_TARGET=x86_64-w64-mingw32
+          strip vericlaw.exe 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vericlaw-windows-x86_64
+          path: vericlaw.exe

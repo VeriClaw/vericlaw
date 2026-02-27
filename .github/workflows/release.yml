@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write  # For creating releases
+
+env:
+  ALIRE_VERSION: '2.0.2'
+  GNAT_VERSION: 'gnat_native=14.2.1'
+
+jobs:
+  # Reuse the cross-platform build matrix
+  build:
+    uses: ./.github/workflows/build-matrix.yml
+    with:
+      build_profile: release
+
+  # Package and publish
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Package release artifacts
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release/
+          
+          # Linux x86_64
+          cd artifacts/vericlaw-linux-x86_64
+          chmod +x vericlaw
+          tar czf ../../release/vericlaw-v${VERSION}-linux-x86_64.tar.gz vericlaw
+          cd ../..
+          
+          # Linux aarch64
+          if [ -d artifacts/vericlaw-linux-aarch64 ]; then
+            cd artifacts/vericlaw-linux-aarch64
+            chmod +x vericlaw
+            tar czf ../../release/vericlaw-v${VERSION}-linux-aarch64.tar.gz vericlaw
+            cd ../..
+          fi
+          
+          # macOS universal
+          if [ -d artifacts/vericlaw-macos-universal ]; then
+            cd artifacts/vericlaw-macos-universal
+            chmod +x vericlaw
+            tar czf ../../release/vericlaw-v${VERSION}-macos-universal.tar.gz vericlaw
+            cd ../..
+          fi
+          
+          # macOS individual (if universal not available)
+          for arch in aarch64 x86_64; do
+            if [ -d "artifacts/vericlaw-macos-${arch}" ]; then
+              cd "artifacts/vericlaw-macos-${arch}"
+              chmod +x vericlaw
+              tar czf "../../release/vericlaw-v${VERSION}-macos-${arch}.tar.gz" vericlaw
+              cd ../..
+            fi
+          done
+          
+          # Windows
+          if [ -d artifacts/vericlaw-windows-x86_64 ]; then
+            cd artifacts/vericlaw-windows-x86_64
+            zip -q ../../release/vericlaw-v${VERSION}-windows-x86_64.zip vericlaw.exe
+            cd ../..
+          fi
+
+      - name: Generate checksums
+        run: |
+          cd release/
+          sha256sum * > checksums-sha256.txt
+          cat checksums-sha256.txt
+
+      - name: GPG sign checksums
+        if: env.GPG_PRIVATE_KEY != ''
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          cd release/
+          gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
+            --pinentry-mode loopback \
+            --detach-sign --armor checksums-sha256.txt
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Extract section for this version from CHANGELOG.md
+          awk "/^## \[${VERSION}\]|^## \[v${VERSION}\]|^### Added.*${VERSION}|^### Fixed.*${VERSION}/{found=1} found && /^## \[/{if(++count>1)exit} found" \
+            CHANGELOG.md > release-notes.md 2>/dev/null || echo "Release ${GITHUB_REF_NAME}" > release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
