@@ -19,7 +19,8 @@ package body HTTP.Client is
      CURL_Handle (System.Null_Address);
 
    type CURL_Code is new int;
-   CURLE_OK : constant CURL_Code := 0;
+   CURLE_OK                   : constant CURL_Code := 0;
+   CURLE_OPERATION_TIMEDOUT   : constant CURL_Code := 28;
 
    type CURL_Option is new int;
    CURLOPT_URL            : constant CURL_Option := 10_002;
@@ -407,7 +408,11 @@ package body HTTP.Client is
             end;
       end case;
 
-      if Code /= CURLE_OK then
+      if Code = CURLE_OPERATION_TIMEDOUT then
+         Set_Unbounded_String
+           (Result.Error,
+            "Request timed out after" & long'Image (Effective_Timeout) & "ms");
+      elsif Code /= CURLE_OK then
          Set_Unbounded_String
            (Result.Error, "curl_easy_perform error code:" & CURL_Code'Image (Code));
       else
@@ -524,7 +529,11 @@ package body HTTP.Client is
       Code := curl_easy_setopt_cstr (Handle, CURLOPT_POSTFIELDS, C_Body);
       Code := curl_easy_perform (Handle);
 
-      if Code /= CURLE_OK then
+      if Code = CURLE_OPERATION_TIMEDOUT then
+         Set_Unbounded_String
+           (Result.Error,
+            "Request timed out after" & long'Image (Effective_Timeout) & "ms");
+      elsif Code /= CURLE_OK then
          Set_Unbounded_String
            (Result.Error,
             "curl_easy_perform error code:" & CURL_Code'Image (Code));

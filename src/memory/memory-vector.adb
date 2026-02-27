@@ -1,5 +1,6 @@
 pragma SPARK_Mode (Off);
 with Ada.Strings.Fixed;
+with Logging;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
 with Interfaces.C;            use Interfaces.C;
@@ -216,7 +217,8 @@ package body Memory.Vector is
                      Result (Idx) :=
                        Float'Value (Body_Str (Num_Start .. Num_End - 1));
                   exception
-                     when Constraint_Error => null;
+                     when Constraint_Error =>
+                         Logging.Debug ("Vector operation constraint error");
                   end;
                end if;
                Pos := Num_End;

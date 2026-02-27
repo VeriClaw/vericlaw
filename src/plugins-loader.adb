@@ -75,7 +75,8 @@ package body Plugins.Loader is
                      Info.Manifest.Granted_Tools (TK) := True;
                   end;
                exception
-                  when Constraint_Error => null;  -- skip unknown tools
+                  when Constraint_Error =>
+                     Logging.Warning ("Unknown plugin tool: " & Get_Array_String (Tools_Arr, I));
                end;
             end loop;
          end;

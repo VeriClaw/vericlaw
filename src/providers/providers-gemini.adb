@@ -2,6 +2,7 @@ with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 with Ada.Text_IO;
+with Logging;
 
 pragma SPARK_Mode (Off);
 package body Providers.Gemini is
@@ -370,7 +371,8 @@ package body Providers.Gemini is
             end;
          end if;
       exception
-         when others => null;  -- discard malformed SSE chunk; streaming continues
+         when others =>
+            Logging.Debug ("Malformed SSE chunk discarded");
       end On_SSE_Line;
    begin
       Http_Resp := HTTP.Client.Post_JSON_Streaming
