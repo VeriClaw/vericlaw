@@ -1,0 +1,40 @@
+name: vericlaw
+arch: "${GOARCH}"
+platform: linux
+version: "${VERSION}"
+maintainer: "VeriClaw Team <security@vericlaw.dev>"
+description: "Formally verified AI agent runtime built with Ada/SPARK"
+vendor: "VeriClaw"
+homepage: "https://github.com/vericlaw/vericlaw"
+license: "Apache-2.0"
+
+contents:
+  - src: ./vericlaw
+    dst: /usr/bin/vericlaw
+    file_info:
+      mode: 0755
+
+  - src: ./deploy/systemd/vericlaw.service
+    dst: /lib/systemd/system/vericlaw.service
+    file_info:
+      mode: 0644
+
+  - src: ./config/
+    dst: /etc/vericlaw/
+    type: config
+    file_info:
+      mode: 0640
+
+scripts:
+  postinstall: packaging/scripts/postinstall.sh
+  preremove: packaging/scripts/preremove.sh
+
+overrides:
+  deb:
+    depends:
+      - libcurl4
+      - libsqlite3-0
+  rpm:
+    depends:
+      - libcurl
+      - sqlite-libs

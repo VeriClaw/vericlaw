@@ -99,3 +99,5 @@ config/config.json
 
 # Copilot session notes (internal reference)
 COPILOT_SESSION_NOTES.md
+ci_pipeline_guide.txt
+cross_platform_strategy.txt
