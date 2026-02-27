@@ -24,6 +24,29 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Log level filtering via `VERICLAW_LOG_LEVEL` env var (debug/info/warning/error)
 - Request ID correlation (`req_id`) in structured log output
 
+### Added (v1.0.0-rc3 production hardening)
+- LLM cost tracking per provider with token budget enforcement (`Metrics.Cost`)
+- OpenTelemetry OTLP tracing: optional HTTP/JSON exporter, zero overhead when off
+- Multi-agent orchestration: role-based delegation (Researcher/Coder/Reviewer/General)
+- Agent blackboard for inter-agent data sharing (`Agent.Blackboard`)
+- SPARK-verified delegation depth bounds (`Plugins.Capabilities.Delegation_Allowed`)
+- Conversation branching: `/edit N`, `/branch`, `/branch switch <id>` REPL commands
+- Database schema versioning with sequential migration framework
+- Gateway per-IP rate limiting (120 req/min, configurable)
+- Gateway Docker healthcheck in docker-compose.yml
+- Configurable `gateway.max_connections` (was hardcoded at 64)
+- `make coverage` target for gcov reporting
+- `make gateway-integration-test` target (10 assertions, security headers, rate limiting)
+- `vericlaw doctor` now performs real health checks (DB, bridges, workspace)
+- Version constant consolidated to `1.0.0-rc3`
+
+### Fixed (v1.0.0-rc3)
+- SQL parameterisation: memory retention DELETE now uses `Bind_Int` (was string concat)
+- Log swallowed exceptions: plugins-loader, SSE providers, memory-vector now log errors
+- HTTP timeout: distinct `CURLE_OPERATION_TIMEDOUT` error message for smart retry
+- Worker task leak: exception handler aborts orphaned tasks during result collection
+- launchd plist: `KeepAlive=true`, user-writable log paths in `~/Library/Logs/`
+
 ### Added (v1.0.0-rc2 features)
 - `--json` flag for machine-readable output on `agent` and `status` commands
 - `--no-color` flag with auto-detection for pipes; respects `NO_COLOR` env var
