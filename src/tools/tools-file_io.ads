@@ -4,6 +4,7 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package Tools.File_IO is
 
    type File_Op is (Read_File, Write_File, Append_File, List_Dir, Stat_File);

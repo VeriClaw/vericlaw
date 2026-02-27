@@ -11,6 +11,7 @@ with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
 with Metrics;
 
+pragma SPARK_Mode (Off);
 package body Channels.Signal is
 
    function Get_Chan_Config

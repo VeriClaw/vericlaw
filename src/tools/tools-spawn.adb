@@ -6,6 +6,7 @@ with Providers.Anthropic;
 with Providers.OpenAI_Compatible;
 with Providers.Gemini;
 
+pragma SPARK_Mode (Off);
 package body Tools.Spawn is
 
    Spawn_Depth : Natural := 0;

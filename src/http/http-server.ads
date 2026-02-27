@@ -10,6 +10,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
+pragma SPARK_Mode (Off);
 package HTTP.Server is
 
    --  Start the HTTP server on the configured bind host/port.

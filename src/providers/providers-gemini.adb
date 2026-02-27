@@ -2,6 +2,7 @@ with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 
+pragma SPARK_Mode (Off);
 package body Providers.Gemini is
 
    Gemini_Base_URL : constant String :=

@@ -4,6 +4,7 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 
+pragma SPARK_Mode (Off);
 package Tools.Spawn is
 
    --  Maximum nesting depth; sub-agents cannot spawn more sub-agents.

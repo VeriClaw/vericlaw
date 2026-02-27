@@ -2,6 +2,7 @@ with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Ada.Strings.Fixed;
 
+pragma SPARK_Mode (Off);
 package body Tools.Brave_Search is
 
    Brave_Search_URL : constant String :=

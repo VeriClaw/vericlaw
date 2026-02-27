@@ -10,6 +10,7 @@ with Ada.Calendar;
 with Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;
 
+pragma SPARK_Mode (Off);
 package body Memory.SQLite is
 
    --  SQLite3 return codes

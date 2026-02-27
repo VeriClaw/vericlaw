@@ -5,6 +5,7 @@
 with GNATCOLL.JSON;            use GNATCOLL.JSON;
 with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package Config.JSON_Parser is
 
    subtype JSON_Value_Type is GNATCOLL.JSON.JSON_Value;

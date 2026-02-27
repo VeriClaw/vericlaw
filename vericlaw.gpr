@@ -16,15 +16,19 @@ project Vericlaw is
    package Compiler is
       case Build_Profile is
          when "dev" =>
-            for Default_Switches ("Ada") use ("-gnat2022", "-gnata", "-gnatVa");
+            for Default_Switches ("Ada") use
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato");
          when "small" =>
             for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-Os", "-ffunction-sections", "-fdata-sections");
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+               "-Os", "-ffunction-sections", "-fdata-sections");
          when "edge-size" =>
             for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-Os", "-ffunction-sections", "-fdata-sections");
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+               "-Os", "-ffunction-sections", "-fdata-sections");
          when "edge-speed" =>
-            for Default_Switches ("Ada") use ("-gnat2022", "-gnata", "-gnatVa", "-O2");
+            for Default_Switches ("Ada") use
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato", "-O2");
       end case;
    end Compiler;
 
@@ -50,9 +54,11 @@ project Vericlaw is
             for Default_Switches ("Ada") use ("-lcurl", "-lsqlite3");
          when "small" | "edge-size" =>
             for Default_Switches ("Ada") use
-              ("-lcurl", "-lsqlite3", "-Wl,--gc-sections", "-s");
+              ("-lcurl", "-lsqlite3", "-Wl,--gc-sections", "-s",
+               "-fstack-protector-strong");
          when "edge-speed" =>
-            for Default_Switches ("Ada") use ("-lcurl", "-lsqlite3");
+            for Default_Switches ("Ada") use
+              ("-lcurl", "-lsqlite3", "-fstack-protector-strong");
       end case;
    end Linker;
 

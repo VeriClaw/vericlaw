@@ -5,6 +5,7 @@
 with Config.Schema;    use Config.Schema;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package Config.Loader is
 
    Default_Config_Dir  : constant String := ".vericlaw";

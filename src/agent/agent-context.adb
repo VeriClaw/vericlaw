@@ -1,6 +1,7 @@
 with Ada.Calendar;
 with Ada.Numerics.Discrete_Random;
 
+pragma SPARK_Mode (Off);
 package body Agent.Context is
 
    package Rand_Char is new Ada.Numerics.Discrete_Random (Character);

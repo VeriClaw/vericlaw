@@ -3,6 +3,7 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Metrics;
 
+pragma SPARK_Mode (Off);
 package body Channels.CLI is
 
    Prompt     : constant String := "you> ";

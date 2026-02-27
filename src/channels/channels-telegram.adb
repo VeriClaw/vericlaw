@@ -12,6 +12,7 @@ with Channels.Rate_Limit;
 with Metrics;
 with Audit.Syslog;
 
+pragma SPARK_Mode (Off);
 package body Channels.Telegram is
 
    Telegram_API : constant String := "https://api.telegram.org/bot";
@@ -24,9 +25,11 @@ package body Channels.Telegram is
       Chat_ID   : String;
       Text      : String) return Boolean
    is
-      --  Split long messages (Telegram limit: 4096 chars).
-      Max_Chunk : constant := 4000;
-      Offset    : Natural := 0;
+      --  Telegram hard limit is 4096 chars per message. Use 4000 to leave
+      --  margin for any server-side overhead or markdown escaping expansion.
+      Telegram_Max_Message_Chars : constant := 4_096;
+      Max_Chunk                  : constant := Telegram_Max_Message_Chars - 96;
+      Offset                     : Natural := 0;
    begin
       while Offset < Text'Length loop
          declare

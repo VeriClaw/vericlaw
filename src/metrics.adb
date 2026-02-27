@@ -1,6 +1,7 @@
 with Ada.Calendar;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package body Metrics is
 
    use type Ada.Calendar.Time;

@@ -4,6 +4,7 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Tools.Shell;
 
+pragma SPARK_Mode (Off);
 package body Tools.Git is
 
    package Shell_Pkg renames Standard.Tools.Shell;

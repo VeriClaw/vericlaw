@@ -33,6 +33,7 @@ with Metrics;
 with Tools.Cron;
 with Audit.Syslog;
 
+pragma SPARK_Mode (Off);
 procedure Main is
 
    use type Config.Schema.Channel_Kind;

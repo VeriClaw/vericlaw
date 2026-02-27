@@ -5,6 +5,7 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package Config.Schema is
 
    --  -----------------------------------------------------------------------

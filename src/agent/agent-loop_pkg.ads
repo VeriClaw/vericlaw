@@ -8,6 +8,7 @@ with Agent.Tools;
 with Config.Schema;
 with Memory.SQLite;
 
+pragma SPARK_Mode (Off);
 package Agent.Loop_Pkg is
 
    --  A reply to be sent back to the channel.
@@ -36,6 +37,9 @@ package Agent.Loop_Pkg is
       Cfg        : Config.Schema.Agent_Config;
       Mem        : Memory.SQLite.Memory_Handle) return Agent_Reply;
 
-   Max_Tool_Rounds : constant := 10;  -- max agentic loops before forced stop
+   --  Maximum number of LLM→tool→LLM agentic loops per request.
+   --  Prevents runaway agent execution from adversarial or looping prompts.
+   --  Sister project benchmarks: ZeroClaw uses 15, PicoClaw uses 8.
+   Max_Tool_Rounds : constant := 10;
 
 end Agent.Loop_Pkg;

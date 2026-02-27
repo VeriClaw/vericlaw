@@ -3,6 +3,7 @@ with Ada.Directories;
 with Ada.Text_IO;
 with Config.JSON_Parser;    use Config.JSON_Parser;
 
+pragma SPARK_Mode (Off);
 package body Config.Loader is
 
    function Home_Dir return String is

@@ -5,6 +5,7 @@ with Interfaces.C;            use Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;
 with System;
 
+pragma SPARK_Mode (Off);
 package body HTTP.Client is
 
    Default_Timeout_Ms : constant := 30_000;

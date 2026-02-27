@@ -2,6 +2,7 @@ with Ada.Calendar;
 with Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;
 
+pragma SPARK_Mode (Off);
 package body Tools.Cron is
 
    --  Escape a string for embedding in a JSON string value.
@@ -24,13 +25,19 @@ package body Tools.Cron is
       return To_String (R);
    end JSON_Escape;
 
+   --  Named constants for time unit conversions — avoids magic number literals
+   Seconds_Per_Minute : constant := 60;
+   Seconds_Per_Hour   : constant := 3_600;
+   Seconds_Per_Day    : constant := 86_400;
+   Default_Interval   : constant Duration := Duration (Seconds_Per_Hour);
+
    function Parse_Interval_Seconds (Schedule : String) return Duration is
       Last : Positive;
       Unit : Character;
       N    : Integer;
    begin
       if Schedule'Length = 0 then
-         return 3600.0;
+         return Default_Interval;
       end if;
       Last := Schedule'Last;
       Unit := Schedule (Last);
@@ -39,12 +46,15 @@ package body Tools.Cron is
            (Ada.Strings.Fixed.Trim
               (Schedule (Schedule'First .. Last - 1), Ada.Strings.Both));
       exception
-         when others => return 3600.0;
+         --  Unparseable schedule string: fall back to 1-hour default.
+         --  This is expected control flow for malformed user input, not an
+         --  exceptional condition, but Ada has no pattern-match parse.
+         when others => return Default_Interval;
       end;
       case Unit is
-         when 'm'    => return Duration (N * 60);
-         when 'h'    => return Duration (N * 3600);
-         when 'd'    => return Duration (N * 86400);
+         when 'm'    => return Duration (N * Seconds_Per_Minute);
+         when 'h'    => return Duration (N * Seconds_Per_Hour);
+         when 'd'    => return Duration (N * Seconds_Per_Day);
          when others => return Duration (N);
       end case;
    end Parse_Interval_Seconds;

@@ -55,7 +55,23 @@ package Gateway.Auth with SPARK_Mode is
       Lockout_Interval_Elapsed : Boolean := False;
       Reset                    : Boolean := False) return Pairing_Status
    with
-     Pre => not (Pairing_Attempt_Failed and Pairing_Succeeded);
+     Pre  => not (Pairing_Attempt_Failed and Pairing_Succeeded),
+     Post =>
+       --  A successful pairing resets attempt count to zero
+       (if Pairing_Succeeded then
+           Advance_Pairing_Status'Result.Failed_Attempts = 0
+        --  A reset always produces a zeroed status
+        elsif Reset then
+           Advance_Pairing_Status'Result.Failed_Attempts = 0
+             and then Advance_Pairing_Status'Result.Lockout_Intervals_Remaining = 0
+        --  Attempt count cannot exceed Config.Max_Pairing_Attempts + 1
+        elsif Pairing_Attempt_Failed then
+           Advance_Pairing_Status'Result.Failed_Attempts <=
+             Status.Failed_Attempts + 1
+        --  If no change event, status is unchanged or lockout ticked down
+        else
+           Advance_Pairing_Status'Result.Failed_Attempts =
+             Status.Failed_Attempts);
 
    function Request_Decision
      (Config        : Auth_Config;

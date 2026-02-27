@@ -1,6 +1,7 @@
 --  Metrics: in-memory Prometheus counter/gauge store.
 --  Thread-safe via a protected object; renders text exposition format on demand.
 
+pragma SPARK_Mode (Off);
 package Metrics is
 
    --  Increment a counter. Name is the metric suffix (e.g. "requests_total").

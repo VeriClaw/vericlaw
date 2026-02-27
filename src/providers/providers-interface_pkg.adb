@@ -1,6 +1,7 @@
 --  Default implementation of Chat_Streaming: falls back to non-streaming Chat.
 --  Providers that support SSE streaming override this.
 
+pragma SPARK_Mode (Off);
 package body Providers.Interface_Pkg is
 
    function Chat_Streaming

@@ -12,6 +12,7 @@ with Channels.Signal;
 with Channels.WhatsApp;
 with Metrics;
 
+pragma SPARK_Mode (Off);
 package body HTTP.Server is
 
    WS : AWS.Server.HTTP;

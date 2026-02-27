@@ -2,6 +2,7 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Directories;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 
+pragma SPARK_Mode (Off);
 package body Tools.File_IO is
 
    function Contains_Null (S : String) return Boolean is

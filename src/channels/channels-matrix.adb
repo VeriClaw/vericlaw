@@ -10,6 +10,7 @@ with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
 
+pragma SPARK_Mode (Off);
 package body Channels.Matrix is
 
    --  Client-side dedup: track last 100 message IDs.

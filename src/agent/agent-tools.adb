@@ -9,6 +9,7 @@ with Memory.SQLite;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;
 
+pragma SPARK_Mode (Off);
 package body Agent.Tools is
 
    --  Renamings to avoid ambiguity between Agent.Tools (this pkg) and top-level Tools

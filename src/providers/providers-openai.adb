@@ -1,8 +1,10 @@
 with Ada.Text_IO;
 with HTTP.Client;
+with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 
+pragma SPARK_Mode (Off);
 package body Providers.OpenAI is
 
    OpenAI_Default_URL : constant String := "https://api.openai.com";
@@ -127,7 +129,10 @@ package body Providers.OpenAI is
          end;
       end;
    exception
-      when others => null;  -- Ignore all parse/access errors in stream callback
+      when others =>
+         --  Cannot propagate Ada exceptions through C (libcurl) stack frames.
+         --  Discard malformed SSE chunk; streaming continues on next callback.
+         Metrics.Increment ("provider_stream_errors", "openai");
    end OpenAI_SSE_Parse;
 
    function Create (Cfg : Provider_Config) return OpenAI_Provider is

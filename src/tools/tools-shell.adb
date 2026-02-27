@@ -3,6 +3,7 @@ with Interfaces.C.Strings; use Interfaces.C.Strings;
 with System;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package body Tools.Shell is
 
    --  POSIX thin bindings for popen / pclose.

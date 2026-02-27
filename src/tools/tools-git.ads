@@ -4,6 +4,7 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package Tools.Git is
 
    type Git_Result is record

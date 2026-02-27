@@ -1,6 +1,7 @@
 with Ada.Interrupts;
 with Ada.Interrupts.Names;
 
+pragma SPARK_Mode (Off);
 package body Config.Reload is
 
    --  Protected object at library level; pragma Attach_Handler installs the

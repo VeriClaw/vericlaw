@@ -6,6 +6,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
 with System;
 
+pragma SPARK_Mode (Off);
 package Memory.SQLite is
 
    type Memory_Handle is limited private;

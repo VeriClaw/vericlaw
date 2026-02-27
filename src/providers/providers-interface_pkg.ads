@@ -5,6 +5,7 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
 
+pragma SPARK_Mode (Off);
 package Providers.Interface_Pkg is
 
    type Tool_Call is record

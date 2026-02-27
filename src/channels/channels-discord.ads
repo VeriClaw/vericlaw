@@ -7,6 +7,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
+pragma SPARK_Mode (Off);
 package Channels.Discord is
 
    procedure Run_Polling

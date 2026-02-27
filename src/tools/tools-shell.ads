@@ -3,6 +3,7 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package Tools.Shell is
 
    type Shell_Result is record

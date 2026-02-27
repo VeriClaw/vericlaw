@@ -4,6 +4,7 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Memory.SQLite;
 
+pragma SPARK_Mode (Off);
 package Tools.Cron is
 
    type Cron_Result is record

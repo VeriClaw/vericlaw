@@ -1,6 +1,7 @@
 --  Config.Reload: SIGHUP handler flag for hot config reload.
 --  Polling loops call Is_Requested / Acknowledge to check and clear the flag.
 
+pragma SPARK_Mode (Off);
 package Config.Reload is
 
    --  Set the reload-requested flag (also invoked directly by the signal handler).

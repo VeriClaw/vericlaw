@@ -5,6 +5,7 @@
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+pragma SPARK_Mode (Off);
 package HTTP.Client is
 
    --  Maximum response body accepted (4 MB) to prevent memory exhaustion.

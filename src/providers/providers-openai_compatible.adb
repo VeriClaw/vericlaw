@@ -2,6 +2,7 @@ with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 
+pragma SPARK_Mode (Off);
 package body Providers.OpenAI_Compatible is
 
    function Create (Cfg : Provider_Config) return OpenAI_Compat_Provider is

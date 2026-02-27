@@ -1,8 +1,10 @@
 with Ada.Text_IO;
 with HTTP.Client;
+with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
 
+pragma SPARK_Mode (Off);
 package body Providers.Anthropic is
 
    Anthropic_API_URL : constant String := "https://api.anthropic.com";
@@ -92,7 +94,10 @@ package body Providers.Anthropic is
          end;
       end;
    exception
-      when others => null;  -- Ignore parse/access errors in stream callback
+      when others =>
+         --  Cannot propagate Ada exceptions through C (libcurl) stack frames.
+         --  Discard malformed SSE chunk; streaming continues on next callback.
+         Metrics.Increment ("provider_stream_errors", "anthropic");
    end Anthropic_SSE_Parse;
 
    function Create (Cfg : Provider_Config) return Anthropic_Provider is

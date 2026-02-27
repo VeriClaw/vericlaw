@@ -1,0 +1,60 @@
+# Pre-commit hooks for VeriClaw — Ada/SPARK AI agent runtime
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        name: Shell script lint (shellcheck)
+        files: \.sh$
+        args: [--severity=warning]
+
+  # Secret scanning — prevent API keys / tokens from being committed
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: v3.82.6
+    hooks:
+      - id: trufflehog
+        name: Secret scan (trufflehog)
+        language: golang
+        entry: trufflehog filesystem --no-update --fail .
+        pass_filenames: false
+
+  # Detect common secret patterns (fast, local, no network)
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: Detect hardcoded secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: |-
+          (?x)^(
+            .*\.example\.json|
+            config/examples/.*|
+            docs/.*|
+            tests/.*\.csv|
+            .*\.md
+          )$
+
+  # Trailing whitespace and end-of-file fixes
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of file
+      - id: check-yaml
+        name: Validate YAML files
+      - id: check-json
+        name: Validate JSON files
+        exclude: '^config/config\.json$'   # user config excluded
+      - id: check-merge-conflict
+        name: Check for merge conflict markers
+      - id: check-case-conflict
+        name: Check for case conflicts in filenames
+      - id: mixed-line-ending
+        name: Normalize line endings
+        args: [--fix=lf]

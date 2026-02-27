@@ -8,6 +8,7 @@ with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
 with Metrics;
 
+pragma SPARK_Mode (Off);
 package body Agent.Loop_Pkg is
 
    Max_Schema_Count : constant := Max_Tool_Schemas;
