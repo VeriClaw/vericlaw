@@ -7,6 +7,7 @@ with Tools.Cron;
 with Tools.Spawn;
 with Tools.Browser;
 with Memory.SQLite;
+with Memory.Vector;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;
 
@@ -22,6 +23,7 @@ package body Agent.Tools is
    package Cron_Pkg    renames Standard.Tools.Cron;
    package Spawn_Pkg   renames Standard.Tools.Spawn;
    package Browser_Pkg renames Standard.Tools.Browser;
+   package Vec_Pkg     renames Standard.Memory.Vector;
 
    --  JSON Schema strings for each tool (passed to LLM providers).
    Shell_Params : constant String :=
@@ -151,6 +153,19 @@ package body Agent.Tools is
      & """required"":[""action""]"
      & "}";
 
+   Memory_Search_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """query"":{""type"":""string"","
+     &   """description"":""The query to search for semantically similar memories""},"
+     & """k"":{""type"":""integer"","
+     &   """description"":""Number of results (1-10, default 5)"","
+     &   """default"":5}"
+     & "},"
+     & """required"":[""query""]"
+     & "}";
+
    function Make_Schema (N, D, P : String) return Tool_Schema is
    begin
       return
@@ -255,6 +270,14 @@ package body Agent.Tools is
            ("browser_screenshot",
             "Take a screenshot of a web page",
             Browser_Screenshot_Params);
+      end if;
+      --  memory_search (vector RAG)
+      if Cfg.RAG_Enabled then
+         Num := Num + 1;
+         Schemas (Num) := Make_Schema
+           ("memory_search",
+            "Semantic search over conversation memory using vector similarity",
+            Memory_Search_Params);
       end if;
    end Build_Schemas;
 
@@ -522,6 +545,49 @@ package body Agent.Tools is
             else
                Result.Error := SR.Error;
             end if;
+         end;
+
+      elsif Name = "memory_search" then
+         Metrics.Increment ("tool_calls_total", "memory_search");
+         if not Cfg.Tools.RAG_Enabled then
+            Set_Unbounded_String
+              (Result.Error, "RAG/memory_search is not enabled");
+            return Result;
+         end if;
+         declare
+            Query  : constant String := Get_String (PR.Root, "query");
+            K_Raw  : constant Integer := Get_Integer (PR.Root, "k", 5);
+            K      : constant Positive :=
+              (if K_Raw < 1 then 1
+               elsif K_Raw > Vec_Pkg.Max_Results then Vec_Pkg.Max_Results
+               else K_Raw);
+            Embed_URL : constant String :=
+              (if Length (Cfg.Tools.RAG_Embed_Base_URL) > 0
+               then To_String (Cfg.Tools.RAG_Embed_Base_URL)
+               else "https://api.openai.com/v1");
+            API_Key   : constant String :=
+              To_String (Cfg.Providers (1).API_Key);
+            Q_Vec  : constant Vec_Pkg.Embedding :=
+              Vec_Pkg.Embed (Query, API_Key, Embed_URL);
+            Chunks : Vec_Pkg.Chunk_Array;
+            Num    : Natural;
+            Buf    : Unbounded_String;
+         begin
+            Vec_Pkg.Search (Mem, Q_Vec, K, Chunks, Num);
+            Append (Buf, "[");
+            for I in 1 .. Num loop
+               if I > 1 then Append (Buf, ","); end if;
+               Append (Buf, "{""content"":""");
+               Append (Buf, To_String (Chunks (I).Content));
+               Append (Buf, """,""session_id"":""");
+               Append (Buf, To_String (Chunks (I).Session_ID));
+               Append (Buf, """,""score"":");
+               Append (Buf, Float'Image (Chunks (I).Score));
+               Append (Buf, "}");
+            end loop;
+            Append (Buf, "]");
+            Result.Success := True;
+            Result.Output  := Buf;
          end;
 
       else

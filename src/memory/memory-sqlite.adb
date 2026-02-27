@@ -35,6 +35,18 @@ package body Memory.SQLite is
    function c_close (DB : System.Address) return int
    with Import, Convention => C, External_Name => "sqlite3_close";
 
+   function c_enable_load_extension
+     (DB    : System.Address;
+      Onoff : int) return int
+   with Import, Convention => C, External_Name => "sqlite3_enable_load_extension";
+
+   function c_load_extension
+     (DB    : System.Address;
+      File  : chars_ptr;
+      Proc  : System.Address;
+      Error : System.Address) return int
+   with Import, Convention => C, External_Name => "sqlite3_load_extension";
+
    function c_exec
      (DB       : System.Address;
       SQL      : chars_ptr;
@@ -595,5 +607,36 @@ package body Memory.SQLite is
       Rc := c_finalize (Stmt);
       pragma Unreferenced (Rc);
    end Cron_Update_Run;
+
+   procedure Load_Vec_Extension (Handle : Memory_Handle; Path : String) is
+      CS : chars_ptr;
+      Rc : int;
+   begin
+      if not Handle.Open or else Handle.DB = System.Null_Address then
+         return;
+      end if;
+
+      Rc := c_enable_load_extension (Handle.DB, 1);
+      if Rc /= SQLITE_OK then return; end if;
+
+      CS := New_String (Path);
+      Rc := c_load_extension
+        (Handle.DB, CS, System.Null_Address, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then return; end if;
+
+      Exec_DDL (Handle.DB,
+        "CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories"
+        & " USING vec0(embedding float[1536])");
+      Exec_DDL (Handle.DB,
+        "CREATE TABLE IF NOT EXISTS vec_memories_meta"
+        & " (rowid INTEGER PRIMARY KEY,"
+        & " session_id TEXT, content TEXT, ts TEXT)");
+   end Load_Vec_Extension;
+
+   function DB_Address (Handle : Memory_Handle) return System.Address is
+   begin
+      return Handle.DB;
+   end DB_Address;
 
 end Memory.SQLite;

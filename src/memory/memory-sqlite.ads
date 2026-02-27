@@ -113,6 +113,17 @@ package Memory.SQLite is
       Name     : String;
       Next_Run : String);
 
+   --  -----------------------------------------------------------------------
+   --  Vector extension support (sqlite-vec)
+   --  -----------------------------------------------------------------------
+
+   --  Load the sqlite-vec shared library and create the vec_memories tables.
+   --  Path: shared library name or path (e.g. "vec0" or "/usr/lib/vec0.so").
+   procedure Load_Vec_Extension (Handle : Memory_Handle; Path : String);
+
+   --  Return the raw SQLite database handle (needed by Memory.Vector).
+   function DB_Address (Handle : Memory_Handle) return System.Address;
+
 private
 
    type Memory_Handle is new Ada.Finalization.Limited_Controlled with record

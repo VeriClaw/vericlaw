@@ -176,6 +176,11 @@ package body Config.Loader is
                Set_Unbounded_String
                  (Result.Config.Tools.Browser_Bridge_URL,
                   Get_String (T, "browser_bridge_url"));
+               Result.Config.Tools.RAG_Enabled :=
+                 Get_Boolean (T, "rag_enabled", False);
+               Set_Unbounded_String
+                 (Result.Config.Tools.RAG_Embed_Base_URL,
+                  Get_String (T, "rag_embed_base_url"));
             end;
          end if;
 

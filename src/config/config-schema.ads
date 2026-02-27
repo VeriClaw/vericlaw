@@ -82,6 +82,8 @@ package Config.Schema is
       Brave_API_Key      : Unbounded_String;
       MCP_Bridge_URL     : Unbounded_String;  -- e.g. "http://mcp-bridge:3004"
       Browser_Bridge_URL : Unbounded_String;  -- e.g. "http://browser-bridge:3007"
+      RAG_Enabled        : Boolean := False;
+      RAG_Embed_Base_URL : Unbounded_String;  -- default: https://api.openai.com/v1
    end record;
 
    --  -----------------------------------------------------------------------

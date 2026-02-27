@@ -331,6 +331,15 @@ begin
    --  Open memory database.
    Open_Memory_Or_Warn (CR.Config, Mem, Mem_OK);
 
+   --  Load sqlite-vec extension if RAG is enabled.
+   if Mem_OK and then CR.Config.Tools.RAG_Enabled then
+      begin
+         Memory.SQLite.Load_Vec_Extension (Mem, "vec0");
+      exception
+         when others => null;  -- extension might not be installed; skip silently
+      end;
+   end if;
+
    --  Dispatch command.
    declare
       C : constant String := To_String (Cmd);
