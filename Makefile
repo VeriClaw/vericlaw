@@ -38,7 +38,7 @@ COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite coverage docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test gateway-integration-test
 
 build:
 	$(TOOLCHAIN_CHECK)
@@ -111,6 +111,20 @@ fuzz-suite:
 	$(TOOLCHAIN_CHECK)
 	gprbuild -P tests/competitive_v2_security_regression_fuzz_suite.gpr
 	./tests/competitive_v2_security_regression_fuzz_suite
+
+coverage:
+	$(TOOLCHAIN_CHECK)
+	gprbuild -P $(PROJECT) -XBUILD_PROFILE=coverage
+	gprbuild -P tests/config_loader_test.gpr -XBUILD_PROFILE=coverage
+	gprbuild -P tests/agent_context_test.gpr -XBUILD_PROFILE=coverage
+	gprbuild -P tests/agent_tools_test.gpr -XBUILD_PROFILE=coverage
+	gprbuild -P tests/security_secrets_tests.gpr -XBUILD_PROFILE=coverage
+	./tests/config_loader_test || true
+	./tests/agent_context_test || true
+	./tests/agent_tools_test || true
+	./tests/security_secrets_tests || true
+	gcov -o obj src/*.adb 2>/dev/null || true
+	@echo "Coverage data in obj/*.gcov"
 
 conformance-suite:
 	$(CONFORMANCE_RUNNER)
@@ -208,6 +222,12 @@ operator-console-serve:
 
 gateway-doctor-check:
 	./scripts/check_gateway_doctor.sh
+
+## Run gateway HTTP integration tests against a live server.
+## Override the target URL: make gateway-integration-test GATEWAY_URL=http://host:port
+GATEWAY_URL ?= http://localhost:8787
+gateway-integration-test:
+	./tests/gateway_integration_test.sh "$(GATEWAY_URL)"
 
 # ---------------------------------------------------------------------------
 # Docker-based development workflow (Mac-friendly, no local GNAT required)
