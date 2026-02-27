@@ -1,0 +1,48 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "defaultErrnoRet": 1,
+  "archMap": [
+    { "architecture": "SCMP_ARCH_X86_64", "subArchitectures": ["SCMP_ARCH_X86"] },
+    { "architecture": "SCMP_ARCH_AARCH64", "subArchitectures": [] }
+  ],
+  "syscalls": [
+    {
+      "names": [
+        "read", "write", "readv", "writev", "pread64", "pwrite64",
+        "open", "openat", "close", "fstat", "stat", "lstat", "newfstatat",
+        "lseek", "mmap", "mprotect", "munmap", "brk",
+        "ioctl", "fcntl",
+        "socket", "connect", "sendto", "recvfrom", "sendmsg", "recvmsg",
+        "bind", "listen", "accept", "accept4", "getsockname", "getpeername",
+        "setsockopt", "getsockopt",
+        "poll", "epoll_create1", "epoll_ctl", "epoll_wait", "epoll_pwait",
+        "select", "pselect6",
+        "clock_gettime", "clock_getres", "gettimeofday", "nanosleep",
+        "futex", "set_robust_list", "get_robust_list",
+        "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "sigaltstack",
+        "getpid", "getuid", "geteuid", "getgid", "getegid", "gettid",
+        "access", "faccessat", "getcwd", "chdir",
+        "pipe", "pipe2", "dup", "dup2", "dup3",
+        "getrandom", "getdents64",
+        "madvise", "mremap",
+        "setrlimit", "getrlimit", "prlimit64",
+        "exit", "exit_group",
+        "clone", "clone3", "wait4", "waitid",
+        "arch_prctl", "set_tid_address", "rseq",
+        "sched_getaffinity", "sched_yield",
+        "getresuid", "getresgid",
+        "unlink", "unlinkat", "rename", "renameat2",
+        "mkdir", "mkdirat", "rmdir",
+        "ftruncate", "fallocate",
+        "fsync", "fdatasync",
+        "flock", "fchmod", "fchown"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "names": ["execve", "execveat"],
+      "action": "SCMP_ACT_ALLOW",
+      "comment": "Needed for shell tool execution — disable if shell_enabled=false"
+    }
+  ]
+}

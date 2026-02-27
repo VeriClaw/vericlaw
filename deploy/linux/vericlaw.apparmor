@@ -1,0 +1,63 @@
+# AppArmor profile for VeriClaw AI Agent
+# Install: sudo cp vericlaw.apparmor /etc/apparmor.d/usr.bin.vericlaw
+# Load:    sudo apparmor_parser -r /etc/apparmor.d/usr.bin.vericlaw
+
+#include <tunables/global>
+
+profile vericlaw /usr/bin/vericlaw flags=(enforce) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+
+  # Binary
+  /usr/bin/vericlaw mr,
+
+  # Shared libraries
+  /usr/lib/** mr,
+  /lib/** mr,
+
+  # Config (read-only)
+  /etc/vericlaw/** r,
+  owner @{HOME}/.vericlaw/config/** r,
+
+  # Working directory (read-write)
+  owner @{HOME}/.vericlaw/workspace/** rw,
+  owner @{HOME}/.vericlaw/workspace/ r,
+
+  # Database
+  owner @{HOME}/.vericlaw/memory.db rwk,
+  owner @{HOME}/.vericlaw/memory.db-wal rwk,
+  owner @{HOME}/.vericlaw/memory.db-shm rwk,
+
+  # Temp files
+  /tmp/** rw,
+  /tmp/ r,
+
+  # Network access (needed for LLM API calls)
+  network inet stream,
+  network inet dgram,
+  network inet6 stream,
+  network inet6 dgram,
+
+  # DNS resolution
+  /etc/resolv.conf r,
+  /etc/hosts r,
+  /etc/nsswitch.conf r,
+
+  # Proc access (minimal)
+  @{PROC}/sys/kernel/random/uuid r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  # Deny dangerous operations
+  deny /proc/*/mem rw,
+  deny /sys/** w,
+  deny /dev/** w,
+  deny /boot/** rwx,
+  deny /usr/** w,
+
+  # Shell tool execution (conditional)
+  /bin/sh rix,
+  /bin/bash rix,
+  /usr/bin/git rix,
+  /usr/bin/curl rix,
+}

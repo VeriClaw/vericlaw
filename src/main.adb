@@ -1,6 +1,7 @@
 with Ada.Text_IO;           use Ada.Text_IO;
 with Ada.Command_Line;      use Ada.Command_Line;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Ada.Strings.Fixed;
 with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Calendar;
@@ -8,6 +9,7 @@ with Ada.Calendar.Formatting;
 with Ada.Interrupts;
 with Ada.Interrupts.Names;
 with Logging;
+with Build_Info;
 
 --  Existing SPARK-verified security layer (unchanged)
 with Channels.Security;
@@ -36,6 +38,7 @@ with Tools.Cron;
 with Audit.Syslog;
 with Metrics.Cost;
 with Observability.Tracing;
+with Sandbox;
 
 pragma SPARK_Mode (Off);
 procedure Main is
@@ -58,6 +61,7 @@ procedure Main is
       Put_Line ("  export --session <id> [--format] Export conversation (md or json)");
       Put_Line ("  config validate                  Validate config file without starting agent");
       Put_Line ("  doctor                           Print configuration and health status");
+      Put_Line ("  update-check                     Check for new VeriClaw releases");
       Put_Line ("  version                          Print version information");
       Put_Line ("  help                             Show this help message");
       New_Line;
@@ -71,9 +75,66 @@ procedure Main is
 
    procedure Cmd_Version is
    begin
-      Put_Line ("vericlaw " & Version & "  |  Ada/SPARK  |  SPARK-verified security core");
+      Put_Line ("vericlaw " & Build_Info.Version & " (" & Build_Info.Git_Commit & " " & Build_Info.Build_Date & " " & Build_Info.Target_Triple & ")");
       Put_Line ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw");
    end Cmd_Version;
+
+   procedure Cmd_Update_Check is
+      use HTTP.Client;
+      Resp : HTTP.Client.Response;
+      API_URL : constant String := "https://api.github.com/repos/vericlaw/vericlaw/releases/latest";
+   begin
+      Put_Line ("Checking for updates...");
+      Resp := HTTP.Client.Get (API_URL, Timeout_Ms => 5000);
+      if not Resp.Success then
+         Put_Line ("  Could not reach update server.");
+         Put_Line ("  Current version: " & Build_Info.Version);
+         return;
+      end if;
+
+      --  Parse tag_name from response JSON
+      declare
+         Body_Str : constant String := To_String (Resp.Body);
+         Tag_Key  : constant String := """tag_name"":""";
+         Tag_Pos  : Natural;
+         Tag_End  : Natural;
+         Latest   : Unbounded_String;
+      begin
+         Tag_Pos := Ada.Strings.Fixed.Index (Body_Str, Tag_Key);
+         if Tag_Pos = 0 then
+            Put_Line ("  Could not parse latest version.");
+            return;
+         end if;
+         Tag_Pos := Tag_Pos + Tag_Key'Length;
+         Tag_End := Ada.Strings.Fixed.Index (Body_Str, """", Tag_Pos);
+         if Tag_End = 0 then
+            Put_Line ("  Could not parse latest version.");
+            return;
+         end if;
+         Set_Unbounded_String (Latest, Body_Str (Tag_Pos .. Tag_End - 1));
+
+         --  Strip leading 'v' if present
+         declare
+            Latest_Str : constant String := To_String (Latest);
+            Clean_Latest : constant String :=
+              (if Latest_Str'Length > 0 and then Latest_Str (Latest_Str'First) = 'v'
+               then Latest_Str (Latest_Str'First + 1 .. Latest_Str'Last)
+               else Latest_Str);
+         begin
+            if Clean_Latest = Build_Info.Version then
+               Put_Line ("  You are running the latest version (" & Build_Info.Version & ").");
+            else
+               Put_Line ("  Update available: " & Clean_Latest & " (current: " & Build_Info.Version & ")");
+               Put_Line ("");
+               Put_Line ("  To update:");
+               Put_Line ("    brew upgrade vericlaw       # if installed via Homebrew");
+               Put_Line ("    sudo apt upgrade vericlaw   # if installed via APT");
+               Put_Line ("    scoop update vericlaw       # if installed via Scoop");
+               Put_Line ("    curl -fsSL https://get.vericlaw.dev | sh  # universal installer");
+            end if;
+         end;
+      end;
+   end Cmd_Update_Check;
 
    --  Verify SPARK security defaults still hold (keeps the proven layer active).
    procedure Assert_Security_Defaults is
@@ -373,6 +434,11 @@ begin
       return;
    end if;
 
+   if To_String (Cmd) = "update-check" then
+      Cmd_Update_Check;
+      return;
+   end if;
+
    if To_String (Cmd) = "onboard" then
       declare
          Default_Path : constant String :=
@@ -512,6 +578,15 @@ begin
 
    --  Open memory database.
    Open_Memory_Or_Warn (CR.Config, Mem, Mem_OK);
+
+   --  Apply runtime sandbox before processing any commands.
+   declare
+      Policy : Sandbox.Sandbox_Policy;
+   begin
+      Policy.Allow_Network := True;  -- Agent needs HTTP
+      Policy.Allow_Subprocess := CR.Config.Tools.Shell_Enabled;
+      Sandbox.Enforce (Policy);
+   end;
 
    --  Load sqlite-vec extension if RAG is enabled.
    if Mem_OK and then CR.Config.Tools.RAG_Enabled then
@@ -841,7 +916,7 @@ begin
                end if;
             end loop;
             if JSON_Mode then
-               Put_Line ("{""version"":""" & Version & """"
+               Put_Line ("{""version"":""" & Build_Info.Version & """"
                  & ",""channels_active"":" & Natural'Image (Active)
                  & ",""channels_total"":" & Natural'Image (CR.Config.Num_Channels)
                  & ",""provider"":"
@@ -863,7 +938,7 @@ begin
                  & "}");
             else
                Put_Line ("VeriClaw status");
-               Put_Line ("  version   : " & Version);
+               Put_Line ("  version   : " & Build_Info.Version);
                Put_Line ("  channels  : "
                           & Natural'Image (Active) & " active /"
                           & Natural'Image (CR.Config.Num_Channels) & " configured");

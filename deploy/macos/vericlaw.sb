@@ -1,0 +1,80 @@
+;; VeriClaw macOS sandbox profile
+;; Usage: sandbox-exec -f deploy/macos/vericlaw.sb ./vericlaw
+;; This restricts the agent to only its required capabilities.
+
+(version 1)
+
+;; Deny everything by default
+(deny default)
+
+;; Allow basic process operations
+(allow process-exec (literal "/usr/bin/vericlaw"))
+(allow process-fork)
+(allow signal (target self))
+(allow sysctl-read)
+
+;; Allow network access (needed for LLM API calls)
+(allow network-outbound
+  (remote tcp)
+  (remote udp))
+(allow network-inbound
+  (local tcp "*:8787"))  ;; Gateway port
+(allow system-socket)
+
+;; Allow DNS resolution
+(allow network-outbound (literal "/private/var/run/mDNSResponder"))
+(allow file-read-data (literal "/etc/resolv.conf"))
+(allow file-read-data (literal "/etc/hosts"))
+
+;; Allow reading shared libraries and system files
+(allow file-read*
+  (subpath "/usr/lib")
+  (subpath "/usr/local/lib")
+  (subpath "/opt/homebrew/lib")
+  (subpath "/System/Library")
+  (subpath "/Library/Preferences")
+  (literal "/dev/urandom")
+  (literal "/dev/random"))
+
+;; Allow reading config
+(allow file-read*
+  (subpath (string-append (param "HOME") "/.vericlaw/config")))
+
+;; Allow read-write to workspace
+(allow file-read* file-write*
+  (subpath (string-append (param "HOME") "/.vericlaw/workspace"))
+  (subpath (string-append (param "HOME") "/.vericlaw/memory.db"))
+  (subpath (string-append (param "HOME") "/.vericlaw/memory.db-wal"))
+  (subpath (string-append (param "HOME") "/.vericlaw/memory.db-shm")))
+
+;; Allow temp files
+(allow file-read* file-write*
+  (subpath "/tmp")
+  (subpath "/private/tmp")
+  (subpath (param "TMPDIR")))
+
+;; Allow TTY/terminal access
+(allow file-read* file-write*
+  (regex #"^/dev/ttys[0-9]+$")
+  (literal "/dev/null")
+  (literal "/dev/stdin")
+  (literal "/dev/stdout")
+  (literal "/dev/stderr"))
+
+;; Shell tool execution (when shell_enabled=true)
+(allow process-exec
+  (literal "/bin/sh")
+  (literal "/bin/bash")
+  (literal "/usr/bin/git")
+  (literal "/usr/bin/curl"))
+
+;; Deny dangerous operations explicitly
+(deny file-write*
+  (subpath "/System")
+  (subpath "/usr")
+  (subpath "/Library")
+  (subpath "/Applications"))
+(deny process-exec
+  (subpath "/System")
+  (literal "/sbin/reboot")
+  (literal "/sbin/shutdown"))
