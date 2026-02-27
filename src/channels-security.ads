@@ -62,6 +62,7 @@ package Channels.Security with SPARK_Mode is
       Requests_In_Window : Natural;
       Max_Requests       : Natural) return Boolean
    with
+     Pre  => (if Limiter_Configured then Max_Requests > 0),
      Post =>
        Rate_Limit_Allows'Result =
          (Rate_Limit_Policy_Decision

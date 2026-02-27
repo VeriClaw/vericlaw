@@ -1,4 +1,4 @@
-# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge + Email Bridge
+# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge + Email Bridge + IRC Bridge + Matrix Bridge
 #
 # Quick start (headless pairing):
 #   1. cp config/whatsapp.example.json config/config.json  # fill in your API key
@@ -15,8 +15,14 @@
 # For Email: set EMAIL_USER and EMAIL_PASS env vars and run:
 #   docker compose up email-bridge vericlaw
 #
+# For IRC: set IRC_HOST, IRC_NICK, IRC_CHANNELS env vars and run:
+#   docker compose up irc-bridge vericlaw
+#
+# For Matrix: set MATRIX_HOMESERVER, MATRIX_TOKEN, MATRIX_USER_ID env vars and run:
+#   docker compose up matrix-bridge vericlaw
+#
 # See docs/setup/whatsapp.md, docs/setup/discord.md, docs/setup/slack.md,
-# and docs/setup/email.md for details.
+# docs/setup/email.md, docs/setup/irc.md, and docs/setup/matrix.md for details.
 
 services:
   discord-bridge:
@@ -90,6 +96,45 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  irc-bridge:
+    build:
+      context: ./irc-bridge
+      dockerfile: Dockerfile
+    environment:
+      - IRC_HOST=${IRC_HOST:-irc.libera.chat}
+      - IRC_PORT=${IRC_PORT:-6697}
+      - IRC_TLS=${IRC_TLS:-true}
+      - IRC_NICK=${IRC_NICK:-vericlaw}
+      - IRC_PASS=${IRC_PASS:-}
+      - IRC_CHANNELS=${IRC_CHANNELS:-#general}
+    ports:
+      - "3005:3005"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3005/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  matrix-bridge:
+    build:
+      context: ./matrix-bridge
+      dockerfile: Dockerfile
+    environment:
+      - MATRIX_HOMESERVER=${MATRIX_HOMESERVER:-https://matrix.org}
+      - MATRIX_TOKEN=${MATRIX_TOKEN:-}
+      - MATRIX_USER_ID=${MATRIX_USER_ID:-}
+    ports:
+      - "3006:3006"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3006/health',r=>{process.exit(r.statusCode===200?0:1)})"]
       interval: 10s
       timeout: 5s
       retries: 5

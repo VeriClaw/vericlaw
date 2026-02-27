@@ -60,4 +60,8 @@ project Vericlaw is
       for Global_Configuration_Pragmas use "spark.adc";
       for Executable ("main.adb") use "vericlaw";
    end Builder;
+
+   package Prove is
+      for Switches ("Ada") use ("--level=2", "--prover=z3,cvc4,altergo", "--timeout=60", "--report=fail");
+   end Prove;
 end Vericlaw;

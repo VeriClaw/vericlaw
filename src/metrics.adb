@@ -3,6 +3,8 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package body Metrics is
 
+   use type Ada.Calendar.Time;
+
    --  Captured at elaboration time; used to compute vericlaw_uptime_seconds.
    Start_Time : constant Ada.Calendar.Time := Ada.Calendar.Clock;
 

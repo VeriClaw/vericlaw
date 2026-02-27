@@ -68,6 +68,10 @@ package body Config.Loader is
          Dest.Kind := Slack;
       elsif Kind_Str = "email" then
          Dest.Kind := Email;
+      elsif Kind_Str = "irc" then
+         Dest.Kind := IRC;
+      elsif Kind_Str = "matrix" then
+         Dest.Kind := Matrix;
       else
          Dest.Kind := CLI;
       end if;
@@ -158,6 +162,8 @@ package body Config.Loader is
                  Get_Boolean (T, "file", True);
                Result.Config.Tools.Web_Fetch_Enabled :=
                  Get_Boolean (T, "web_fetch", False);
+               Result.Config.Tools.Git_Enabled :=
+                 Get_Boolean (T, "git", True);
                Result.Config.Tools.Brave_Search_Enabled :=
                  Get_Boolean (T, "brave_search", False);
                Set_Unbounded_String

@@ -63,6 +63,7 @@ package Gateway.Auth with SPARK_Mode is
       Token_Present : Boolean;
       Token_Valid   : Boolean) return Auth_Decision
    with
+     Pre  => (if Token_Valid then Token_Present),
      Post =>
        (if not Config_Is_Secure (Config) then
            Request_Decision'Result = Deny_Insecure_Config
@@ -83,6 +84,7 @@ package Gateway.Auth with SPARK_Mode is
       Token_Present : Boolean;
       Token_Valid   : Boolean) return Auth_Decision
    with
+     Pre  => (if Token_Valid then Token_Present),
      Post =>
        (if not Config_Is_Secure (Config) then
            Request_Decision'Result = Deny_Insecure_Config
@@ -103,6 +105,7 @@ package Gateway.Auth with SPARK_Mode is
       Token_Present : Boolean;
       Token_Valid   : Boolean) return Boolean
    with
+     Pre  => (if Token_Valid then Token_Present),
      Post =>
        Request_Authorized'Result =
          (Request_Decision
@@ -117,6 +120,7 @@ package Gateway.Auth with SPARK_Mode is
       Token_Present : Boolean;
       Token_Valid   : Boolean) return Boolean
    with
+     Pre  => (if Token_Valid then Token_Present),
      Post =>
        Request_Authorized'Result =
          (Request_Decision

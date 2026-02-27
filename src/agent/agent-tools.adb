@@ -1,5 +1,6 @@
 with Tools.Shell;
 with Tools.File_IO;
+with Tools.Git;
 with Tools.Brave_Search;
 with Tools.MCP;
 with Tools.Cron;
@@ -13,6 +14,7 @@ package body Agent.Tools is
    --  Renamings to avoid ambiguity between Agent.Tools (this pkg) and top-level Tools
    package Shell_Pkg   renames Standard.Tools.Shell;
    package File_IO_Pkg renames Standard.Tools.File_IO;
+   package Git_Pkg     renames Standard.Tools.Git;
    package Search_Pkg  renames Standard.Tools.Brave_Search;
    package MCP_Pkg     renames Standard.Tools.MCP;
    package Cron_Pkg    renames Standard.Tools.Cron;
@@ -110,6 +112,20 @@ package body Agent.Tools is
      & """required"":[""prompt""]"
      & "}";
 
+   Git_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """action"":{""type"":""string"","
+     &   """description"":""Git action: status|log|diff|add|commit|push|pull|branch|checkout""},"
+     & """args"":{""type"":""string"","
+     &   """description"":""Optional extra arguments (files, message, branch name, etc.)""},"
+     & """path"":{""type"":""string"","
+     &   """description"":""Optional repository path (default: workspace)""}"
+     & "},"
+     & """required"":[""action""]"
+     & "}";
+
    function Make_Schema (N, D, P : String) return Tool_Schema is
    begin
       return
@@ -160,6 +176,14 @@ package body Agent.Tools is
               (To_String (Cfg.MCP_Bridge_URL), MCP_Tools, MCP_Count);
             MCP_Pkg.Append_Schemas (MCP_Tools, MCP_Count, Schemas, Num);
          end;
+      end if;
+      --  git operations
+      if Cfg.Git_Enabled then
+         Num := Num + 1;
+         Schemas (Num) := Make_Schema
+           ("git_operations",
+            "Execute a git command in the workspace repository",
+            Git_Params);
       end if;
       --  cron tools
       Num := Num + 1;
@@ -353,6 +377,29 @@ package body Agent.Tools is
                Result.Output  := CR.Output;
             else
                Result.Error := CR.Error;
+            end if;
+         end;
+
+      elsif Name = "git_operations" then
+         Metrics.Increment ("tool_calls_total", "git_operations");
+         if not Cfg.Tools.Git_Enabled then
+            Set_Unbounded_String (Result.Error, "Git tool is not enabled");
+            return Result;
+         end if;
+         declare
+            Action : constant String := Get_String (PR.Root, "action");
+            Args   : constant String := Get_String (PR.Root, "args");
+            Path   : constant String :=
+              Get_String (PR.Root, "path", Workspace);
+            GR     : constant Git_Pkg.Git_Result :=
+              Git_Pkg.Execute (Action, Args, Path);
+         begin
+            if GR.Success then
+               Result.Success := True;
+               Result.Output  := GR.Output;
+            else
+               Result.Error  := GR.Error;
+               Append (Result.Output, GR.Output);
             end if;
          end;
 

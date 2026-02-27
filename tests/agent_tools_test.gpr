@@ -2,7 +2,8 @@ with "gnatcoll";
 
 project Agent_Tools_Test is
    for Source_Dirs use (".", "../src", "../src/agent", "../src/config",
-                        "../src/providers", "../src/tools", "../src/http");
+                        "../src/providers", "../src/tools", "../src/http",
+                        "../src/memory");
    for Main use ("agent_tools_test.adb");
 
    package Compiler is

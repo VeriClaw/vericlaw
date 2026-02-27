@@ -177,30 +177,118 @@ package body Agent.Loop_Pkg is
                "[tool calls: "
                & Natural'Image (Prov_Resp.Num_Tool_Calls) & "]");
 
-            --  Execute each tool call and feed results back.
-            for I in 1 .. Prov_Resp.Num_Tool_Calls loop
-               declare
-                  TC     : constant Tool_Call :=
-                    Prov_Resp.Tool_Calls (I);
-                  TRes   : constant Agent.Tools.Tool_Result :=
-                    Agent.Tools.Dispatch
-                      (Name      => To_String (TC.Name),
-                       Args_JSON => To_String (TC.Arguments),
-                       Cfg       => Cfg,
-                       Mem       => Mem,
-                       Workspace => Home_Workspace);
-                  Output : constant String :=
-                    (if TRes.Success
-                     then To_String (TRes.Output)
-                     else "ERROR: " & To_String (TRes.Error));
+            --  Execute tool calls; parallelise safe ones when N > 1.
+            declare
+               N : constant Positive := Prov_Resp.Num_Tool_Calls;
+
+               --  Tools that have ordering-sensitive side effects run
+               --  sequentially; everything else is safe to parallelise.
+               function Is_Parallel_Safe (Name : String) return Boolean is
                begin
-                  --  Append tool result as a message.
+                  return Name /= "cron_add"
+                    and then Name /= "cron_list"
+                    and then Name /= "cron_remove"
+                    and then Name /= "spawn";
+               end Is_Parallel_Safe;
+
+               type Output_Array is
+                 array (Positive range 1 .. N) of Unbounded_String;
+               Outputs  : Output_Array;
+               All_Safe : Boolean := N > 1;
+            begin
+               --  Check every call in this batch before committing to the
+               --  parallel path.
+               if All_Safe then
+                  for I in 1 .. N loop
+                     if not Is_Parallel_Safe
+                          (To_String (Prov_Resp.Tool_Calls (I).Name))
+                     then
+                        All_Safe := False;
+                        exit;
+                     end if;
+                  end loop;
+               end if;
+
+               if All_Safe then
+                  --  Parallel path: one Ada task per tool call.
+                  declare
+                     task type Worker is
+                        entry Start (TC : Tool_Call);
+                        entry Get_Result (R : out Unbounded_String);
+                     end Worker;
+
+                     task body Worker is
+                        My_TC : Tool_Call;
+                        Res   : Unbounded_String;
+                     begin
+                        accept Start (TC : Tool_Call) do
+                           My_TC := TC;
+                        end Start;
+
+                        declare
+                           TRes : constant Agent.Tools.Tool_Result :=
+                             Agent.Tools.Dispatch
+                               (Name      => To_String (My_TC.Name),
+                                Args_JSON => To_String (My_TC.Arguments),
+                                Cfg       => Cfg,
+                                Mem       => Mem,
+                                Workspace => Home_Workspace);
+                        begin
+                           Res := To_Unbounded_String
+                             (if TRes.Success
+                              then To_String (TRes.Output)
+                              else "ERROR: " & To_String (TRes.Error));
+                        end;
+
+                        accept Get_Result (R : out Unbounded_String) do
+                           R := Res;
+                        end Get_Result;
+                     end Worker;
+
+                     type Worker_Access is access Worker;
+                     Workers : array (1 .. N) of Worker_Access;
+                  begin
+                     --  Spawn and start all workers concurrently.
+                     for I in 1 .. N loop
+                        Workers (I) := new Worker;
+                        Workers (I).Start (Prov_Resp.Tool_Calls (I));
+                     end loop;
+                     --  Collect results in original call order.
+                     for I in 1 .. N loop
+                        Workers (I).Get_Result (Outputs (I));
+                     end loop;
+                  end;
+               else
+                  --  Sequential path: single call or ordering-sensitive tools.
+                  for I in 1 .. N loop
+                     declare
+                        TC   : constant Tool_Call :=
+                          Prov_Resp.Tool_Calls (I);
+                        TRes : constant Agent.Tools.Tool_Result :=
+                          Agent.Tools.Dispatch
+                            (Name      => To_String (TC.Name),
+                             Args_JSON => To_String (TC.Arguments),
+                             Cfg       => Cfg,
+                             Mem       => Mem,
+                             Workspace => Home_Workspace);
+                     begin
+                        Outputs (I) :=
+                          To_Unbounded_String
+                            (if TRes.Success
+                             then To_String (TRes.Output)
+                             else "ERROR: " & To_String (TRes.Error));
+                     end;
+                  end loop;
+               end if;
+
+               --  Feed all results back into the conversation in order.
+               for I in 1 .. N loop
                   Agent.Context.Append_Message
                     (Conv, Agent.Context.Tool_Result,
-                     Output,
-                     To_String (TC.ID));
-               end;
-            end loop;
+                     To_String (Outputs (I)),
+                     To_String (Prov_Resp.Tool_Calls (I).ID));
+               end loop;
+            end;
          end;
       end loop;
 
@@ -309,7 +397,8 @@ package body Agent.Loop_Pkg is
                     Agent.Tools.Dispatch
                       (Name      => To_String (TC.Name),
                        Args_JSON => To_String (TC.Arguments),
-                       Cfg       => Cfg.Tools,
+                       Cfg       => Cfg,
+                       Mem       => Mem,
                        Workspace => Home_Workspace);
                   Output : constant String :=
                     (if TRes.Success

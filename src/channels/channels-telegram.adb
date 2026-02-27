@@ -10,6 +10,7 @@ with Agent.Loop_Pkg;
 with Channels.Security;   -- SPARK security policy checks
 with Channels.Rate_Limit;
 with Metrics;
+with Audit.Syslog;
 
 package body Channels.Telegram is
 

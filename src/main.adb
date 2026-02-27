@@ -25,12 +25,17 @@ with Channels.WhatsApp;
 with Channels.Discord;
 with Channels.Slack;
 with Channels.Email;
+with Channels.IRC;
+with Channels.Matrix;
 with HTTP.Server;
 with Config.Reload;
 with Metrics;
 with Tools.Cron;
+with Audit.Syslog;
 
 procedure Main is
+
+   use type Config.Schema.Channel_Kind;
 
    procedure Print_Usage is
    begin
@@ -170,6 +175,9 @@ procedure Main is
 begin
    --  SPARK security assertion runs unconditionally on startup.
    Assert_Security_Defaults;
+
+   --  Open syslog connection for audit event forwarding.
+   Audit.Syslog.Enable ("vericlaw");
 
    --  Parse subcommand.
    if Argument_Count >= 1 then
@@ -477,6 +485,42 @@ begin
                                   & To_String (T_Err));
                      end if;
                   end Email_Poller;
+
+                  task IRC_Poller;
+                  task body IRC_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.IRC.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[IRC]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end IRC_Poller;
+
+                  task Matrix_Poller;
+                  task body Matrix_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Matrix.Run_Polling (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line ("Gateway[Matrix]: memory open failed: "
+                                  & To_String (T_Err));
+                     end if;
+                  end Matrix_Poller;
 
                   --  Background task: fire due cron jobs every 60 seconds.
                   task Cron_Heartbeat;

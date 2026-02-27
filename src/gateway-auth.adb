@@ -23,6 +23,12 @@ package body Gateway.Auth with SPARK_Mode is
          Lockout_Intervals_Remaining => 0);
    end Reset_Pairing_Status;
 
+   function Increment_Attempts (Count : Natural) return Natural
+   with Post =>
+     (if Count = Natural'Last
+      then Increment_Attempts'Result = Natural'Last
+      else Increment_Attempts'Result = Count + 1);
+
    function Increment_Attempts (Count : Natural) return Natural is
    begin
       if Count = Natural'Last then
