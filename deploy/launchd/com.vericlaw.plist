@@ -15,11 +15,11 @@
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
-    <false/>
+    <true/>
     <key>StandardOutPath</key>
-    <string>/var/log/vericlaw.out.log</string>
+    <string>/Users/vericlaw/Library/Logs/vericlaw.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/vericlaw.err.log</string>
+    <string>/Users/vericlaw/Library/Logs/vericlaw.err.log</string>
     <key>EnvironmentVariables</key>
     <dict>
       <key>GATEWAY_BIND_HOST</key>
