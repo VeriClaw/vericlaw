@@ -96,5 +96,9 @@ irc-bridge/package-lock.json
 matrix-bridge/node_modules/
 matrix-bridge/package-lock.json
 
+# Browser bridge (Node.js)
+browser-bridge/node_modules/
+browser-bridge/package-lock.json
+
 # Local runtime config (user fills in their API keys)
 config/config.json

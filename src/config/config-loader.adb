@@ -173,6 +173,9 @@ package body Config.Loader is
                Set_Unbounded_String
                  (Result.Config.Tools.MCP_Bridge_URL,
                   Get_String (T, "mcp_bridge_url"));
+               Set_Unbounded_String
+                 (Result.Config.Tools.Browser_Bridge_URL,
+                  Get_String (T, "browser_bridge_url"));
             end;
          end if;
 

@@ -81,6 +81,7 @@ package Config.Schema is
       Git_Enabled        : Boolean := True;
       Brave_API_Key      : Unbounded_String;
       MCP_Bridge_URL     : Unbounded_String;  -- e.g. "http://mcp-bridge:3004"
+      Browser_Bridge_URL : Unbounded_String;  -- e.g. "http://browser-bridge:3007"
    end record;
 
    --  -----------------------------------------------------------------------

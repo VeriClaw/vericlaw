@@ -5,6 +5,7 @@ with Tools.Brave_Search;
 with Tools.MCP;
 with Tools.Cron;
 with Tools.Spawn;
+with Tools.Browser;
 with Memory.SQLite;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;
@@ -20,6 +21,7 @@ package body Agent.Tools is
    package MCP_Pkg     renames Standard.Tools.MCP;
    package Cron_Pkg    renames Standard.Tools.Cron;
    package Spawn_Pkg   renames Standard.Tools.Spawn;
+   package Browser_Pkg renames Standard.Tools.Browser;
 
    --  JSON Schema strings for each tool (passed to LLM providers).
    Shell_Params : constant String :=
@@ -111,6 +113,28 @@ package body Agent.Tools is
      &   """description"":""Optional: model override""}"
      & "},"
      & """required"":[""prompt""]"
+     & "}";
+
+   Browser_Browse_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """url"":{""type"":""string"",""description"":""URL to fetch""},"
+     & """timeout_ms"":{""type"":""integer"","
+     &   """description"":""Navigation timeout in ms (default 15000)""}"
+     & "},"
+     & """required"":[""url""]"
+     & "}";
+
+   Browser_Screenshot_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """url"":{""type"":""string"",""description"":""URL to screenshot""},"
+     & """timeout_ms"":{""type"":""integer"","
+     &   """description"":""Navigation timeout in ms (default 15000)""}"
+     & "},"
+     & """required"":[""url""]"
      & "}";
 
    Git_Params : constant String :=
@@ -218,6 +242,20 @@ package body Agent.Tools is
       Schemas (Num) := Make_Schema
         ("spawn", "Spawn a sub-agent to research or process independently",
          Spawn_Params);
+      --  browser tools
+      if Length (Cfg.Browser_Bridge_URL) > 0 then
+         Browser_Pkg.Bridge_URL := Cfg.Browser_Bridge_URL;
+         Num := Num + 1;
+         Schemas (Num) := Make_Schema
+           ("browser_browse",
+            "Fetch and read the text content of a web page using a real browser",
+            Browser_Browse_Params);
+         Num := Num + 1;
+         Schemas (Num) := Make_Schema
+           ("browser_screenshot",
+            "Take a screenshot of a web page",
+            Browser_Screenshot_Params);
+      end if;
    end Build_Schemas;
 
    function Dispatch
@@ -430,6 +468,60 @@ package body Agent.Tools is
          begin
             Result.Success := True;
             Set_Unbounded_String (Result.Output, SResp);
+         end;
+
+      elsif Name = "browser_browse" then
+         Metrics.Increment ("tool_calls_total", "browser_browse");
+         if Length (Cfg.Tools.Browser_Bridge_URL) = 0 then
+            Set_Unbounded_String
+              (Result.Error, "Browser bridge URL not configured");
+            return Result;
+         end if;
+         declare
+            BUrl : constant String := Get_String (PR.Root, "url");
+            BTms : constant Integer :=
+              Get_Integer (PR.Root, "timeout_ms", 15_000);
+            BR   : constant Browser_Pkg.Browse_Result :=
+              Browser_Pkg.Browse
+                (URL        => BUrl,
+                 Timeout_Ms => (if BTms > 0 then BTms else 15_000));
+         begin
+            if BR.Success then
+               Result.Success := True;
+               Set_Unbounded_String
+                 (Result.Output,
+                  "Title: " & To_String (BR.Title) & ASCII.LF
+                  & To_String (BR.Text));
+            else
+               Result.Error := BR.Error;
+            end if;
+         end;
+
+      elsif Name = "browser_screenshot" then
+         Metrics.Increment ("tool_calls_total", "browser_screenshot");
+         if Length (Cfg.Tools.Browser_Bridge_URL) = 0 then
+            Set_Unbounded_String
+              (Result.Error, "Browser bridge URL not configured");
+            return Result;
+         end if;
+         declare
+            BUrl : constant String := Get_String (PR.Root, "url");
+            BTms : constant Integer :=
+              Get_Integer (PR.Root, "timeout_ms", 15_000);
+            SR   : constant Browser_Pkg.Screenshot_Result :=
+              Browser_Pkg.Screenshot
+                (URL        => BUrl,
+                 Timeout_Ms => (if BTms > 0 then BTms else 15_000));
+         begin
+            if SR.Success then
+               Result.Success := True;
+               Set_Unbounded_String
+                 (Result.Output,
+                  "Title: " & To_String (SR.Title) & ASCII.LF
+                  & "PNG_BASE64:" & To_String (SR.PNG_Base64));
+            else
+               Result.Error := SR.Error;
+            end if;
          end;
 
       else

@@ -1,4 +1,4 @@
-# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge + Email Bridge + IRC Bridge + Matrix Bridge
+# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge + Email Bridge + IRC Bridge + Matrix Bridge + Browser Bridge
 #
 # Quick start (headless pairing):
 #   1. cp config/whatsapp.example.json config/config.json  # fill in your API key
@@ -21,8 +21,12 @@
 # For Matrix: set MATRIX_HOMESERVER, MATRIX_TOKEN, MATRIX_USER_ID env vars and run:
 #   docker compose up matrix-bridge vericlaw
 #
+# For Browser tool: run:
+#   docker compose up browser-bridge vericlaw
+#
 # See docs/setup/whatsapp.md, docs/setup/discord.md, docs/setup/slack.md,
-# docs/setup/email.md, docs/setup/irc.md, and docs/setup/matrix.md for details.
+# docs/setup/email.md, docs/setup/irc.md, docs/setup/matrix.md, and
+# docs/setup/browser.md for details.
 
 services:
   discord-bridge:
@@ -173,6 +177,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  browser-bridge:
+    build: ./browser-bridge
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3007:3007"
+    environment:
+      PORT: "3007"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN  # required for Chromium sandbox
 
 volumes:
   wa-sessions:
