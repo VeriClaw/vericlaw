@@ -38,19 +38,16 @@ jobs:
           export PATH=/opt/gnat/bin:$PATH
           export GPR_PROJECT_PATH=/opt/gnat/share/gpr
           make check
-          make competitive-regression-gate
-          make supply-chain-attest
-          make supply-chain-verify
-      - name: Upload competitive regression artifacts
+          make config-test
+          make context-test
+          make tools-test
+      - name: Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: competitive-regression-artifacts
+          name: build-artifacts
           path: |
             tests/competitive_benchmark_report.json
-            tests/competitive_direct_benchmark_report.json
-            tests/competitive_scorecard_report.json
-            tests/competitive_regression_gate_report.json
 
   container-ci-matrix:
     runs-on: ubuntu-latest

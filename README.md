@@ -1,5 +1,10 @@
 # VeriClaw
 
+> ## ⚠️ WORK IN PROGRESS
+> **This project is actively under development and is not yet production-ready.**
+> The `test` branch contains the latest working code. Do not use `main` — it is an empty stub.
+> Features, APIs, and configuration formats may change without notice.
+
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml)
 
 VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
@@ -336,9 +341,14 @@ make check               # full build + SPARK flow analysis
 make runtime-tests       # all 4 runtime test suites
 make config-test         # config JSON parsing + schema defaults
 make context-test        # conversation context add/evict/format
-make memory-test         # SQLite memory save/retrieve/FTS5 search
+make memory-test         # SQLite memory save/retrieve/FTS5 search (skipped if gnatcoll_sqlite unavailable)
 make tools-test          # tool schema builder + dispatch gating
 ```
+
+> **Note:** `memory-test` requires `gnatcoll_sqlite`. It is skipped gracefully in the Docker dev
+> image (`vericlaw-dev`) which uses GNAT Community 2021 without that component. The SQLite memory
+> backend is fully functional in the main binary — only the isolated test suite requires it.
+> To run `memory-test`, install `gnatcoll_sqlite` via Alire: `alr with gnatcoll_sqlite`.
 
 ## Build profiles
 
@@ -587,7 +597,7 @@ These items are intentionally deferred post-MVP:
 - [ ] **Prometheus metrics** — `/metrics` endpoint with latency histograms
 - [ ] **Hot config reload** — `SIGHUP` reloads config without restart
 - [ ] **Multi-user gateway** — per-user conversation and fact store isolation
-- [ ] **Publish to GitHub** — push to `github.com/VeriClaw/vericlaw` once org is created
+- [x] **Published to GitHub** — `github.com/VeriClaw/vericlaw` (`test` branch)
 
 ### Security hardening
 
