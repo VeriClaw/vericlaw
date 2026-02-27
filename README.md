@@ -39,7 +39,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - All channels run concurrently in `gateway` mode using Ada tasks
 - Per-user memory isolation — operator gets full access, guests get sandboxed namespaces
 
-**Tools (8 built-in + unlimited via MCP)**
+**Tools (13 built-in + unlimited via MCP)**
 - `file` — read/write/list files in `~/.vericlaw/workspace/` (workspace-scoped, path-traversal blocked)
 - `shell` — execute commands via popen (disabled by default, allowlisted)
 - `web_fetch` — fetch and parse web pages
@@ -47,10 +47,14 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - `git_operations` — `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout`
 - `cron_add` / `cron_list` / `cron_remove` — schedule recurring AI tasks
 - `spawn` — delegate a subtask to an independent sub-agent (depth-capped at 1)
+- `browser_browse` — fetch a web page using a real browser (JavaScript rendered)
+- `browser_screenshot` — take a screenshot of any URL (PNG, base64)
+- `memory_search` — semantic similarity search over conversation history (vector RAG)
 - **MCP (Model Context Protocol)** — connect external tool servers via `mcp-bridge`; tools auto-discovered at startup
 
 **Memory and state**
 - SQLite with FTS5 full-text search + persistent facts store
+- Vector RAG memory via `sqlite-vec` + OpenAI `text-embedding-3-small`
 - Session auto-expiry (configurable, default 30 days)
 - WAL mode for safe concurrent multi-channel writes
 - Parallel tool calls — multiple tools from one LLM response execute concurrently via Ada tasks
@@ -225,7 +229,10 @@ This asks for your provider, API key, model, agent name, and channel, then write
     "web_fetch": false,
     "brave_search": false,
     "brave_api_key": "",
-    "git": true
+    "git": true,
+    "browser_bridge_url": "",      // optional: "http://browser-bridge:3007"
+    "rag_enabled": false,          // optional: true to enable vector memory search
+    "rag_embed_base_url": ""       // optional: "https://api.openai.com/v1"
   },
   "memory": { "max_history": 50, "facts_enabled": true, "session_retention_days": 30 },
   "gateway": { "bind_host": "127.0.0.1", "bind_port": 8787 }
@@ -369,6 +376,9 @@ Anyone else reaching the agent when `allowlist: "*"` is a **guest** — sandboxe
 | Git operations | `git: true` | **on** | `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout` |
 | Cron scheduler | always available | — | `cron_add`, `cron_list`, `cron_remove` — schedule recurring AI tasks |
 | Spawn | always available | — | Delegate a subtask to an isolated sub-agent |
+| Browser browse | `browser_bridge_url` | off | Fetch JS-rendered page text via headless Chromium |
+| Browser screenshot | `browser_bridge_url` | off | Screenshot any URL as PNG (base64) |
+| Memory search | `rag_enabled: true` | off | Semantic similarity search over conversation history |
 | MCP tools | `mcp_bridge_url` | off | Auto-discovered from any MCP server via mcp-bridge |
 
 ### Cron scheduler
@@ -412,6 +422,65 @@ bot: Here's a comparison based on the research: ...
 ```
 
 Sub-agents run with a clean conversation (system prompt + single prompt, no tools, depth cap = 1).
+
+### Browser tool
+
+Requires the `browser-bridge` sidecar (bundles headless Chromium via Puppeteer):
+
+```bash
+docker compose up browser-bridge vericlaw
+```
+
+Config:
+```json
+{ "tools": { "browser_bridge_url": "http://browser-bridge:3007" } }
+```
+
+Usage:
+```
+you: What does the VeriClaw homepage say?
+bot: [calls browser_browse("https://example.com")]
+bot: The page title is "Example Domain" and the body reads: ...
+
+you: Screenshot the GitHub trending page
+bot: [calls browser_screenshot("https://github.com/trending")]
+bot: [returns base64 PNG]
+```
+
+Private IP addresses (10.x, 192.168.x, 127.x, 172.16–31.x) are blocked at the bridge level. Max 2 concurrent requests. See [docs/setup/browser.md](docs/setup/browser.md) for installation.
+
+### Vector RAG memory
+
+Semantic search over your conversation history using [sqlite-vec](https://github.com/asg017/sqlite-vec) embeddings. The agent automatically retrieves relevant past context before answering.
+
+**Requirements:** sqlite-vec shared library installed, and an OpenAI-compatible embeddings endpoint.
+
+```bash
+# Install sqlite-vec (macOS)
+brew install sqlite-vec
+
+# Ubuntu / Debian
+apt-get install libsqlite-vec-dev
+```
+
+Config:
+```json
+{
+  "tools": {
+    "rag_enabled": true,
+    "rag_embed_base_url": "https://api.openai.com/v1"
+  }
+}
+```
+
+The `memory_search` tool is then available to the LLM:
+```
+you: What did we discuss about Rust last week?
+bot: [calls memory_search("Rust async runtimes", k=5)]
+bot: Based on our earlier conversations, you asked about Tokio vs async-std. Here's a summary...
+```
+
+See [docs/setup/rag.md](docs/setup/rag.md) for full setup, including using Ollama's `nomic-embed-text` as a free local embedding model.
 
 ## Security
 
@@ -472,6 +541,53 @@ When an LLM response includes multiple tool calls, VeriClaw executes them concur
 ```
 
 See [docs/benchmarks.md](docs/benchmarks.md) for the full comparison table against ZeroClaw and NullClaw.
+
+### Structured logging
+
+All VeriClaw runtime components write JSON-line logs to **stderr**:
+
+```
+{"ts":"2026-02-27T14:51:23Z","level":"info","msg":"Polling started","ctx":{"channel":"telegram"}}
+{"ts":"2026-02-27T14:51:24Z","level":"warning","msg":"Config reload failed","ctx":{}}
+```
+
+Pipe to any log aggregator:
+```bash
+vericlaw gateway 2>&1 | grep -v '^{' > access.log       # stdout only
+vericlaw gateway 2> >(jq .)                              # pretty-print logs
+vericlaw gateway 2>&1 | promtail --stdin --job vericlaw  # → Loki
+```
+
+### Live gateway API
+
+When `vericlaw gateway` is running, a local-only REST API is available on the bind address (default `127.0.0.1:8787`):
+
+```bash
+curl http://127.0.0.1:8787/api/status
+# {"status":"running","version":"0.2.0","uptime_s":120,"channels_active":3}
+
+curl http://127.0.0.1:8787/api/channels
+# {"channels":[{"kind":"telegram","enabled":true,"max_rps":5},{"kind":"slack","enabled":true,"max_rps":5},...]}
+
+curl http://127.0.0.1:8787/api/metrics/summary
+# {"provider_requests_total":42,"provider_errors_total":0,"tool_calls_total":17}
+```
+
+All three endpoints are restricted to `127.0.0.1` — `403 Forbidden` for any other source address.
+
+### Operator console
+
+A local web dashboard for checking gateway health and security defaults:
+
+```bash
+# Open directly in browser (no server needed — reads local report files)
+open operator-console/index.html
+
+# Or connect to a running gateway
+# Enter "http://127.0.0.1:8787" in the Gateway URL field and click Connect
+```
+
+The console shows: security defaults, active channels with their RPS config, live Prometheus metric totals, and release metadata when present.
 
 ## Testing
 
@@ -702,8 +818,8 @@ The `make competitive-regression-gate` gate **fails** if any VeriClaw metric reg
 
 **All 9 channels (concurrently in gateway mode):** CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix
 
-**All 8 built-in tools + unlimited MCP tools:**
-`file`, `shell`, `web_fetch`, `brave_search`, `git_operations`, `cron_add/list/remove`, `spawn`
+**All 13 built-in tools + unlimited MCP tools:**
+`file`, `shell`, `web_fetch`, `brave_search`, `git_operations`, `cron_add/list/remove`, `spawn`, `browser_browse`, `browser_screenshot`, `memory_search`
 
 **Infrastructure:**
 - Streaming SSE output (OpenAI + Anthropic)
@@ -715,15 +831,12 @@ The `make competitive-regression-gate` gate **fails** if any VeriClaw metric reg
 - Parallel tool execution (Ada task pool)
 - Cron heartbeat background task
 - Syslog audit forwarding
+- Structured JSON logging to stderr
+- Live gateway API (`/api/status`, `/api/channels`, `/api/metrics/summary`)
+- Operator web console
+- Vector RAG memory (sqlite-vec + embeddings)
+- Browser/screenshot tool (Puppeteer headless Chromium)
 - SPARK Silver proofs on security core
 - SQLite WAL mode for safe concurrent channel writes
 - Multi-arch Docker images (amd64 / arm64 / arm/v7)
 - Systemd / launchd / Windows service packaging
-
-## Remaining To-Dos
-
-Three items intentionally deferred for a future release:
-
-- [ ] **Browser / screenshot tool** — headless Chromium control via Chrome DevTools Protocol (`browser_navigate`, `browser_screenshot`, `browser_click`)
-- [ ] **Vector embeddings + RAG** — `sqlite-vec` extension for semantic similarity search; retrieval-augmented generation from local documents
-- [ ] **Web operator console** — wire the `operator-console/` HTML/JS frontend to the live gateway for in-browser session management
