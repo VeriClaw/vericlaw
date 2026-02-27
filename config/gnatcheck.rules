@@ -1,0 +1,30 @@
+-- VeriClaw GNATcheck Rules
+-- Static analysis enforcement for Ada/SPARK AI agent
+
+-- Exception handling discipline
++ROverly_Complex_Exception_Handlers
++RPredefined_Exceptions
+
+-- Avoid dangerous constructs
++RGOTO_Statements
++RUnchecked_Conversions
++RUnchecked_Deallocations
+
+-- Complexity limits
++RMetrics_Cyclomatic_Complexity:20
++RMetrics_Essential_Complexity:10
+
+-- SPARK readiness
++RMissing_SPARK_Mode
+
+-- Naming conventions
++RIdentifier_Casing:Mixed
+
+-- Code quality
++RUnused_Parameters
++RImproper_Returns
++RNull_Statements_In_Exception_Handlers
+
+-- Style
++RMaximum_Line_Length:120
++RDeep_Inheritance:5

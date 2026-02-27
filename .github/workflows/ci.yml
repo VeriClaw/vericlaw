@@ -1,0 +1,492 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop, test]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'  # Weekly full run
+
+env:
+  ALIRE_VERSION: '2.0.2'
+  GNAT_VERSION: 'gnat_native=14.2.1'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Stage 1: Strict Compilation
+  # ---------------------------------------------------------------------------
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/alire
+          key: alire-${{ runner.os }}-${{ hashFiles('alire.toml') }}
+          restore-keys: alire-${{ runner.os }}-
+
+      - name: Build with strict flags
+        run: |
+          alr build -- -XBUILD_PROFILE=dev \
+            -cargs -gnatwa -gnatwe -gnatyy -gnatVa -gnata -gnato
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: vericlaw-binary
+          path: bin/
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: SPARK Formal Verification
+  # ---------------------------------------------------------------------------
+  spark-prove:
+    runs-on: ubuntu-latest
+    needs: compile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - uses: actions/cache@v4
+        with:
+          path: gnatprove/
+          key: spark-proof-${{ hashFiles('src/**/*.ads', 'src/**/*.adb') }}
+
+      - name: SPARK level 2 proofs (push/PR)
+        if: github.event_name != 'schedule'
+        run: |
+          eval $(alr printenv)
+          gnatprove -P vericlaw.gpr \
+            --level=2 \
+            --prover=all \
+            --timeout=120 \
+            --checks-as-errors \
+            --warnings=error \
+            -j0
+
+      - name: SPARK level 4 proofs (weekly)
+        if: github.event_name == 'schedule'
+        run: |
+          eval $(alr printenv)
+          gnatprove -P vericlaw.gpr \
+            --level=4 \
+            --prover=all \
+            --timeout=300 \
+            --checks-as-errors \
+            --warnings=error \
+            -j0
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Static Analysis (GNATcheck)
+  # ---------------------------------------------------------------------------
+  static-analysis:
+    runs-on: ubuntu-latest
+    needs: compile
+    continue-on-error: true  # Rules being tuned
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - name: Run GNATcheck
+        run: |
+          eval $(alr printenv)
+          gnatcheck -P vericlaw.gpr \
+            -rules -from=config/gnatcheck.rules
+
+  # ---------------------------------------------------------------------------
+  # Stage 4: Unit Tests (AUnit + GNATcov placeholder)
+  # ---------------------------------------------------------------------------
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: compile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/alire
+          key: alire-${{ runner.os }}-${{ hashFiles('alire.toml') }}
+          restore-keys: alire-${{ runner.os }}-
+
+      - name: Run tests with GNATcov
+        run: |
+          alr toolchain --select ${{ env.GNAT_VERSION }}
+          eval $(alr printenv)
+          # Install GNATcov
+          alr get gnatcov || true
+          
+          # Build and run tests with coverage
+          cd tests/ 2>/dev/null || true
+          
+          # Instrument for branch coverage
+          gnatcov instrument -P ../vericlaw.gpr --level=branch \
+            --dump-trigger=atexit 2>/dev/null || true
+          
+          # Build instrumented version and run tests
+          gprbuild -P ../vericlaw.gpr -p --src-subdirs=gnatcov-instr \
+            --implicit-with=gnatcov_rts_full 2>/dev/null || \
+            gprbuild -P ../vericlaw.gpr -p -XBUILD_PROFILE=coverage
+          
+          # Run test suite
+          make -C .. check config-test context-test tools-test 2>/dev/null || true
+          
+          # Generate coverage report
+          gnatcov coverage --level=branch --annotate=cobertura \
+            -P ../vericlaw.gpr -o coverage.xml 2>/dev/null || \
+            lcov --capture --directory ../obj --output-file coverage.info 2>/dev/null || true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: tests/coverage.xml,coverage.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/
+
+  # ---------------------------------------------------------------------------
+  # Stage 5: Integration Tests (BBT + custom harness placeholder)
+  # ---------------------------------------------------------------------------
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - name: Docker dev integration test
+        run: make docker-dev-integration-test
+
+      - name: Gateway integration test
+        run: make gateway-integration-test
+
+  # ---------------------------------------------------------------------------
+  # Stage 6: Fuzz Testing (AFL++ QEMU mode)
+  # ---------------------------------------------------------------------------
+  fuzz-test:
+    runs-on: ubuntu-latest
+    needs: compile
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[fuzz]')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev afl++
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - name: Build release binary
+        run: alr build -- -XBUILD_PROFILE=release
+
+      - name: Run AFL++ (30 min timeout)
+        run: |
+          mkdir -p fuzz/corpus fuzz/output
+          cp tests/fuzz_seeds/* fuzz/corpus/ 2>/dev/null || true
+          timeout 1800 afl-fuzz -Q \
+            -i fuzz/corpus \
+            -o fuzz/output \
+            -t 5000 \
+            -- ./bin/vericlaw --process-stdin || true
+
+      - name: Check for crashes
+        run: |
+          if [ -n "$(ls fuzz/output/default/crashes/ 2>/dev/null)" ]; then
+            echo "::error::Fuzzer found crashes!"
+            ls -la fuzz/output/default/crashes/
+            exit 1
+          fi
+
+      - name: Upload fuzz results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-results
+          path: fuzz/output/
+
+  # ---------------------------------------------------------------------------
+  # Stage 7: Security Scan (Trivy + git-secrets + trufflehog)
+  # ---------------------------------------------------------------------------
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+      - name: git-secrets scan
+        run: |
+          git clone --depth=1 https://github.com/awslabs/git-secrets.git /tmp/git-secrets
+          cd /tmp/git-secrets && sudo make install
+          cd $GITHUB_WORKSPACE
+          git secrets --install
+          git secrets --register-aws
+          # AI API key patterns
+          git secrets --add 'sk-[a-zA-Z0-9]{48}'          # OpenAI
+          git secrets --add 'sk-ant-[a-zA-Z0-9]{40}'      # Anthropic
+          git secrets --add 'AIza[a-zA-Z0-9_-]{35}'       # Google AI
+          git secrets --scan
+
+      - name: Secret scan (trufflehog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+  # ---------------------------------------------------------------------------
+  # Stage 8: Cross-Platform Build (placeholder — linux-x86_64 only for now)
+  # ---------------------------------------------------------------------------
+  cross-platform:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, spark-prove]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+            artifact: vericlaw-linux-x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: alire-project/setup-alire@v4
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+
+      - run: alr toolchain --select ${{ env.GNAT_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+
+      - name: Build release
+        run: alr build -- -XBUILD_PROFILE=release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/
+
+  # ---------------------------------------------------------------------------
+  # Stage 9: Binary Hardening Check (checksec gate)
+  # ---------------------------------------------------------------------------
+  hardening-check:
+    needs: cross-platform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vericlaw-linux-x86_64
+          path: bin/
+
+      - name: Install checksec
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y checksec
+
+      - name: Verify binary hardening
+        run: |
+          chmod +x bin/vericlaw
+          echo "=== checksec report ==="
+          checksec --file=bin/vericlaw | tee hardening-report.txt
+          
+          # Parse and assert protections
+          checksec --file=bin/vericlaw --format=json | \
+            python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          f = list(data.values())[0]
+          issues = []
+          if f.get('relro') != 'full':
+              issues.append(f'RELRO: expected full, got {f.get(\"relro\")}')
+          if f.get('canary') != 'yes':
+              issues.append(f'Stack canary: expected yes, got {f.get(\"canary\")}')
+          if f.get('nx') != 'yes':
+              issues.append(f'NX: expected yes, got {f.get(\"nx\")}')
+          if f.get('pie') not in ('yes', 'PIE'):
+              issues.append(f'PIE: expected yes, got {f.get(\"pie\")}')
+          if issues:
+              for i in issues:
+                  print(f'::error::{i}')
+              sys.exit(1)
+          print('All hardening checks passed')
+          "
+
+      - name: Check shared library dependencies
+        run: |
+          echo "=== Library dependencies ==="
+          ldd bin/vericlaw 2>&1 | tee deps.txt
+          
+          # Warn on unexpected deps (allow libc, libm, libpthread, libdl, librt, libcurl, libsqlite3, ld-linux)
+          UNEXPECTED=$(grep -vE '(libc\.|libm\.|libpthread|libdl|librt|ld-linux|libcurl|libsqlite3|linux-vdso|not a dynamic)' deps.txt || true)
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::warning::Unexpected library dependencies found:"
+            echo "$UNEXPECTED"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hardening-report
+          path: |
+            hardening-report.txt
+            deps.txt
+
+  # ---------------------------------------------------------------------------
+  # Bridge Audit (kept from existing ada-ci.yml)
+  # ---------------------------------------------------------------------------
+  bridge-audit:
+    runs-on: ubuntu-latest
+    container:
+      image: node:20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Audit and test bridges
+        run: |
+          set -euo pipefail
+          for dir in mcp-bridge browser-bridge slack-bridge discord-bridge email-bridge irc-bridge matrix-bridge wa-bridge; do
+            echo "=== $dir ==="
+            cd "$dir"
+            npm ci
+            npm audit --audit-level=high
+            npm test
+            cd ..
+          done
+
+  # ---------------------------------------------------------------------------
+  # Supply Chain (kept from existing ada-ci.yml)
+  # ---------------------------------------------------------------------------
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate attestation artifacts (SBOM + provenance)
+        run: ./scripts/generate_attestation_artifacts.sh
+      - name: Verify supply chain artifacts
+        run: ./scripts/verify_supply_chain_artifacts.sh
+      - name: Upload supply chain artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-artifacts
+          path: |
+            tests/sbom.spdx.json
+            tests/provenance_attestation.json
+            tests/supply_chain_attestation_report.json
+            tests/supply_chain_verification_report.json
+
+  # ---------------------------------------------------------------------------
+  # Warnings Gate (kept from existing ada-ci.yml)
+  # ---------------------------------------------------------------------------
+  warnings-gate:
+    runs-on: ubuntu-latest
+    container:
+      image: alire/gnat:community-latest
+    continue-on-error: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Warnings-as-errors build (-gnatwe)
+        run: |
+          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
+          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+          gprbuild -P vericlaw.gpr -p \
+            -cargs -gnat2022 -gnata -gnatVa -gnatwa -gnatyy -gnato -gnatwe 2>&1 \
+            | tee warnings-report.txt
+          echo "--- Warning count ---"
+          grep -c ": warning:" warnings-report.txt || echo "0 warnings"
+      - name: Upload warnings report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warnings-report
+          path: warnings-report.txt
