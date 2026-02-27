@@ -69,6 +69,16 @@ package Memory.SQLite is
       Limit  : Positive := 5) return Search_Results;
 
    --  -----------------------------------------------------------------------
+   --  Session export
+   --  -----------------------------------------------------------------------
+
+   --  Export all messages for a session (up to Max_History).
+   procedure Export_Session
+     (Handle     : Memory_Handle;
+      Session_ID : String;
+      Conv       : out Agent.Context.Conversation);
+
+   --  -----------------------------------------------------------------------
    --  Cron scheduler
    --  -----------------------------------------------------------------------
 

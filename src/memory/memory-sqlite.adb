@@ -399,6 +399,15 @@ package body Memory.SQLite is
       end loop;
    end Load_History;
 
+   procedure Export_Session
+     (Handle     : Memory_Handle;
+      Session_ID : String;
+      Conv       : out Agent.Context.Conversation)
+   is
+   begin
+      Load_History (Handle, Session_ID, Agent.Context.Max_History, Conv);
+   end Export_Session;
+
    procedure Upsert_Fact
      (Handle : Memory_Handle; Key : String; Value : String)
    is

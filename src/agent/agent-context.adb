@@ -1,4 +1,7 @@
 with Ada.Numerics.Discrete_Random;
+with Ada.Strings.Fixed;
+with Ada.Directories;
+with Ada.Streams.Stream_IO;
 
 pragma SPARK_Mode (Off);
 package body Agent.Context is
@@ -26,9 +29,11 @@ package body Agent.Context is
       Name    : String := "")
    is
       New_Msg : constant Message :=
-        (Role    => Role,
-         Content => To_Unbounded_String (Content),
-         Name    => To_Unbounded_String (Name));
+        (Role       => Role,
+         Content    => To_Unbounded_String (Content),
+         Name       => To_Unbounded_String (Name),
+         Images     => (others => (others => Null_Unbounded_String)),
+         Num_Images => 0);
    begin
       if Conv.Msg_Count < Max_History then
          Conv.Msg_Count := Conv.Msg_Count + 1;
@@ -72,5 +77,187 @@ package body Agent.Context is
       end loop;
       return Total;
    end Token_Estimate;
+
+   --  Base64 encoding table
+   B64 : constant String :=
+     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+   function Encode_Base64 (Data : Ada.Streams.Stream_Element_Array)
+     return String
+   is
+      use Ada.Streams;
+      Result : String (1 .. ((Data'Length + 2) / 3) * 4);
+      Idx    : Positive := 1;
+      I      : Stream_Element_Offset := Data'First;
+      A, B, C : Stream_Element;
+   begin
+      while I <= Data'Last loop
+         A := Data (I);
+         B := (if I + 1 <= Data'Last then Data (I + 1) else 0);
+         C := (if I + 2 <= Data'Last then Data (I + 2) else 0);
+         Result (Idx)     := B64 (Integer (A / 4) + 1);
+         Result (Idx + 1) := B64 (Integer ((A mod 4) * 16 + B / 16) + 1);
+         if I + 1 <= Data'Last then
+            Result (Idx + 2) := B64 (Integer ((B mod 16) * 4 + C / 64) + 1);
+         else
+            Result (Idx + 2) := '=';
+         end if;
+         if I + 2 <= Data'Last then
+            Result (Idx + 3) := B64 (Integer (C mod 64) + 1);
+         else
+            Result (Idx + 3) := '=';
+         end if;
+         Idx := Idx + 4;
+         I   := I + 3;
+      end loop;
+      return Result (1 .. Idx - 1);
+   end Encode_Base64;
+
+   function Detect_Media_Type (Path : String) return String is
+      Len : constant Natural := Path'Length;
+   begin
+      if Len >= 4 then
+         declare
+            Ext : constant String := Path (Path'Last - 3 .. Path'Last);
+         begin
+            if Ext = ".jpg" or else Ext = ".JPG" then return "image/jpeg"; end if;
+            if Ext = ".png" or else Ext = ".PNG" then return "image/png"; end if;
+            if Ext = ".gif" or else Ext = ".GIF" then return "image/gif"; end if;
+         end;
+      end if;
+      if Len >= 5 then
+         declare
+            Ext5 : constant String := Path (Path'Last - 4 .. Path'Last);
+         begin
+            if Ext5 = ".jpeg" or else Ext5 = ".JPEG" then return "image/jpeg"; end if;
+            if Ext5 = ".webp" or else Ext5 = ".WEBP" then return "image/webp"; end if;
+         end;
+      end if;
+      return "image/png";  -- default
+   end Detect_Media_Type;
+
+   procedure Parse_Image_Markers
+     (Input    : String;
+      Text_Out : out Unbounded_String;
+      Images   : out Image_Array;
+      Num_Imgs : out Natural)
+   is
+      use Ada.Strings.Fixed;
+      Marker : constant String := "[IMAGE:";
+      Pos    : Natural;
+      Start  : Positive := Input'First;
+   begin
+      Text_Out := Null_Unbounded_String;
+      Images   := (others => (others => Null_Unbounded_String));
+      Num_Imgs := 0;
+
+      loop
+         Pos := Index (Input (Start .. Input'Last), Marker);
+         exit when Pos = 0 or else Num_Imgs >= Max_Images;
+
+         --  Append text before the marker.
+         if Pos > Start then
+            Append (Text_Out, Input (Start .. Pos - 1));
+         end if;
+
+         --  Find closing bracket.
+         declare
+            Path_Start : constant Positive := Pos + Marker'Length;
+            Close      : constant Natural :=
+              Index (Input (Path_Start .. Input'Last), "]");
+         begin
+            if Close = 0 then
+               --  No closing bracket; treat as literal text.
+               Append (Text_Out, Input (Pos .. Input'Last));
+               Start := Input'Last + 1;
+               exit;
+            end if;
+
+            declare
+               Ref : constant String := Input (Path_Start .. Close - 1);
+               Max_Image_Size : constant := 10_000_000;  -- 10 MB
+
+               function Is_Safe_Image_Path (P : String) return Boolean is
+                  use Ada.Strings.Fixed;
+               begin
+                  if Index (P, "..") > 0 then return False; end if;
+                  if P'Length > 0 and then P (P'First) = '/' then
+                     return False;
+                  end if;
+                  if P'Length > 0 and then P (P'First) = '~' then
+                     return False;
+                  end if;
+                  return True;
+               end Is_Safe_Image_Path;
+            begin
+               Num_Imgs := Num_Imgs + 1;
+               Set_Unbounded_String (Images (Num_Imgs).Source_URL, Ref);
+               Set_Unbounded_String
+                 (Images (Num_Imgs).Media_Type, Detect_Media_Type (Ref));
+
+               --  Check if it's a URL or file path.
+               if (Ref'Length >= 7
+                     and then Ref (Ref'First .. Ref'First + 6) = "http://")
+                 or else (Ref'Length >= 8
+                     and then Ref (Ref'First .. Ref'First + 7) = "https://")
+               then
+                  --  URL: pass through; provider will handle it.
+                  Set_Unbounded_String (Images (Num_Imgs).Data, "");
+               elsif Is_Safe_Image_Path (Ref)
+                 and then Ada.Directories.Exists (Ref)
+               then
+                  --  Local file: read and base64-encode with size guard.
+                  declare
+                     use Ada.Streams.Stream_IO;
+                     use Ada.Streams;
+                     File_Size_Val : constant Ada.Directories.File_Size :=
+                       Ada.Directories.Size (Ref);
+                  begin
+                     if File_Size_Val > Max_Image_Size then
+                        Num_Imgs := Num_Imgs - 1;  -- too large
+                     else
+                        declare
+                           Size   : constant Natural :=
+                             Natural (File_Size_Val);
+                           File   : File_Type;
+                           Buffer : Stream_Element_Array
+                             (1 .. Stream_Element_Offset (Size));
+                           Last   : Stream_Element_Offset;
+                        begin
+                           Open (File, In_File, Ref);
+                           begin
+                              Read (Stream (File).all, Buffer, Last);
+                              Close (File);
+                           exception
+                              when others =>
+                                 Close (File);
+                                 Num_Imgs := Num_Imgs - 1;
+                                 goto Continue_Image;
+                           end;
+                           Set_Unbounded_String
+                             (Images (Num_Imgs).Data,
+                              Encode_Base64 (Buffer (1 .. Last)));
+                        end;
+                     end if;
+                  exception
+                     when others =>
+                        Num_Imgs := Num_Imgs - 1;
+                  end;
+               else
+                  --  Unsafe path or not a file — drop.
+                  Num_Imgs := Num_Imgs - 1;
+               end if;
+            end;
+
+            <<Continue_Image>>
+            Start := Close + 1;
+         end;
+      end loop;
+
+      --  Append remaining text.
+      if Start <= Input'Last then
+         Append (Text_Out, Input (Start .. Input'Last));
+      end if;
+   end Parse_Image_Markers;
 
 end Agent.Context;

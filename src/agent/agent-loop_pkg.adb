@@ -91,9 +91,22 @@ package body Agent.Loop_Pkg is
 
       Ensure_System_Prompt (Conv, Cfg);
 
-      --  Append user message.
-      Agent.Context.Append_Message
-        (Conv, Agent.Context.User, User_Input);
+      --  Parse [IMAGE:path] markers from user input.
+      declare
+         Text_Part : Unbounded_String;
+         Imgs      : Agent.Context.Image_Array;
+         Num_Imgs  : Natural;
+      begin
+         Agent.Context.Parse_Image_Markers
+           (User_Input, Text_Part, Imgs, Num_Imgs);
+         Agent.Context.Append_Message
+           (Conv, Agent.Context.User, To_String (Text_Part));
+         --  Attach parsed images to the just-appended message.
+         if Num_Imgs > 0 and Conv.Msg_Count > 0 then
+            Conv.Messages (Conv.Msg_Count).Images := Imgs;
+            Conv.Messages (Conv.Msg_Count).Num_Images := Num_Imgs;
+         end if;
+      end;
 
       --  Persist to memory.
       if Memory.SQLite.Is_Open (Mem) then
@@ -326,8 +339,21 @@ package body Agent.Loop_Pkg is
 
       Ensure_System_Prompt (Conv, Cfg);
 
-      Agent.Context.Append_Message
-        (Conv, Agent.Context.User, User_Input);
+      --  Parse [IMAGE:path] markers from user input.
+      declare
+         Text_Part : Unbounded_String;
+         Imgs      : Agent.Context.Image_Array;
+         Num_Imgs  : Natural;
+      begin
+         Agent.Context.Parse_Image_Markers
+           (User_Input, Text_Part, Imgs, Num_Imgs);
+         Agent.Context.Append_Message
+           (Conv, Agent.Context.User, To_String (Text_Part));
+         if Num_Imgs > 0 and Conv.Msg_Count > 0 then
+            Conv.Messages (Conv.Msg_Count).Images := Imgs;
+            Conv.Messages (Conv.Msg_Count).Num_Images := Num_Imgs;
+         end if;
+      end;
 
       if Memory.SQLite.Is_Open (Mem) then
          Memory.SQLite.Save_Message
