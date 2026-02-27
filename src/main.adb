@@ -21,6 +21,8 @@ with Channels.Telegram;
 with Channels.Signal;
 with Channels.WhatsApp;
 with Channels.Discord;
+with Channels.Slack;
+with Channels.Email;
 with HTTP.Server;
 
 procedure Main is
@@ -349,6 +351,8 @@ begin
             Has_Signal    : Boolean := False;
             Has_WhatsApp  : Boolean := False;
             Has_Discord   : Boolean := False;
+            Has_Slack     : Boolean := False;
+            Has_Email     : Boolean := False;
          begin
             for I in 1 .. CR.Config.Num_Channels loop
                case CR.Config.Channels (I).Kind is
@@ -363,6 +367,12 @@ begin
                        or else CR.Config.Channels (I).Enabled;
                   when Config.Schema.Discord =>
                      Has_Discord := Has_Discord
+                       or else CR.Config.Channels (I).Enabled;
+                  when Config.Schema.Slack =>
+                     Has_Slack := Has_Slack
+                       or else CR.Config.Channels (I).Enabled;
+                  when Config.Schema.Email =>
+                     Has_Email := Has_Email
                        or else CR.Config.Channels (I).Enabled;
                   when Config.Schema.CLI =>
                      null;
@@ -379,6 +389,10 @@ begin
                Channels.WhatsApp.Run_Polling (CR.Config, Mem);
             elsif Has_Discord then
                Channels.Discord.Run_Polling (CR.Config, Mem);
+            elsif Has_Slack then
+               Channels.Slack.Run_Polling (CR.Config, Mem);
+            elsif Has_Email then
+               Channels.Email.Run_Polling (CR.Config, Mem);
             else
                --  No channels: run HTTP server for webhook registration.
                HTTP.Server.Run (CR.Config, Mem);

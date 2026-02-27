@@ -1,4 +1,4 @@
-# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge
+# VeriClaw + WhatsApp Bridge + Discord Bridge + Slack Bridge + Email Bridge
 #
 # Quick start (headless pairing):
 #   1. cp config/whatsapp.example.json config/config.json  # fill in your API key
@@ -12,7 +12,11 @@
 # For Slack: set SLACK_BOT_TOKEN and SLACK_APP_TOKEN env vars and run:
 #   docker compose up slack-bridge vericlaw
 #
-# See docs/setup/whatsapp.md, docs/setup/discord.md, and docs/setup/slack.md for details.
+# For Email: set EMAIL_USER and EMAIL_PASS env vars and run:
+#   docker compose up email-bridge vericlaw
+#
+# See docs/setup/whatsapp.md, docs/setup/discord.md, docs/setup/slack.md,
+# and docs/setup/email.md for details.
 
 services:
   discord-bridge:
@@ -69,6 +73,27 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  email-bridge:
+    build:
+      context: ./email-bridge
+      dockerfile: Dockerfile
+    environment:
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
+      - IMAP_HOST=${IMAP_HOST:-imap.gmail.com}
+      - IMAP_PORT=${IMAP_PORT:-993}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+    ports:
+      - "3003:3003"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   vericlaw:
     build:
