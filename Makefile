@@ -1,3 +1,4 @@
+# CI/CD: See .github/workflows/ci.yml, release.yml, build-matrix.yml
 PROJECT := vericlaw.gpr
 TOOLCHAIN_CHECK := ./scripts/check_toolchain.sh
 BOOTSTRAP := ./scripts/bootstrap_toolchain.sh
@@ -38,10 +39,13 @@ COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite coverage docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test gateway-integration-test
+EMBED_VERSION := ./scripts/embed_version.sh
+
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite coverage docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test gateway-integration-test version-info ci-image ci-image-push
 
 build:
 	$(TOOLCHAIN_CHECK)
+	$(EMBED_VERSION)
 	gprbuild -P $(PROJECT)
 
 prove:
@@ -50,10 +54,14 @@ prove:
 
 check:
 	$(TOOLCHAIN_CHECK)
+	$(EMBED_VERSION)
 	gprbuild -P $(PROJECT)
 	gnatprove -P $(PROJECT) --level=2
 	$(AUDIT_LOG_CHECK)
 	$(SERVICE_SUPERVISOR_CHECK)
+
+version-info:
+	$(EMBED_VERSION)
 
 small-build:
 	$(TOOLCHAIN_CHECK)
@@ -340,3 +348,9 @@ IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
 PUSH_IMAGE=false \
 LOAD_IMAGE=false \
 ./scripts/build_multiarch_image.sh
+
+ci-image:
+	docker build -f Dockerfile.ci -t ghcr.io/vericlaw/ci:$(shell gnat --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+\.\d+' || echo '14.2.1') .
+
+ci-image-push: ci-image
+	docker push ghcr.io/vericlaw/ci:$(shell gnat --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+\.\d+' || echo '14.2.1')

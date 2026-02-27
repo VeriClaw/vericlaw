@@ -1,0 +1,13 @@
+{
+  "total_vcs": 25,
+  "proved_vcs": 25,
+  "unproved_vcs": 0,
+  "timeouts": 0,
+  "errors": 0,
+  "flow_warnings": 0,
+  "units": {
+    "security-policy": {"proved": 11, "unproved": 0, "total": 11},
+    "gateway-auth": {"proved": 8, "unproved": 0, "total": 8},
+    "plugins-capabilities": {"proved": 6, "unproved": 0, "total": 6}
+  }
+}
