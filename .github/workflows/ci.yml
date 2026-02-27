@@ -476,21 +476,18 @@ jobs:
   # ---------------------------------------------------------------------------
   warnings-gate:
     runs-on: ubuntu-latest
-    container:
-      image: alire/gnat:community-latest
     continue-on-error: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: alire-project/setup-alire@v4
       - name: Warnings-as-errors build (-gnatwe)
+        env:
+          ALIRE_VERSION: "2.0.2"
+          GNAT_VERSION: gnat_native=14.2.1
         run: |
-          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
-          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
-          export PATH=/opt/gnat/bin:$PATH
-          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
-          gprbuild -P vericlaw.gpr -p \
-            -cargs -gnat2022 -gnata -gnatVa -gnatwa -gnatyy -gnato -gnatwe 2>&1 \
-            | tee warnings-report.txt
+          alr toolchain --select ${{ env.GNAT_VERSION }}
+          alr build -- -XBUILD_PROFILE=dev 2>&1 | tee warnings-report.txt
           echo "--- Warning count ---"
           grep -c ": warning:" warnings-report.txt || echo "0 warnings"
       - name: Upload warnings report
