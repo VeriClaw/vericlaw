@@ -1,4 +1,3 @@
-with Ada.Text_IO;
 with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
@@ -197,7 +196,7 @@ package body Channels.WhatsApp is
                                       (BU, Default_Session,
                                        Chat_ID, To_String (Reply.Content))
                                     then
-                                       Ada.Text_IO.Put_Line
+                                       Logging.Error
                                          ("WhatsApp: send failed to "
                                           & Chat_ID);
                                     end if;

@@ -1,4 +1,4 @@
-with Ada.Text_IO;
+with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
@@ -44,11 +44,11 @@ package body Channels.Discord is
       Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
    begin
       if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
-         Ada.Text_IO.Put_Line ("Discord: not configured, skipping.");
+         Logging.Info ("Discord: not configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line ("Discord: polling " & Bridge_URL & " ...");
+      Logging.Info ("Discord: polling " & Bridge_URL & " ...");
 
       loop
          declare
@@ -143,7 +143,7 @@ package body Channels.Discord is
                                       (Bridge_URL, Channel_ID,
                                        To_String (Reply.Content), Msg_ID)
                                     then
-                                       Ada.Text_IO.Put_Line
+                                       Logging.Error
                                          ("Discord: send failed to channel "
                                           & Channel_ID);
                                     end if;

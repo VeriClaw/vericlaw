@@ -1,9 +1,25 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Directories;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
+with Interfaces.C;
+with Interfaces.C.Strings;
 
 pragma SPARK_Mode (Off);
 package body Tools.File_IO is
+
+   --  Thin C binding to vericlaw_symlink.c for portable symlink detection.
+   function vericlaw_is_symlink
+     (Path : Interfaces.C.Strings.chars_ptr) return Interfaces.C.int;
+   pragma Import (C, vericlaw_is_symlink, "vericlaw_is_symlink");
+
+   function Is_Symlink (Path : String) return Boolean is
+      C_Path : Interfaces.C.Strings.chars_ptr :=
+        Interfaces.C.Strings.New_String (Path);
+      Result : constant Interfaces.C.int := vericlaw_is_symlink (C_Path);
+   begin
+      Interfaces.C.Strings.Free (C_Path);
+      return Result /= 0;
+   end Is_Symlink;
 
    function Contains_Null (S : String) return Boolean is
    begin
@@ -43,6 +59,9 @@ package body Tools.File_IO is
         or else Norm_Path (1 .. Norm_WS'Length) /= Norm_WS
       then
          return "Path is outside workspace: " & Path;
+      end if;
+      if Is_Symlink (Path) then
+         return "Symlink not allowed: " & Path;
       end if;
       return "";
    end Validate_Path;

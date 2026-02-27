@@ -253,6 +253,11 @@ package body Memory.SQLite is
       Exec_DDL (DB, DDL_Facts_FTS);
       Exec_DDL (DB, DDL_Cron);
 
+      --  Index to make retention DELETE and session lookups O(log n).
+      Exec_DDL (DB,
+        "CREATE INDEX IF NOT EXISTS idx_messages_session_ts"
+        & " ON messages(session_id, created_at)");
+
       --  Prune old sessions on startup if retention is configured.
       if Retention_Days > 0 then
          declare

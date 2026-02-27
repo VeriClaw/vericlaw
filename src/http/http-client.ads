@@ -29,6 +29,11 @@ package HTTP.Client is
    function Is_Success (R : Response) return Boolean is
      (R.Status_Code in 200 .. 299 and then Length (R.Error) = 0);
 
+   --  SSRF protection: returns False if URL targets loopback, link-local,
+   --  private RFC-1918 ranges, or cloud metadata endpoints.
+   --  Call this before any outbound HTTP request to untrusted URLs.
+   function Is_Safe_URL (URL : String) return Boolean;
+
    --  Perform an HTTP request.
    --  TLS verification is always enabled (no way to disable via this API).
    --  Timeout_Ms: 0 means use default (30 000 ms).

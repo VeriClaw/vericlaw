@@ -1,4 +1,4 @@
-with Ada.Text_IO;
+with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
@@ -44,11 +44,11 @@ package body Channels.Email is
       Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
    begin
       if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
-         Ada.Text_IO.Put_Line ("Email: not configured, skipping.");
+         Logging.Info ("Email: not configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line ("Email: polling " & Bridge_URL & " ...");
+      Logging.Info ("Email: polling " & Bridge_URL & " ...");
 
       loop
          declare
@@ -138,7 +138,7 @@ package body Channels.Email is
                                        "Re: " & Subject,
                                        To_String (Reply.Content))
                                     then
-                                       Ada.Text_IO.Put_Line
+                                       Logging.Error
                                          ("Email: send failed to " & From);
                                     end if;
                                  end if;

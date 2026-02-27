@@ -1,4 +1,4 @@
-with Ada.Text_IO;
+with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
@@ -46,11 +46,11 @@ package body Channels.Matrix is
         Chan_Cfg.Bridge_URL;
    begin
       if not Chan_Cfg.Enabled or else Length (Bridge_URL) = 0 then
-         Ada.Text_IO.Put_Line ("Matrix: not configured, skipping.");
+         Logging.Info ("Matrix: not configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line
+      Logging.Info
         ("Matrix: polling " & To_String (Bridge_URL) & " ...");
 
       loop
@@ -64,7 +64,7 @@ package body Channels.Matrix is
                   Current_Cfg := New_CR.Config;
                   Chan_Cfg    := Find_Channel (Current_Cfg, Matrix);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
-                  Ada.Text_IO.Put_Line ("Config reloaded.");
+                  Logging.Info ("Config reloaded.");
                end if;
             end;
             Config.Reload.Acknowledge;
@@ -159,7 +159,7 @@ package body Channels.Matrix is
                                       (BU, Room,
                                        To_String (Reply.Content))
                                     then
-                                       Ada.Text_IO.Put_Line
+                                       Logging.Error
                                          ("Matrix: send failed to " & Room);
                                     end if;
                                  end if;

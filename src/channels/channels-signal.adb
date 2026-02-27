@@ -1,4 +1,4 @@
-with Ada.Text_IO;
+with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
@@ -148,11 +148,11 @@ package body Channels.Signal is
       Our_Number  : Unbounded_String := Chan_Cfg.Token;
    begin
       if not Chan_Cfg.Enabled or else Length (Bridge_URL) = 0 then
-         Ada.Text_IO.Put_Line ("Signal: not configured, skipping.");
+         Logging.Info ("Signal: not configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line
+      Logging.Info
         ("Signal: polling " & To_String (Bridge_URL) & " ...");
 
       loop
@@ -167,7 +167,7 @@ package body Channels.Signal is
                   Chan_Cfg    := Find_Channel (Current_Cfg, Signal);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
                   Our_Number  := Chan_Cfg.Token;
-                  Ada.Text_IO.Put_Line ("Config reloaded.");
+                  Logging.Info ("Config reloaded.");
                end if;
             end;
             Config.Reload.Acknowledge;
@@ -210,7 +210,7 @@ package body Channels.Signal is
                               if not Send_Message
                                 (BU, Num, Source, Reply_Text)
                               then
-                                 Ada.Text_IO.Put_Line
+                                 Logging.Error
                                    ("Signal: send failed to " & Source);
                               end if;
                            end if;

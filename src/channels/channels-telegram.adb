@@ -1,4 +1,3 @@
-with Ada.Text_IO;
 with Logging;
 with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 with HTTP.Client;
@@ -303,7 +302,7 @@ package body Channels.Telegram is
                                        if not Send_Message
                                          (Token, Chat_ID, Reply_Text)
                                        then
-                                          Ada.Text_IO.Put_Line
+                                          Logging.Error
                                             ("Telegram: send failed for "
                                              & Chat_ID);
                                        end if;

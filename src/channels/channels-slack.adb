@@ -1,4 +1,4 @@
-with Ada.Text_IO;
+with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
@@ -44,11 +44,11 @@ package body Channels.Slack is
       Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
    begin
       if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
-         Ada.Text_IO.Put_Line ("Slack: not configured, skipping.");
+         Logging.Info ("Slack: not configured, skipping.");
          return;
       end if;
 
-      Ada.Text_IO.Put_Line ("Slack: polling " & Bridge_URL & " ...");
+      Logging.Info ("Slack: polling " & Bridge_URL & " ...");
 
       loop
          declare
@@ -139,7 +139,7 @@ package body Channels.Slack is
                                       (Bridge_URL, Chan_ID,
                                        To_String (Reply.Content), Thread_TS)
                                     then
-                                       Ada.Text_IO.Put_Line
+                                       Logging.Error
                                          ("Slack: send failed to "
                                           & Chan_ID);
                                     end if;

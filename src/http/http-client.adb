@@ -193,6 +193,99 @@ package body HTTP.Client is
    end Write_CB_Streaming;
 
    --  -----------------------------------------------------------------------
+   --  SSRF protection
+   --  -----------------------------------------------------------------------
+
+   function Is_Safe_URL (URL : String) return Boolean is
+      L : constant String := URL;
+
+      function Has_Prefix (S, Prefix : String) return Boolean is
+        (S'Length >= Prefix'Length
+         and then S (S'First .. S'First + Prefix'Length - 1) = Prefix);
+
+      --  Extract host from http(s)://host/...
+      function Extract_Host return String is
+         Start : Natural := 0;
+      begin
+         if Has_Prefix (L, "http://") then
+            Start := L'First + 7;
+         elsif Has_Prefix (L, "https://") then
+            Start := L'First + 8;
+         else
+            return "";
+         end if;
+         --  Host ends at '/', ':', or end of string.
+         for I in Start .. L'Last loop
+            if L (I) = '/' or else L (I) = ':' then
+               return L (Start .. I - 1);
+            end if;
+         end loop;
+         return L (Start .. L'Last);
+      end Extract_Host;
+
+      Host : constant String := Extract_Host;
+
+      function Starts_With (S, Prefix : String) return Boolean is
+        (S'Length >= Prefix'Length
+         and then S (S'First .. S'First + Prefix'Length - 1) = Prefix);
+
+   begin
+      --  Require http or https scheme.
+      if not (Has_Prefix (L, "http://") or else Has_Prefix (L, "https://")) then
+         return False;
+      end if;
+
+      --  Block loopback, localhost, link-local, private ranges.
+      if Host = "localhost"
+        or else Host = "::1"
+        or else Starts_With (Host, "127.")
+        or else Starts_With (Host, "169.254.")  --  link-local / cloud metadata
+        or else Starts_With (Host, "10.")        --  RFC-1918
+        or else Starts_With (Host, "192.168.")   --  RFC-1918
+        or else Starts_With (Host, "0.")         --  this-network
+        or else Starts_With (Host, "[::1]")      --  IPv6 loopback
+        or else Starts_With (Host, "[fe80:")     --  IPv6 link-local
+        or else Starts_With (Host, "[fc") or else Starts_With (Host, "[fd")  --  ULA
+      then
+         return False;
+      end if;
+
+      --  Block 172.16.0.0/12 (172.16.x.x – 172.31.x.x).
+      if Starts_With (Host, "172.") and then Host'Length >= 7 then
+         declare
+            Second_Octet : constant String :=
+              Host (Host'First + 4 .. Host'Last);
+            Dot_Pos : Natural := 0;
+         begin
+            for I in Second_Octet'Range loop
+               if Second_Octet (I) = '.' then
+                  Dot_Pos := I;
+                  exit;
+               end if;
+            end loop;
+            if Dot_Pos > Second_Octet'First then
+               declare
+                  Oct : Natural := 0;
+               begin
+                  for I in Second_Octet'First .. Dot_Pos - 1 loop
+                     if Second_Octet (I) in '0' .. '9' then
+                        Oct := Oct * 10
+                          + (Character'Pos (Second_Octet (I))
+                             - Character'Pos ('0'));
+                     end if;
+                  end loop;
+                  if Oct in 16 .. 31 then
+                     return False;
+                  end if;
+               end;
+            end if;
+         end;
+      end if;
+
+      return True;
+   end Is_Safe_URL;
+
+   --  -----------------------------------------------------------------------
    --  Core implementation
    --  -----------------------------------------------------------------------
 
@@ -215,6 +308,14 @@ package body HTTP.Client is
       Body_Buf    : Unbounded_String;
       Result      : Response;
    begin
+      --  SSRF guard: reject private/loopback URLs before any libcurl call.
+      if not Is_Safe_URL (URL) then
+         Set_Unbounded_String (Result.Error,
+           "SSRF blocked: URL targets a private or reserved address");
+         Free (C_URL);
+         return Result;
+      end if;
+
       if Handle = Null_CURL then
          Set_Unbounded_String (Result.Error, "curl_easy_init failed");
          Free (C_URL);
@@ -375,6 +476,15 @@ package body HTTP.Client is
 
       Streaming_Proc := On_Chunk;
       Set_Unbounded_String (Streaming_Buffer, "");
+
+      --  SSRF guard.
+      if not Is_Safe_URL (URL) then
+         Set_Unbounded_String (Result.Error,
+           "SSRF blocked: URL targets a private or reserved address");
+         Free (C_Body);
+         Free (C_URL);
+         return Result;
+      end if;
 
       if Handle = Null_CURL then
          Set_Unbounded_String (Result.Error, "curl_easy_init failed");
