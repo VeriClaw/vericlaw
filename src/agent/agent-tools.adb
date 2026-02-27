@@ -2,6 +2,9 @@ with Tools.Shell;
 with Tools.File_IO;
 with Tools.Brave_Search;
 with Tools.MCP;
+with Tools.Cron;
+with Tools.Spawn;
+with Memory.SQLite;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;
 
@@ -12,6 +15,8 @@ package body Agent.Tools is
    package File_IO_Pkg renames Standard.Tools.File_IO;
    package Search_Pkg  renames Standard.Tools.Brave_Search;
    package MCP_Pkg     renames Standard.Tools.MCP;
+   package Cron_Pkg    renames Standard.Tools.Cron;
+   package Spawn_Pkg   renames Standard.Tools.Spawn;
 
    --  JSON Schema strings for each tool (passed to LLM providers).
    Shell_Params : constant String :=
@@ -60,6 +65,49 @@ package body Agent.Tools is
      & """num_results"":{""type"":""integer"",""description"":""Number of results (1-10, default 5)""}"
      & "},"
      & """required"":[""query""]"
+     & "}";
+
+   Cron_Add_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """name"":{""type"":""string"",""description"":""Unique job name""},"
+     & """schedule"":{""type"":""string"","
+     &   """description"":""Interval: 5m, 1h, 24h, 7d""},"
+     & """prompt"":{""type"":""string"","
+     &   """description"":""Task prompt to run on schedule""},"
+     & """session_id"":{""type"":""string"","
+     &   """description"":""Memory session ID (default: cron)""}"
+     & "},"
+     & """required"":[""name"",""schedule"",""prompt""]"
+     & "}";
+
+   Cron_Remove_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """name"":{""type"":""string"",""description"":""Job name to remove""}"
+     & "},"
+     & """required"":[""name""]"
+     & "}";
+
+   Cron_List_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{},"
+     & """required"":[]"
+     & "}";
+
+   Spawn_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{"
+     & """prompt"":{""type"":""string"","
+     &   """description"":""Task for the sub-agent""},"
+     & """model"":{""type"":""string"","
+     &   """description"":""Optional: model override""}"
+     & "},"
+     & """required"":[""prompt""]"
      & "}";
 
    function Make_Schema (N, D, P : String) return Tool_Schema is
@@ -113,12 +161,28 @@ package body Agent.Tools is
             MCP_Pkg.Append_Schemas (MCP_Tools, MCP_Count, Schemas, Num);
          end;
       end if;
+      --  cron tools
+      Num := Num + 1;
+      Schemas (Num) := Make_Schema
+        ("cron_add", "Schedule a recurring AI task", Cron_Add_Params);
+      Num := Num + 1;
+      Schemas (Num) := Make_Schema
+        ("cron_list", "List all scheduled cron jobs", Cron_List_Params);
+      Num := Num + 1;
+      Schemas (Num) := Make_Schema
+        ("cron_remove", "Remove a scheduled cron job", Cron_Remove_Params);
+      --  spawn
+      Num := Num + 1;
+      Schemas (Num) := Make_Schema
+        ("spawn", "Spawn a sub-agent to research or process independently",
+         Spawn_Params);
    end Build_Schemas;
 
    function Dispatch
      (Name      : String;
       Args_JSON : String;
-      Cfg       : Tool_Config;
+      Cfg       : Agent_Config;
+      Mem       : Memory.SQLite.Memory_Handle;
       Workspace : String) return Tool_Result
    is
       PR     : constant Parse_Result := Parse (Args_JSON);
@@ -132,7 +196,7 @@ package body Agent.Tools is
 
       if Name = "shell" then
          Metrics.Increment ("tool_calls_total", "shell");
-         if not Cfg.Shell_Enabled then
+         if not Cfg.Tools.Shell_Enabled then
             Set_Unbounded_String (Result.Error, "Shell tool is not enabled");
             return Result;
          end if;
@@ -161,7 +225,7 @@ package body Agent.Tools is
 
       elsif Name = "file_read" then
          Metrics.Increment ("tool_calls_total", "file_read");
-         if not Cfg.File_Enabled then
+         if not Cfg.Tools.File_Enabled then
             Set_Unbounded_String (Result.Error, "File tool is not enabled");
             return Result;
          end if;
@@ -181,7 +245,7 @@ package body Agent.Tools is
 
       elsif Name = "file_write" then
          Metrics.Increment ("tool_calls_total", "file_write");
-         if not Cfg.File_Enabled then
+         if not Cfg.Tools.File_Enabled then
             Set_Unbounded_String (Result.Error, "File tool is not enabled");
             return Result;
          end if;
@@ -202,7 +266,7 @@ package body Agent.Tools is
 
       elsif Name = "file_list" then
          Metrics.Increment ("tool_calls_total", "file_list");
-         if not Cfg.File_Enabled then
+         if not Cfg.Tools.File_Enabled then
             Set_Unbounded_String (Result.Error, "File tool is not enabled");
             return Result;
          end if;
@@ -222,7 +286,7 @@ package body Agent.Tools is
 
       elsif Name = "brave_search" then
          Metrics.Increment ("tool_calls_total", "brave_search");
-         if not Cfg.Brave_Search_Enabled then
+         if not Cfg.Tools.Brave_Search_Enabled then
             Set_Unbounded_String
               (Result.Error, "Brave Search tool is not enabled");
             return Result;
@@ -234,7 +298,7 @@ package body Agent.Tools is
             SR    : constant Search_Pkg.Brave_Result :=
               Search_Pkg.Search
                 (Query       => Query,
-                 API_Key     => To_String (Cfg.Brave_API_Key),
+                 API_Key     => To_String (Cfg.Tools.Brave_API_Key),
                  Num_Results => (if NR > 0 then NR else 5));
          begin
             if SR.Success then
@@ -247,19 +311,75 @@ package body Agent.Tools is
             end if;
          end;
 
+      elsif Name = "cron_add" then
+         declare
+            CName : constant String := Get_String (PR.Root, "name");
+            CSch  : constant String := Get_String (PR.Root, "schedule");
+            CProm : constant String := Get_String (PR.Root, "prompt");
+            CSess : constant String :=
+              Get_String (PR.Root, "session_id", "cron");
+            CR    : constant Cron_Pkg.Cron_Result :=
+              Cron_Pkg.Cron_Add (Mem, CName, CSch, CProm, CSess);
+         begin
+            if CR.Success then
+               Result.Success := True;
+               Result.Output  := CR.Output;
+            else
+               Result.Error := CR.Error;
+            end if;
+         end;
+
+      elsif Name = "cron_list" then
+         declare
+            CR : constant Cron_Pkg.Cron_Result :=
+              Cron_Pkg.Cron_List (Mem);
+         begin
+            if CR.Success then
+               Result.Success := True;
+               Result.Output  := CR.Output;
+            else
+               Result.Error := CR.Error;
+            end if;
+         end;
+
+      elsif Name = "cron_remove" then
+         declare
+            CName : constant String := Get_String (PR.Root, "name");
+            CR    : constant Cron_Pkg.Cron_Result :=
+              Cron_Pkg.Cron_Remove (Mem, CName);
+         begin
+            if CR.Success then
+               Result.Success := True;
+               Result.Output  := CR.Output;
+            else
+               Result.Error := CR.Error;
+            end if;
+         end;
+
+      elsif Name = "spawn" then
+         declare
+            SProm  : constant String := Get_String (PR.Root, "prompt");
+            SModel : constant String := Get_String (PR.Root, "model");
+            SResp  : constant String :=
+              Spawn_Pkg.Run_Subagent (SProm, Cfg, SModel);
+         begin
+            Result.Success := True;
+            Set_Unbounded_String (Result.Output, SResp);
+         end;
+
       else
          --  Check for MCP tool (prefix "mcp__").
          if Name'Length > 5
            and then Name (Name'First .. Name'First + 4) = "mcp__"
          then
-            if Length (Cfg.MCP_Bridge_URL) = 0 then
+            if Length (Cfg.Tools.MCP_Bridge_URL) = 0 then
                Set_Unbounded_String
                  (Result.Error, "MCP bridge URL not configured");
             else
                declare
                   MCP_Result : constant String :=
                     MCP_Pkg.Execute
-                      (To_String (Cfg.MCP_Bridge_URL), Name, Args_JSON);
+                      (To_String (Cfg.Tools.MCP_Bridge_URL), Name, Args_JSON);
                begin
                   Result.Success := True;
                   Set_Unbounded_String (Result.Output, MCP_Result);

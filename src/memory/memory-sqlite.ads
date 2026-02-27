@@ -11,11 +11,13 @@ package Memory.SQLite is
    type Memory_Handle is limited private;
 
    --  Open (or create) the database at the given path.
+   --  Retention_Days: auto-prune messages older than N days on open (0 = never).
    --  Returns False and sets Error on failure.
    function Open
-     (Handle : out Memory_Handle;
-      Path   : String;
-      Error  : out Unbounded_String) return Boolean;
+     (Handle         : out Memory_Handle;
+      Path           : String;
+      Error          : out Unbounded_String;
+      Retention_Days : Natural := 30) return Boolean;
 
    procedure Close (Handle : in out Memory_Handle);
 
@@ -63,6 +65,51 @@ package Memory.SQLite is
      (Handle : Memory_Handle;
       Query  : String;
       Limit  : Positive := 5) return Search_Results;
+
+   --  -----------------------------------------------------------------------
+   --  Cron scheduler
+   --  -----------------------------------------------------------------------
+
+   type Cron_Job_Info is record
+      Name       : Unbounded_String;
+      Schedule   : Unbounded_String;
+      Prompt     : Unbounded_String;
+      Session_ID : Unbounded_String;
+      Last_Run   : Unbounded_String;
+      Next_Run   : Unbounded_String;
+   end record;
+
+   Max_Cron_Jobs : constant := 64;
+   type Cron_Job_Array is array (1 .. Max_Cron_Jobs) of Cron_Job_Info;
+
+   type Cron_List_Result is record
+      Jobs  : Cron_Job_Array;
+      Count : Natural := 0;
+   end record;
+
+   --  Insert or replace a cron job (UNIQUE on name).
+   procedure Cron_Insert
+     (Handle     : Memory_Handle;
+      Name       : String;
+      Schedule   : String;
+      Prompt     : String;
+      Session_ID : String;
+      Next_Run   : String);
+
+   --  Return all active (enabled=1) cron jobs.
+   function Cron_List_Jobs (Handle : Memory_Handle) return Cron_List_Result;
+
+   --  Delete a cron job by name.
+   procedure Cron_Delete (Handle : Memory_Handle; Name : String);
+
+   --  Return jobs whose next_run <= now and enabled = 1.
+   function Cron_Due_Jobs (Handle : Memory_Handle) return Cron_List_Result;
+
+   --  Record execution: set last_run=now and next_run to supplied value.
+   procedure Cron_Update_Run
+     (Handle   : Memory_Handle;
+      Name     : String;
+      Next_Run : String);
 
 private
 

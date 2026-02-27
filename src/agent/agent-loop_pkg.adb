@@ -186,7 +186,8 @@ package body Agent.Loop_Pkg is
                     Agent.Tools.Dispatch
                       (Name      => To_String (TC.Name),
                        Args_JSON => To_String (TC.Arguments),
-                       Cfg       => Cfg.Tools,
+                       Cfg       => Cfg,
+                       Mem       => Mem,
                        Workspace => Home_Workspace);
                   Output : constant String :=
                     (if TRes.Success

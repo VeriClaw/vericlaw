@@ -5,6 +5,7 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Providers.Interface_Pkg; use Providers.Interface_Pkg;
 with Config.Schema;            use Config.Schema;
+with Memory.SQLite;
 
 package Agent.Tools is
 
@@ -19,7 +20,8 @@ package Agent.Tools is
    function Dispatch
      (Name      : String;
       Args_JSON : String;
-      Cfg       : Tool_Config;
+      Cfg       : Agent_Config;
+      Mem       : Memory.SQLite.Memory_Handle;
       Workspace : String) return Tool_Result;
 
    --  Build the tool schema array to pass to providers.
