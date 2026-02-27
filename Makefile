@@ -281,3 +281,37 @@ docker-dev-integration-test: docker-dev-build
 	    echo "Reply: $$REPLY" && \
 	    test -n "$$REPLY" && echo "INTEGRATION TEST PASSED" \
 	  '
+
+## ---------------------------------------------------------------------------
+## Docker registry push targets
+## Usage: make docker-push REGISTRY=ghcr.io/yourorg VERSION=0.2.0
+## Requires: docker login <registry> beforehand
+## ---------------------------------------------------------------------------
+REGISTRY ?= ghcr.io/yourorg
+VERSION  ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
+
+docker-push: ## Build and push multi-arch image to registry
+@echo "=== Building and pushing vericlaw:$(VERSION) to $(REGISTRY) ==="
+IMAGE_NAME="$(REGISTRY)/vericlaw" \
+IMAGE_TAG="$(VERSION)" \
+IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
+PUSH_IMAGE=true \
+ATTEST_PROVENANCE=true \
+ATTEST_SBOM=true \
+./scripts/build_multiarch_image.sh
+@echo "Also tagging as latest..."
+docker buildx imagetools create \
+  -t "$(REGISTRY)/vericlaw:latest" \
+  "$(REGISTRY)/vericlaw:$(VERSION)" 2>/dev/null || \
+  docker tag "$(REGISTRY)/vericlaw:$(VERSION)" "$(REGISTRY)/vericlaw:latest" && \
+  docker push "$(REGISTRY)/vericlaw:latest"
+@echo "=== Pushed $(REGISTRY)/vericlaw:$(VERSION) and :latest ==="
+
+docker-push-dry-run: ## Verify multi-arch build without pushing
+@echo "=== Dry-run multi-arch build (no push) ==="
+IMAGE_NAME="$(REGISTRY)/vericlaw" \
+IMAGE_TAG="$(VERSION)" \
+IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
+PUSH_IMAGE=false \
+LOAD_IMAGE=false \
+./scripts/build_multiarch_image.sh

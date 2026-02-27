@@ -74,6 +74,58 @@ jobs:
           path: |
             tests/competitive_benchmark_report.json
 
+  # Warnings-as-errors gate: tracks progress toward zero-warning build.
+  # Currently continue-on-error: true (existing warnings pre-date -gnatwa).
+  # Once the codebase is warning-clean, set continue-on-error: false to
+  # make this a hard gate and enforce -gnatwe permanently.
+  warnings-gate:
+    runs-on: ubuntu-latest
+    container:
+      image: alire/gnat:community-latest
+    continue-on-error: true  # TODO: set false once warning-clean (prod-ci-gnatwe)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Warnings-as-errors build (-gnatwe)
+        run: |
+          apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev
+          ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          export PATH=/opt/gnat/bin:$PATH
+          export GPR_PROJECT_PATH=/opt/gnat/share/gpr
+          gprbuild -P vericlaw.gpr -p \
+            -cargs -gnat2022 -gnata -gnatVa -gnatwa -gnatyy -gnato -gnatwe 2>&1 \
+            | tee warnings-report.txt
+          echo "--- Warning count ---"
+          grep -c ": warning:" warnings-report.txt || echo "0 warnings"
+      - name: Upload warnings report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warnings-report
+          path: warnings-report.txt
+
+  # Supply chain attestation: generates SPDX SBOM + provenance JSON, then
+  # verifies them. Pure Python — runs without a GNAT container.
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate attestation artifacts (SBOM + provenance)
+        run: ./scripts/generate_attestation_artifacts.sh
+      - name: Verify supply chain artifacts
+        run: ./scripts/verify_supply_chain_artifacts.sh
+      - name: Upload supply chain artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supply-chain-artifacts
+          path: |
+            tests/sbom.spdx.json
+            tests/provenance_attestation.json
+            tests/supply_chain_attestation_report.json
+            tests/supply_chain_verification_report.json
+
   container-ci-matrix:
     runs-on: ubuntu-latest
     strategy:
