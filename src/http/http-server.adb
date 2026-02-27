@@ -61,6 +61,67 @@ package body HTTP.Server is
    end Bool_Image;
 
    --  -----------------------------------------------------------------------
+   --  Per-IP fixed-window rate limiter (thread-safe via protected object)
+   --  -----------------------------------------------------------------------
+
+   Window_Seconds : constant Duration := 60.0;
+   Max_Per_Window : constant Natural  := 120;
+
+   protected Rate_Limiter is
+      procedure Check (IP : String; Allowed : out Boolean);
+   private
+      type Rate_Entry is record
+         IP           : String (1 .. 45);  --  max IPv6 string length
+         IP_Len       : Natural := 0;
+         Count        : Natural := 0;
+         Window_Start : Ada.Calendar.Time;
+      end record;
+      Max_Entries : constant := 256;
+      Entries     : array (1 .. Max_Entries) of Rate_Entry;
+      Num_Entries : Natural := 0;
+   end Rate_Limiter;
+
+   protected body Rate_Limiter is
+      procedure Check (IP : String; Allowed : out Boolean) is
+         use type Ada.Calendar.Time;
+         Now       : constant Ada.Calendar.Time := Ada.Calendar.Clock;
+         IP_Padded : String (1 .. 45) := (others => ' ');
+         Len       : constant Natural :=
+           Natural'Min (IP'Length, 45);
+      begin
+         IP_Padded (1 .. Len) := IP (IP'First .. IP'First + Len - 1);
+
+         for I in 1 .. Num_Entries loop
+            if Entries (I).IP_Len = Len
+              and then Entries (I).IP (1 .. Len) = IP_Padded (1 .. Len)
+            then
+               if Now - Entries (I).Window_Start > Window_Seconds then
+                  Entries (I).Window_Start := Now;
+                  Entries (I).Count := 1;
+                  Allowed := True;
+               elsif Entries (I).Count < Max_Per_Window then
+                  Entries (I).Count := Entries (I).Count + 1;
+                  Allowed := True;
+               else
+                  Allowed := False;
+               end if;
+               return;
+            end if;
+         end loop;
+
+         --  New IP — add entry if space remains; allow either way.
+         if Num_Entries < Max_Entries then
+            Num_Entries := Num_Entries + 1;
+            Entries (Num_Entries).IP := IP_Padded;
+            Entries (Num_Entries).IP_Len := Len;
+            Entries (Num_Entries).Count := 1;
+            Entries (Num_Entries).Window_Start := Now;
+         end if;
+         Allowed := True;
+      end Check;
+   end Rate_Limiter;
+
+   --  -----------------------------------------------------------------------
    --  Request dispatcher
    --  -----------------------------------------------------------------------
 
@@ -79,6 +140,21 @@ package body HTTP.Server is
 
       function Raw_Dispatch return AWS.Response.Data is
       begin
+      --  Per-IP rate limiting (skip /health)
+      if URI /= "/health" then
+         declare
+            Allowed : Boolean;
+         begin
+            Rate_Limiter.Check (AWS.Status.IP_Addr (Request), Allowed);
+            if not Allowed then
+               return AWS.Response.Build
+                 ("application/json",
+                  "{""error"":""rate limit exceeded""}",
+                  AWS.Messages.S429);
+            end if;
+         end;
+      end if;
+
       --  Health check
       if URI = "/health" and then Method = "GET" then
          return AWS.Response.Build
@@ -437,7 +513,7 @@ package body HTTP.Server is
 
       AWS.Config.Set.Server_Host (AWS_Cfg, Host);
       AWS.Config.Set.Server_Port (AWS_Cfg, Port);
-      AWS.Config.Set.Max_Connection (AWS_Cfg, 64);
+      AWS.Config.Set.Max_Connection (AWS_Cfg, Cfg.Gateway.Max_Connections);
       AWS.Config.Set.Session (AWS_Cfg, False);
 
       Ada.Text_IO.Put_Line

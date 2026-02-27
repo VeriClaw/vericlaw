@@ -22,6 +22,7 @@ package Config.Schema is
 
    --  Gateway-level limits
    subtype Port_Number    is Positive range 1 .. 65_535;     -- TCP/UDP port
+   subtype Max_Conn_Limit is Positive range 1 .. 4_096;     -- AWS max connections
    subtype History_Limit  is Positive range 1 .. 10_000;     -- conversation turns kept
 
    --  Agent-level limits
@@ -41,8 +42,10 @@ package Config.Schema is
       Model       : Unbounded_String;
       Deployment  : Unbounded_String;              -- Azure: deployment name
       API_Version : Unbounded_String;              -- Azure: e.g. "2024-02-15-preview"
-      Max_Tokens  : Token_Count   := 4_096;
-      Timeout_Ms  : Timeout_Ms    := 60_000;
+      Max_Tokens          : Token_Count := 4_096;
+      Timeout_Ms          : Timeout_Ms  := 60_000;
+      Price_Per_1K_Input  : Float       := 0.0;
+      Price_Per_1K_Output : Float       := 0.0;
    end record;
 
    Max_Providers : constant := 8;
@@ -102,10 +105,11 @@ package Config.Schema is
    --  -----------------------------------------------------------------------
 
    type Gateway_Config is record
-      Bind_Host    : Unbounded_String;  -- default: "127.0.0.1"
-      Bind_Port    : Port_Number := 8787;
-      TLS_Cert     : Unbounded_String;
-      TLS_Key      : Unbounded_String;
+      Bind_Host       : Unbounded_String;  -- default: "127.0.0.1"
+      Bind_Port       : Port_Number := 8787;
+      Max_Connections : Max_Conn_Limit := 64;
+      TLS_Cert        : Unbounded_String;
+      TLS_Key         : Unbounded_String;
    end record;
 
    --  -----------------------------------------------------------------------

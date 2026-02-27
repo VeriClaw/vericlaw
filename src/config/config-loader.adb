@@ -254,6 +254,14 @@ package body Config.Loader is
                if P > 0 then
                   Result.Config.Gateway.Bind_Port := Positive (P);
                end if;
+               declare
+                  MC : constant Integer :=
+                    Get_Integer (G, "max_connections", 64);
+               begin
+                  if MC > 0 then
+                     Result.Config.Gateway.Max_Connections := Positive (MC);
+                  end if;
+               end;
                Set_Unbounded_String
                  (Result.Config.Gateway.TLS_Cert,
                   Get_String (G, "tls_cert"));
