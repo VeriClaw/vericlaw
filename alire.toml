@@ -1,4 +1,3 @@
-[general]
 name = "vericlaw"
 description = "Ada/SPARK AI agent runtime with formally verified security core"
 version = "1.0.0"
@@ -12,11 +11,9 @@ aws = "^24.0.0"
 
 [gpr-externals]
 BUILD_PROFILE = "dev"
+BUILD_TARGET = "native"
 BINDER_MODE = "portable"
 
 [gpr-set-externals]
 BUILD_PROFILE = "dev"
-
-[[actions]]
-type = "post-fetch"
-command = ["gprbuild", "-p", "-P", "vericlaw.gpr"]
+BUILD_TARGET = "native"
