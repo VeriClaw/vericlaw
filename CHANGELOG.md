@@ -4,7 +4,15 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 
 ## [Unreleased]
 ### Added
-- (next release items go here)
+- Browser/screenshot tool via Puppeteer bridge (port 3007): `browser_browse`, `browser_screenshot`
+- Vector RAG memory via sqlite-vec + OpenAI embeddings: `memory_search` tool
+- Structured JSON logging package (`Logging`) with thread-safe protected mutex
+- RAII `Memory_Handle` via `Ada.Finalization.Limited_Controlled`
+- Live gateway API: `/api/status`, `/api/channels`, `/api/metrics/summary`
+- Operator console wired to live gateway with Connect UI
+- Warnings-as-errors CI gate (`warnings-gate` job, currently `continue-on-error: true`)
+- Supply chain CI job (SBOM + provenance generation and verification)
+- `make docker-push` and `make docker-push-dry-run` targets
 
 ## [0.2.0] - 2026-02-27
 ### Added
