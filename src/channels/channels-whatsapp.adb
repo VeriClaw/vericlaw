@@ -128,16 +128,17 @@ package body Channels.WhatsApp is
                      begin
                         for I in 1 .. Array_Length (Root_Arr) loop
                         declare
-                           Item    : constant JSON_Value_Type :=
+                           Item        : constant JSON_Value_Type :=
                              Array_Item (Root_Arr, I);
-                           Msg_ID  : constant String :=
+                           Msg_ID      : constant String :=
                              Get_String (Item, "id");
-                           Chat_ID : constant String :=
+                           Chat_ID     : constant String :=
                              Get_String (Item, "from");
-                           Text    : constant String :=
+                           Text        : constant String :=
                              Get_String (Item, "body");
-                           From_Me : constant Boolean :=
+                           From_Me     : constant Boolean :=
                              Get_Boolean (Item, "fromMe", False);
+                           Is_Operator : Boolean := False;
                         begin
                            --  Skip already-processed messages (client-side dedup)
                            if Was_Seen (Msg_ID) then
@@ -148,8 +149,14 @@ package body Channels.WhatsApp is
                            if not From_Me and then Text'Length > 0 then
                               --  Allowlist check
                               declare
-                                 Allowlist : constant String :=
+                                 Allowlist   : constant String :=
                                    To_String (Chan_Cfg.Allowlist);
+                                 Comma       : constant Natural :=
+                                   Index (Allowlist, ",");
+                                 First_Entry : constant String :=
+                                   (if Comma > 0
+                                    then Allowlist (Allowlist'First .. Comma - 1)
+                                    else Allowlist);
                               begin
                                  if Allowlist'Length = 0 then
                                     goto Next_Item;
@@ -159,6 +166,9 @@ package body Channels.WhatsApp is
                                  then
                                     goto Next_Item;
                                  end if;
+                                 --  Operator = first allowlist entry; guest = open-access users.
+                                 Is_Operator :=
+                                   Allowlist /= "*" and then Chat_ID = First_Entry;
                               end;
 
                               --  Rate limit: enforce Max_RPS per session.
@@ -169,28 +179,51 @@ package body Channels.WhatsApp is
                               end if;
 
                               declare
+                                 Sess  : constant String :=
+                                   (if Is_Operator
+                                    then "wa:" & Chat_ID
+                                    else "guest-wa-" & Chat_ID);
                                  Conv  : Agent.Context.Conversation;
                                  Reply : Agent.Loop_Pkg.Agent_Reply;
                               begin
                                  Set_Unbounded_String
-                                   (Conv.Session_ID, "wa:" & Chat_ID);
+                                   (Conv.Session_ID, Sess);
                                  Set_Unbounded_String
                                    (Conv.Channel, "whatsapp:" & Chat_ID);
 
                                  if Memory.SQLite.Is_Open (Mem) then
                                     Memory.SQLite.Load_History
-                                      (Mem, "wa:" & Chat_ID,
+                                      (Mem, Sess,
                                        Current_Cfg.Memory.Max_History, Conv);
                                  end if;
 
                                  Metrics.Increment ("requests_total", "whatsapp");
 
-                                 Reply :=
-                                   Agent.Loop_Pkg.Process_Message
-                                     (User_Input => Text,
-                                      Conv       => Conv,
-                                      Cfg        => Current_Cfg,
-                                      Mem        => Mem);
+                                 if Is_Operator then
+                                    Reply :=
+                                      Agent.Loop_Pkg.Process_Message
+                                        (User_Input => Text,
+                                         Conv       => Conv,
+                                         Cfg        => Current_Cfg,
+                                         Mem        => Mem);
+                                 else
+                                    declare
+                                       Guest_Cfg : Agent_Config := Current_Cfg;
+                                    begin
+                                       Set_Unbounded_String
+                                         (Guest_Cfg.System_Prompt,
+                                          To_String (Current_Cfg.System_Prompt)
+                                          & " [Note: You are speaking with a"
+                                          & " guest user. Keep responses"
+                                          & " helpful but brief.]");
+                                       Reply :=
+                                         Agent.Loop_Pkg.Process_Message
+                                           (User_Input => Text,
+                                            Conv       => Conv,
+                                            Cfg        => Guest_Cfg,
+                                            Mem        => Mem);
+                                    end;
+                                 end if;
 
                                  if Reply.Success then
                                     if not Send_Message

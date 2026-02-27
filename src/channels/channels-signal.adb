@@ -64,25 +64,32 @@ package body Channels.Signal is
       end if;
 
       declare
-         Envelope : constant JSON_Value_Type :=
+         Envelope    : constant JSON_Value_Type :=
            Get_Object (PR.Root, "envelope");
-         Source   : constant String :=
+         Source      : constant String :=
            Get_String (Envelope, "source");
-         Data_Msg : constant JSON_Value_Type :=
+         Data_Msg    : constant JSON_Value_Type :=
            Get_Object (Envelope, "dataMessage");
-         Text     : constant String :=
+         Text        : constant String :=
            Get_String (Data_Msg, "message");
+         Is_Operator : Boolean := False;
       begin
          if Text'Length = 0 then return ""; end if;
 
          --  Allowlist check.
          declare
-            Allowlist : constant String := To_String (Chan.Allowlist);
+            Allowlist   : constant String := To_String (Chan.Allowlist);
+            Comma       : constant Natural := Index (Allowlist, ",");
+            First_Entry : constant String :=
+              (if Comma > 0 then Allowlist (Allowlist'First .. Comma - 1)
+               else Allowlist);
          begin
             if Allowlist'Length = 0 then return ""; end if;
             if Allowlist /= "*" and then Index (Allowlist, Source) = 0 then
                return "";
             end if;
+            --  Operator = first allowlist entry; guest = open-access users.
+            Is_Operator := Allowlist /= "*" and then Source = First_Entry;
          end;
 
          --  Rate limit: enforce Max_RPS per user session.
@@ -93,25 +100,44 @@ package body Channels.Signal is
          end if;
 
          declare
+            Sess  : constant String :=
+              (if Is_Operator then "signal:" & Source
+               else "guest-signal-" & Source);
             Conv  : Agent.Context.Conversation;
             Reply : Agent.Loop_Pkg.Agent_Reply;
          begin
-            Set_Unbounded_String (Conv.Session_ID, "signal:" & Source);
+            Set_Unbounded_String (Conv.Session_ID, Sess);
             Set_Unbounded_String (Conv.Channel, "signal:" & Source);
 
             if Memory.SQLite.Is_Open (Mem) then
                Memory.SQLite.Load_History
-                 (Mem, "signal:" & Source,
-                  Cfg.Memory.Max_History, Conv);
+                 (Mem, Sess, Cfg.Memory.Max_History, Conv);
             end if;
 
             Metrics.Increment ("requests_total", "signal");
 
-            Reply := Agent.Loop_Pkg.Process_Message
-              (User_Input => Text,
-               Conv       => Conv,
-               Cfg        => Cfg,
-               Mem        => Mem);
+            if Is_Operator then
+               Reply := Agent.Loop_Pkg.Process_Message
+                 (User_Input => Text,
+                  Conv       => Conv,
+                  Cfg        => Cfg,
+                  Mem        => Mem);
+            else
+               declare
+                  Guest_Cfg : Agent_Config := Cfg;
+               begin
+                  Set_Unbounded_String
+                    (Guest_Cfg.System_Prompt,
+                     To_String (Cfg.System_Prompt)
+                     & " [Note: You are speaking with a guest user."
+                     & " Keep responses helpful but brief.]");
+                  Reply := Agent.Loop_Pkg.Process_Message
+                    (User_Input => Text,
+                     Conv       => Conv,
+                     Cfg        => Guest_Cfg,
+                     Mem        => Mem);
+               end;
+            end if;
 
             if Reply.Success then
                return To_String (Reply.Content);

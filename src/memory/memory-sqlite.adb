@@ -8,6 +8,7 @@ with System;                   use System;
 with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
+with Ada.Strings.Fixed;
 
 package body Memory.SQLite is
 
@@ -119,6 +120,18 @@ package body Memory.SQLite is
      & " content='facts', content_rowid='rowid'"
      & ");";
 
+   DDL_Cron : constant String :=
+     "CREATE TABLE IF NOT EXISTS cron_jobs ("
+     & " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+     & " name TEXT NOT NULL UNIQUE,"
+     & " schedule TEXT NOT NULL,"
+     & " prompt TEXT NOT NULL,"
+     & " session_id TEXT NOT NULL,"
+     & " last_run TEXT,"
+     & " next_run TEXT NOT NULL,"
+     & " enabled INTEGER DEFAULT 1"
+     & ");";
+
    --  -----------------------------------------------------------------------
    --  Internal helpers
    --  -----------------------------------------------------------------------
@@ -199,9 +212,10 @@ package body Memory.SQLite is
    --  -----------------------------------------------------------------------
 
    function Open
-     (Handle : out Memory_Handle;
-      Path   : String;
-      Error  : out Unbounded_String) return Boolean
+     (Handle         : out Memory_Handle;
+      Path           : String;
+      Error          : out Unbounded_String;
+      Retention_Days : Natural := 30) return Boolean
    is
       CS : chars_ptr := New_String (Path);
       DB : System.Address;
@@ -216,11 +230,28 @@ package body Memory.SQLite is
          return False;
       end if;
 
+      --  Enable WAL mode for safe concurrent multi-writer access.
+      Exec_DDL (DB, "PRAGMA journal_mode=WAL");
+
       --  Create schema if needed.
       Exec_DDL (DB, DDL_Messages);
       Exec_DDL (DB, DDL_Messages_FTS);
       Exec_DDL (DB, DDL_Facts);
       Exec_DDL (DB, DDL_Facts_FTS);
+      Exec_DDL (DB, DDL_Cron);
+
+      --  Prune old sessions on startup if retention is configured.
+      if Retention_Days > 0 then
+         declare
+            Days_Str : constant String :=
+              Ada.Strings.Fixed.Trim
+                (Natural'Image (Retention_Days), Ada.Strings.Left);
+         begin
+            Exec_DDL (DB,
+              "DELETE FROM messages WHERE"
+              & " julianday('now') - julianday(created_at) > " & Days_Str);
+         end;
+      end if;
 
       Handle.DB   := DB;
       Handle.Open := True;
@@ -436,5 +467,125 @@ package body Memory.SQLite is
       pragma Unreferenced (Rc);
       return Tmp (1 .. Count);
    end Search;
+
+   procedure Cron_Insert
+     (Handle     : Memory_Handle;
+      Name       : String;
+      Schedule   : String;
+      Prompt     : String;
+      Session_ID : String;
+      Next_Run   : String)
+   is
+      SQL  : constant String :=
+        "INSERT INTO cron_jobs (name, schedule, prompt, session_id, next_run)"
+        & " VALUES (?, ?, ?, ?, ?)"
+        & " ON CONFLICT(name) DO UPDATE SET"
+        & "  schedule=excluded.schedule,"
+        & "  prompt=excluded.prompt,"
+        & "  session_id=excluded.session_id,"
+        & "  next_run=excluded.next_run,"
+        & "  enabled=1";
+      CS   : chars_ptr := New_String (SQL);
+      Stmt : System.Address;
+      Rc   : int;
+   begin
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then return; end if;
+      Bind_Text (Stmt, 1, Name);
+      Bind_Text (Stmt, 2, Schedule);
+      Bind_Text (Stmt, 3, Prompt);
+      Bind_Text (Stmt, 4, Session_ID);
+      Bind_Text (Stmt, 5, Next_Run);
+      Rc := c_step (Stmt);
+      Rc := c_finalize (Stmt);
+      pragma Unreferenced (Rc);
+   end Cron_Insert;
+
+   function Cron_Fill_Jobs
+     (Handle : Memory_Handle;
+      SQL    : String) return Cron_List_Result
+   is
+      CS    : chars_ptr := New_String (SQL);
+      Stmt  : System.Address;
+      Rc    : int;
+      Res   : Cron_List_Result;
+   begin
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then return Res; end if;
+      while c_step (Stmt) = SQLITE_ROW
+        and Res.Count < Max_Cron_Jobs
+      loop
+         Res.Count := Res.Count + 1;
+         Res.Jobs (Res.Count) :=
+           (Name       => To_Unbounded_String (Col_Text (Stmt, 0)),
+            Schedule   => To_Unbounded_String (Col_Text (Stmt, 1)),
+            Prompt     => To_Unbounded_String (Col_Text (Stmt, 2)),
+            Session_ID => To_Unbounded_String (Col_Text (Stmt, 3)),
+            Last_Run   => To_Unbounded_String (Col_Text (Stmt, 4)),
+            Next_Run   => To_Unbounded_String (Col_Text (Stmt, 5)));
+      end loop;
+      Rc := c_finalize (Stmt);
+      pragma Unreferenced (Rc);
+      return Res;
+   end Cron_Fill_Jobs;
+
+   function Cron_List_Jobs (Handle : Memory_Handle) return Cron_List_Result is
+   begin
+      return Cron_Fill_Jobs
+        (Handle,
+         "SELECT name, schedule, prompt, session_id,"
+         & " coalesce(last_run,''), next_run"
+         & " FROM cron_jobs WHERE enabled = 1 ORDER BY name");
+   end Cron_List_Jobs;
+
+   procedure Cron_Delete (Handle : Memory_Handle; Name : String) is
+      SQL  : constant String := "DELETE FROM cron_jobs WHERE name = ?";
+      CS   : chars_ptr := New_String (SQL);
+      Stmt : System.Address;
+      Rc   : int;
+   begin
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then return; end if;
+      Bind_Text (Stmt, 1, Name);
+      Rc := c_step (Stmt);
+      Rc := c_finalize (Stmt);
+      pragma Unreferenced (Rc);
+   end Cron_Delete;
+
+   function Cron_Due_Jobs (Handle : Memory_Handle) return Cron_List_Result is
+   begin
+      return Cron_Fill_Jobs
+        (Handle,
+         "SELECT name, schedule, prompt, session_id,"
+         & " coalesce(last_run,''), next_run"
+         & " FROM cron_jobs"
+         & " WHERE next_run <= datetime('now') AND enabled = 1"
+         & " ORDER BY next_run");
+   end Cron_Due_Jobs;
+
+   procedure Cron_Update_Run
+     (Handle   : Memory_Handle;
+      Name     : String;
+      Next_Run : String)
+   is
+      SQL  : constant String :=
+        "UPDATE cron_jobs SET last_run = datetime('now'), next_run = ?"
+        & " WHERE name = ?";
+      CS   : chars_ptr := New_String (SQL);
+      Stmt : System.Address;
+      Rc   : int;
+   begin
+      Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
+      Free (CS);
+      if Rc /= SQLITE_OK then return; end if;
+      Bind_Text (Stmt, 1, Next_Run);
+      Bind_Text (Stmt, 2, Name);
+      Rc := c_step (Stmt);
+      Rc := c_finalize (Stmt);
+      pragma Unreferenced (Rc);
+   end Cron_Update_Run;
 
 end Memory.SQLite;

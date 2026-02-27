@@ -3,6 +3,8 @@ with Ada.Command_Line;      use Ada.Command_Line;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Directories;
 with Ada.Environment_Variables;
+with Ada.Calendar;
+with Ada.Calendar.Formatting;
 
 --  Existing SPARK-verified security layer (unchanged)
 with Channels.Security;
@@ -26,6 +28,7 @@ with Channels.Email;
 with HTTP.Server;
 with Config.Reload;
 with Metrics;
+with Tools.Cron;
 
 procedure Main is
 
@@ -474,6 +477,49 @@ begin
                                   & To_String (T_Err));
                      end if;
                   end Email_Poller;
+
+                  --  Background task: fire due cron jobs every 60 seconds.
+                  task Cron_Heartbeat;
+                  task body Cron_Heartbeat is
+                     use Ada.Calendar;
+                     use Ada.Calendar.Formatting;
+                  begin
+                     loop
+                        delay 60.0;
+                        if Memory.SQLite.Is_Open (Mem) then
+                           declare
+                              Due : constant Memory.SQLite.Cron_List_Result :=
+                                Memory.SQLite.Cron_Due_Jobs (Mem);
+                           begin
+                              for I in 1 .. Due.Count loop
+                                 declare
+                                    Job   : constant Memory.SQLite.Cron_Job_Info :=
+                                      Due.Jobs (I);
+                                    Conv  : Agent.Context.Conversation;
+                                    Reply : Agent.Loop_Pkg.Agent_Reply;
+                                    Nxt   : constant String :=
+                                      Image (Clock
+                                        + Tools.Cron.Parse_Interval_Seconds
+                                            (To_String (Job.Schedule)));
+                                 begin
+                                    Set_Unbounded_String
+                                      (Conv.Session_ID, To_String (Job.Session_ID));
+                                    Reply := Agent.Loop_Pkg.Process_Message
+                                      (To_String (Job.Prompt), Conv,
+                                       CR.Config, Mem);
+                                    Memory.SQLite.Cron_Update_Run
+                                      (Mem, To_String (Job.Name), Nxt);
+                                    if Reply.Success then
+                                       Put_Line
+                                         ("[cron:" & To_String (Job.Name) & "] "
+                                          & To_String (Reply.Content));
+                                    end if;
+                                 end;
+                              end loop;
+                           end;
+                        end if;
+                     end loop;
+                  end Cron_Heartbeat;
                begin
                   null;
                   --  Block waits for all pollers to terminate.

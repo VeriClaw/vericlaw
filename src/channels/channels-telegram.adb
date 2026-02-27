@@ -76,13 +76,14 @@ package body Channels.Telegram is
       end if;
 
       declare
-         Msg      : constant JSON_Value_Type :=
+         Msg         : constant JSON_Value_Type :=
            Get_Object (PR.Root, "message");
-         Text     : constant String := Get_String (Msg, "text");
-         Chat     : constant JSON_Value_Type := Get_Object (Msg, "chat");
-         Chat_ID  : constant String := Get_String (Chat, "id");
-         From     : constant JSON_Value_Type := Get_Object (Msg, "from");
-         User_ID  : constant String := Get_String (From, "id");
+         Text        : constant String := Get_String (Msg, "text");
+         Chat        : constant JSON_Value_Type := Get_Object (Msg, "chat");
+         Chat_ID     : constant String := Get_String (Chat, "id");
+         From        : constant JSON_Value_Type := Get_Object (Msg, "from");
+         User_ID     : constant String := Get_String (From, "id");
+         Is_Operator : Boolean := False;
       begin
          if Text'Length = 0 then
             return "";
@@ -108,8 +109,12 @@ package body Channels.Telegram is
 
             --  Check if user_id is in allowlist (empty allowlist = deny all).
             declare
-               Allowlist : constant String :=
+               Allowlist   : constant String :=
                  To_String (Chan_Cfg.Allowlist);
+               Comma       : constant Natural := Index (Allowlist, ",");
+               First_Entry : constant String :=
+                 (if Comma > 0 then Allowlist (Allowlist'First .. Comma - 1)
+                  else Allowlist);
             begin
                if Allowlist'Length = 0 then
                   return "";  -- deny all when no allowlist configured
@@ -119,6 +124,8 @@ package body Channels.Telegram is
                then
                   return "";  -- user not in allowlist
                end if;
+               --  Operator = first allowlist entry; guest = open-access users.
+               Is_Operator := Allowlist /= "*" and then User_ID = First_Entry;
             end;
 
             --  Rate limit: enforce Max_RPS per user session.
@@ -131,27 +138,45 @@ package body Channels.Telegram is
 
          --  Process via agent loop.
          declare
+            Sess  : constant String :=
+              (if Is_Operator then "tg:" & Chat_ID
+               else "guest-tg-" & Chat_ID);
             Conv  : Agent.Context.Conversation;
             Reply : Agent.Loop_Pkg.Agent_Reply;
          begin
-            --  Use chat_id as session for conversation continuity.
-            Set_Unbounded_String (Conv.Session_ID, "tg:" & Chat_ID);
+            Set_Unbounded_String (Conv.Session_ID, Sess);
             Set_Unbounded_String (Conv.Channel, "telegram:" & Chat_ID);
 
-            --  Load existing history for this chat.
+            --  Load existing history for this session.
             if Memory.SQLite.Is_Open (Mem) then
                Memory.SQLite.Load_History
-                 (Mem, "tg:" & Chat_ID,
-                  Cfg.Memory.Max_History, Conv);
+                 (Mem, Sess, Cfg.Memory.Max_History, Conv);
             end if;
 
             Metrics.Increment ("requests_total", "telegram");
 
-            Reply := Agent.Loop_Pkg.Process_Message
-              (User_Input => Text,
-               Conv       => Conv,
-               Cfg        => Cfg,
-               Mem        => Mem);
+            if Is_Operator then
+               Reply := Agent.Loop_Pkg.Process_Message
+                 (User_Input => Text,
+                  Conv       => Conv,
+                  Cfg        => Cfg,
+                  Mem        => Mem);
+            else
+               declare
+                  Guest_Cfg : Agent_Config := Cfg;
+               begin
+                  Set_Unbounded_String
+                    (Guest_Cfg.System_Prompt,
+                     To_String (Cfg.System_Prompt)
+                     & " [Note: You are speaking with a guest user."
+                     & " Keep responses helpful but brief.]");
+                  Reply := Agent.Loop_Pkg.Process_Message
+                    (User_Input => Text,
+                     Conv       => Conv,
+                     Cfg        => Guest_Cfg,
+                     Mem        => Mem);
+               end;
+            end if;
 
             if Reply.Success then
                return To_String (Reply.Content);
