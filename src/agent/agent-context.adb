@@ -33,7 +33,7 @@ is
         (Role       => Role,
          Content    => To_Unbounded_String (Content),
          Name       => To_Unbounded_String (Name),
-         Images     => (others => (others => Null_Unbounded_String)),
+         Images     => [others => (others => Null_Unbounded_String)],
          Num_Images => 0);
    begin
       if Conv.Msg_Count < Max_History then
@@ -149,7 +149,7 @@ is
       Start  : Positive := Input'First;
    begin
       Text_Out := Null_Unbounded_String;
-      Images   := (others => (others => Null_Unbounded_String));
+      Images   := [others => (others => Null_Unbounded_String)];
       Num_Imgs := 0;
 
       loop
@@ -179,7 +179,6 @@ is
                Max_Image_Size : constant := 10_000_000;  -- 10 MB
 
                function Is_Safe_Image_Path (P : String) return Boolean is
-                  use Ada.Strings.Fixed;
                begin
                   if Index (P, "..") > 0 then return False; end if;
                   if P'Length > 0 and then P (P'First) = '/' then
@@ -211,6 +210,7 @@ is
                   declare
                      use Ada.Streams.Stream_IO;
                      use Ada.Streams;
+                     use type Ada.Directories.File_Size;
                      File_Size_Val : constant Ada.Directories.File_Size :=
                        Ada.Directories.Size (Ref);
                   begin
@@ -227,7 +227,7 @@ is
                         begin
                            Open (File, In_File, Ref);
                            begin
-                              Read (Stream (File).all, Buffer, Last);
+                              Read (File, Buffer, Last);
                               Close (File);
                            exception
                               when others =>

@@ -6,6 +6,7 @@ with Providers.OpenAI_Compatible;
 with Providers.Gemini;
 with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
+with Agent.Tools;
 with Metrics;
 with Metrics.Cost;
 with Observability.Tracing;
@@ -28,6 +29,7 @@ is
    function Make_Provider
      (Cfg : Provider_Config) return access Provider_Type'Class
    is
+      pragma Warnings (Off, "anonymous access");
    begin
       case Cfg.Kind is
          when OpenAI =>
@@ -86,7 +88,7 @@ is
       Round         : Natural := 0;
    begin
       --  Guard: need at least one provider.
-      if Cfg.Num_Providers < 1 then
+      if Cfg.Num_Providers = 0 then
          Set_Unbounded_String
            (Reply.Error, "No providers configured. Add a provider to config.");
          return Reply;
@@ -384,7 +386,7 @@ is
       Num_Tools    : Natural := 0;
       Round        : Natural := 0;
    begin
-      if Cfg.Num_Providers < 1 then
+      if Cfg.Num_Providers = 0 then
          Set_Unbounded_String
            (Reply.Error, "No providers configured. Add a provider to config.");
          return Reply;
