@@ -66,13 +66,26 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - Encrypted secrets — ChaCha20-Poly1305 at rest
 - Tamper-evident audit log + syslog forwarding
 - Workspace isolation + path traversal blocked at policy level
+- Security headers on all HTTP responses (X-Content-Type-Options, X-Frame-Options, Cache-Control)
+- Graceful SIGTERM/SIGINT shutdown with clean resource teardown
 
 **Operations**
 - Prometheus `/metrics` endpoint — per-channel, per-provider, per-tool counters
 - `SIGHUP` hot config reload — update tokens/allowlists without restart
 - `doctor` command — verify config, connectivity, and tool availability
+- `status` command — runtime status summary (supports `--json`)
+- `export` command — export conversation history (`--format md|json`)
+- `--json` flag — machine-readable JSON output for `agent` and `status` commands
+- `--no-color` flag — disable ANSI colors (auto-detected for pipes, respects `NO_COLOR`)
+- Plugin loader — discover and load plugins with SPARK-verified capability policy
 - Systemd / launchd / Windows service packaging
 - Multi-arch Docker images (amd64 / arm64 / arm/v7)
+
+**Multimodal input**
+- `[IMAGE:path]` markers in user messages — base64-encode local images for vision APIs
+- `[IMAGE:url]` markers — pass image URLs to OpenAI/Anthropic/Gemini vision endpoints
+- Automatic MIME type detection (JPEG, PNG, GIF, WebP)
+- Supports up to 4 images per message
 
 ## Project Structure
 
@@ -247,6 +260,8 @@ vericlaw channels login --channel whatsapp  # link WhatsApp (headless pairing co
 vericlaw chat                           # interactive CLI conversation (streaming output)
 vericlaw agent "Summarise today's news" # one-shot, prints reply
 vericlaw gateway                        # start all enabled channels concurrently
+vericlaw status                         # show runtime status summary
+vericlaw config validate                # validate config without starting agent
 vericlaw doctor                         # check config, health, connectivity
 vericlaw version                        # print version
 vericlaw help                           # show all commands
@@ -544,11 +559,17 @@ See [docs/benchmarks.md](docs/benchmarks.md) for the full comparison table again
 
 ### Structured logging
 
-All VeriClaw runtime components write JSON-line logs to **stderr**:
+All VeriClaw runtime components write JSON-line logs to **stderr** with configurable log levels and request ID correlation:
 
 ```
-{"ts":"2026-02-27T14:51:23Z","level":"info","msg":"Polling started","ctx":{"channel":"telegram"}}
+{"ts":"2026-02-27T14:51:23Z","level":"info","msg":"Polling started","req_id":"abc123","ctx":{"channel":"telegram"}}
 {"ts":"2026-02-27T14:51:24Z","level":"warning","msg":"Config reload failed","ctx":{}}
+```
+
+Set minimum log level via environment variable:
+```bash
+VERICLAW_LOG_LEVEL=debug vericlaw gateway   # show all logs including debug
+VERICLAW_LOG_LEVEL=warning vericlaw gateway  # only warnings and errors
 ```
 
 Pipe to any log aggregator:
@@ -571,9 +592,22 @@ curl http://127.0.0.1:8787/api/channels
 
 curl http://127.0.0.1:8787/api/metrics/summary
 # {"provider_requests_total":42,"provider_errors_total":0,"tool_calls_total":17}
+
+# Non-streaming chat completion
+curl -X POST http://127.0.0.1:8787/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Hello","session_id":"my-session"}'
+# {"content":"Hi! How can I help?"}
+
+# SSE streaming chat completion
+curl -X POST http://127.0.0.1:8787/api/chat/stream \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Hello","session_id":"my-session"}'
+# data: {"content":"Hi! How can I help?"}
+# data: [DONE]
 ```
 
-All three endpoints are restricted to `127.0.0.1` — `403 Forbidden` for any other source address.
+All API endpoints are restricted to `127.0.0.1` — `403 Forbidden` for any other source address.
 
 ### Operator console
 
@@ -608,6 +642,14 @@ make context-test        # conversation context add/evict/format
 make memory-test         # SQLite memory save/retrieve/FTS5 search (skipped if gnatcoll_sqlite unavailable)
 make tools-test          # tool schema builder + dispatch gating
 ```
+
+### Security regression fuzz suite
+
+```bash
+make fuzz-suite          # boundary-value + combinatorial fuzz of all SPARK policy modules
+```
+
+Covers: channel security, gateway auth, provider routing, credential scoping, runtime admission, audit retention, and config migration — exercising every boundary in the SPARK-verified decision functions.
 
 > **Note:** `memory-test` requires `gnatcoll_sqlite`. It is skipped gracefully in the Docker dev
 > image (`vericlaw-dev`) which uses GNAT Community 2021 without that component. The SQLite memory

@@ -59,7 +59,7 @@ Standard Ada code that implements the agent logic. It calls into Layer 1 for all
 
 ### Layer 3: Node.js Bridge Sidecars
 
-Seven lightweight Node.js services handle protocol-specific connectivity. Each sidecar exposes a local HTTP REST API consumed by the Ada runtime.
+Eight lightweight Node.js services handle protocol-specific connectivity. Each sidecar exposes a local HTTP REST API consumed by the Ada runtime.
 
 | Sidecar | Protocol | Default Port |
 |---|---|---|
@@ -70,6 +70,7 @@ Seven lightweight Node.js services handle protocol-specific connectivity. Each s
 | `mcp-bridge` | Model Context Protocol | 3004 |
 | `irc-bridge` | IRC | 3005 |
 | `matrix-bridge` | Matrix | 3006 |
+| `browser-bridge` | Puppeteer (page fetch, screenshot) | 3007 |
 
 ---
 
@@ -115,7 +116,9 @@ User input
 
 ## Concurrency Model
 
-- **Gateway mode** spawns one Ada task per active channel. Tasks communicate via protected objects.
+- **Gateway mode** spawns one Ada task per active channel. Tasks communicate via protected objects. The gateway HTTP server also exposes:
+  - `POST /api/chat` — non-streaming chat (localhost-only, JSON request/response)
+  - `POST /api/chat/stream` — SSE streaming chat (localhost-only, server-sent events)
 - **Parallel tool execution**: multiple tool calls from a single LLM response run concurrently via an Ada task pool in `agent-loop_pkg`.
 - **SQLite WAL mode** allows concurrent reads from multiple channel tasks with a single writer at a time.
 - All Ada tasks share the same security core via re-entrant SPARK packages (no shared mutable state in Layer 1).
@@ -154,8 +157,8 @@ Decisions above the boundary are formally proved. Decisions below rely on Ada's 
 | `libcurl` | `http/` (Ada) | TLS HTTP client (SSL_VERIFYPEER=1, SSL_VERIFYHOST=2) |
 | `libsqlite3` | `memory/` (Ada) | Conversation memory, facts, session state |
 | `gnatcoll` | Ada runtime | String utilities, JSON, OS bindings |
-| `aws` (Ada Web Server) | Ada runtime | HTTP server for `/metrics` and gateway webhooks |
-| Node.js + npm packages | 7 bridge sidecars | Protocol-specific connectivity |
+| `aws` (Ada Web Server) | Ada runtime | HTTP server for `/metrics`, gateway webhooks, and `/api/chat` endpoints |
+| Node.js + npm packages | 8 bridge sidecars | Protocol-specific connectivity |
 
 ---
 
@@ -167,4 +170,4 @@ VERICLAW_CONFIG env var (path to config file)
     > built-in defaults
 ```
 
-All configuration is validated at startup. Unknown keys are rejected. Invalid values produce a clear error message and a non-zero exit code.
+All configuration is validated at startup. Unknown keys are rejected. Invalid values produce a clear error message and a non-zero exit code. The config loader also validates URLs, strings, and API keys against injection patterns (e.g., embedded newlines, shell metacharacters) before the runtime accepts them.
