@@ -1,0 +1,13 @@
+{
+  "comment": "Add these fields inside the 'tools' object in your config.json",
+  "tools": {
+    "rag_enabled": true,
+    "rag_embed_base_url": "https://api.openai.com/v1"
+  },
+  "notes": [
+    "rag_embed_base_url defaults to https://api.openai.com/v1 when omitted.",
+    "Embeddings use the same API key as your primary provider (providers[0].api_key).",
+    "sqlite-vec must be installed; see docs/setup/rag.md for installation instructions.",
+    "For local/compatible endpoints set rag_embed_base_url to your server, e.g. http://localhost:11434/v1"
+  ]
+}
