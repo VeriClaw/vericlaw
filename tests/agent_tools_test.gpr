@@ -11,7 +11,7 @@ project Agent_Tools_Test is
    end Compiler;
 
    package Linker is
-      for Default_Switches ("Ada") use ("-lcurl");
+      for Default_Switches ("Ada") use ("-lcurl", "-lsqlite3");
    end Linker;
 
    package Builder is

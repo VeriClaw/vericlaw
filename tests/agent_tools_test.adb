@@ -7,6 +7,7 @@ with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with Config.Schema;          use Config.Schema;
 with Providers.Interface_Pkg; use Providers.Interface_Pkg;
 with Agent.Tools;            use Agent.Tools;
+with Memory.SQLite;
 
 procedure Agent_Tools_Test is
 
@@ -37,9 +38,11 @@ procedure Agent_Tools_Test is
       Cfg.Shell_Enabled        := False;
       Cfg.Web_Fetch_Enabled    := False;
       Cfg.Brave_Search_Enabled := False;
+      Cfg.Git_Enabled          := False;
 
       Build_Schemas (Cfg, Schemas, Num);
-      Assert (Num = 0, "Num = 0 when all tools disabled");
+      --  cron_add + cron_list + cron_remove + spawn are always included
+      Assert (Num = 4, "Num = 4 when all tools disabled (cron x3 + spawn always present)");
    end Test_Schemas_All_Disabled;
 
    ---------------------------------------------------------
@@ -84,7 +87,8 @@ procedure Agent_Tools_Test is
       Cfg.Brave_API_Key        := To_Unbounded_String ("test-key");
 
       Build_Schemas (Cfg, Schemas, Num);
-      Assert (Num = 5, "Num = 5 when all tools enabled (shell + 3 file + brave_search)");
+      --  shell(1) + file x3 + brave(1) + git(1 default) + cron x3 + spawn(1) = 10
+      Assert (Num = 10, "Num = 10 when all tools enabled (shell+file x3+brave+git+cron x3+spawn)");
 
       --  Check all names are unique and non-empty
       for I in 1 .. Num loop
@@ -97,14 +101,16 @@ procedure Agent_Tools_Test is
    --  Section 4: Dispatch — unknown tool name
    ---------------------------------------------------------
    procedure Test_Dispatch_Unknown is
-      Cfg    : Tool_Config;
-      Result : Tool_Result;
+      Cfg     : Agent_Config;
+      Null_Mem : Memory.SQLite.Memory_Handle;
+      Result  : Tool_Result;
    begin
       Put_Line ("--- Dispatch (unknown tool) ---");
-      Cfg.File_Enabled  := True;
-      Cfg.Shell_Enabled := False;
+      Cfg.Tools.File_Enabled  := True;
+      Cfg.Tools.Shell_Enabled := False;
 
       Result := Dispatch ("nonexistent_tool", "{}", Cfg,
+                          Mem       => Null_Mem,
                           Workspace => "/tmp/vericlaw_test");
       Assert (not Result.Success, "Unknown tool returns Success = False");
       Assert (Length (Result.Error) > 0, "Unknown tool returns non-empty error");
@@ -114,13 +120,15 @@ procedure Agent_Tools_Test is
    --  Section 5: Dispatch — disabled tool returns error, not crash
    ---------------------------------------------------------
    procedure Test_Dispatch_Disabled is
-      Cfg    : Tool_Config;
-      Result : Tool_Result;
+      Cfg      : Agent_Config;
+      Null_Mem : Memory.SQLite.Memory_Handle;
+      Result   : Tool_Result;
    begin
       Put_Line ("--- Dispatch (shell disabled) ---");
-      Cfg.Shell_Enabled := False;
+      Cfg.Tools.Shell_Enabled := False;
 
       Result := Dispatch ("shell", "{""command"": ""echo hello""}", Cfg,
+                          Mem       => Null_Mem,
                           Workspace => "/tmp/vericlaw_test");
       Assert (not Result.Success,
               "Disabled tool returns Success = False");

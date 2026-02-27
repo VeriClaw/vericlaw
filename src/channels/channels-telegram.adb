@@ -118,11 +118,17 @@ package body Channels.Telegram is
                   else Allowlist);
             begin
                if Allowlist'Length = 0 then
+                  Audit.Syslog.Log_Event
+                    ("access_denied", User_ID, "telegram",
+                     "no allowlist configured");
                   return "";  -- deny all when no allowlist configured
                end if;
                if Allowlist /= "*"
                  and then Index (Allowlist, User_ID) = 0
                then
+                  Audit.Syslog.Log_Event
+                    ("access_denied", User_ID, "telegram",
+                     "user not in allowlist");
                   return "";  -- user not in allowlist
                end if;
                --  Operator = first allowlist entry; guest = open-access users.
@@ -155,6 +161,7 @@ package body Channels.Telegram is
             end if;
 
             Metrics.Increment ("requests_total", "telegram");
+            Audit.Syslog.Log_Event ("message_received", User_ID, "telegram");
 
             if Is_Operator then
                Reply := Agent.Loop_Pkg.Process_Message
