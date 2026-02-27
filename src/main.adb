@@ -47,7 +47,7 @@ procedure Main is
 
    use type Config.Schema.Channel_Kind;
 
-    procedure Print_Usage is
+   procedure Print_Usage is
    begin
       Put_Line ("Usage: vericlaw <command> [options]");
       New_Line;
@@ -94,24 +94,24 @@ procedure Main is
 
       --  Parse tag_name from response JSON
       declare
-         Body_Str : constant String := To_String (Resp.Body);
+         Resp_Body : constant String := To_String (Resp.Body);
          Tag_Key  : constant String := """tag_name"":""";
          Tag_Pos  : Natural;
          Tag_End  : Natural;
          Latest   : Unbounded_String;
       begin
-         Tag_Pos := Ada.Strings.Fixed.Index (Body_Str, Tag_Key);
+         Tag_Pos := Ada.Strings.Fixed.Index (Resp_Body, Tag_Key);
          if Tag_Pos = 0 then
             Put_Line ("  Could not parse latest version.");
             return;
          end if;
          Tag_Pos := Tag_Pos + Tag_Key'Length;
-         Tag_End := Ada.Strings.Fixed.Index (Body_Str, """", Tag_Pos);
+         Tag_End := Ada.Strings.Fixed.Index (Resp_Body, """", Tag_Pos);
          if Tag_End = 0 then
             Put_Line ("  Could not parse latest version.");
             return;
          end if;
-         Set_Unbounded_String (Latest, Body_Str (Tag_Pos .. Tag_End - 1));
+         Set_Unbounded_String (Latest, Resp_Body (Tag_Pos .. Tag_End - 1));
 
          --  Strip leading 'v' if present
          declare

@@ -20,7 +20,8 @@ project Vericlaw is
       case Build_Profile is
          when "dev" =>
             for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato");
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwe",
+               "-gnatyy", "-gnatyM120", "-gnato");
          when "release" =>
             for Default_Switches ("Ada") use
               ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",

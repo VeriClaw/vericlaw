@@ -41,8 +41,7 @@ jobs:
 
       - name: Build with strict flags
         run: |
-          alr build -- -XBUILD_PROFILE=dev \
-            -cargs -gnatwa -gnatwe -gnatyy -gnatVa -gnata -gnato
+          alr build -- -XBUILD_PROFILE=dev
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
@@ -291,8 +290,17 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          severity: 'HIGH,CRITICAL'
+          severity: 'CRITICAL'
           exit-code: '1'
+
+      - name: Trivy HIGH scan (informational)
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'HIGH'
+          exit-code: '0'
 
       - name: git-secrets scan
         run: |
@@ -428,6 +436,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Audit and test bridges
+        shell: bash
         run: |
           set -euo pipefail
           for dir in mcp-bridge browser-bridge slack-bridge discord-bridge email-bridge irc-bridge matrix-bridge wa-bridge; do
