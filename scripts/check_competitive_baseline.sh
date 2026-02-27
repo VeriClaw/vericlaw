@@ -5,7 +5,7 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/check_competitive_baseline.sh [--report PATH] [--baseline PATH] [--direct-report PATH] [--scorecard-report PATH] [--regression-report PATH]
 
-Validates Quasar benchmark output against local SLO thresholds from
+Validates VeriClaw benchmark output against local SLO thresholds from
 config/anywhere_v2_competitive_baseline.toml.
 Writes comparative feature/deployment scorecard dimensions to
 tests/competitive_scorecard_report.json by default and a regression gate
@@ -161,29 +161,29 @@ def get_scorecard_value(payload, section, key):
 direct_report = load_json(direct_report_path) if direct_report_path.is_file() else None
 
 def run_v1_checks():
-    quasar = report.get("vericlaw", {})
+    vericlaw = report.get("vericlaw", {})
     errors = []
     for metric in baseline.get("edge_performance_metrics", []):
         metric_id = metric.get("id")
         report_key = metric_map.get(metric_id)
         if report_key is None:
             continue
-        if metric_is_explicitly_unsupported(quasar, metric_id):
+        if metric_is_explicitly_unsupported(vericlaw, metric_id):
             errors.append(
-                f"unsupported metric: {metric_id} collector={metric_collector(quasar, metric_id)}"
+                f"unsupported metric: {metric_id} collector={metric_collector(vericlaw, metric_id)}"
             )
             continue
-        value = get_metric(quasar, metric_id)
+        value = get_metric(vericlaw, metric_id)
         if value is None:
             errors.append(f"missing metric: {metric_id}")
             continue
         if not is_number(value):
             errors.append(f"non-numeric metric: {metric_id}={value!r}")
             continue
-        slo_max = metric.get("quasar_slo_max")
+        slo_max = metric.get("vericlaw_slo_max")
         if is_number(slo_max) and value > slo_max:
             errors.append(f"SLO max exceeded: {metric_id} value={value} max={slo_max}")
-        slo_min = metric.get("quasar_slo_min")
+        slo_min = metric.get("vericlaw_slo_min")
         if is_number(slo_min) and value < slo_min:
             errors.append(f"SLO min missed: {metric_id} value={value} min={slo_min}")
         if metric_id == "throughput_ops_per_sec" and value <= 0:
@@ -193,7 +193,7 @@ def run_v1_checks():
 def run_v2_checks():
     errors = []
     regression_checks = []
-    quasar = report.get("vericlaw", {})
+    vericlaw = report.get("vericlaw", {})
     report_competitors = report.get("competitors", {})
     if not isinstance(report_competitors, dict):
         report_competitors = {}
@@ -217,7 +217,7 @@ def run_v2_checks():
     direct_projects = {}
     if direct_report is None:
         errors.append(
-            f"missing direct harness report: {direct_report_path} (run: ./scripts/run_direct_competitor_harness.sh --quasar-report {report_path})"
+            f"missing direct harness report: {direct_report_path} (run: ./scripts/run_direct_competitor_harness.sh --vericlaw-report {report_path})"
         )
     else:
         schema_version = direct_report.get("schema_version")
@@ -230,9 +230,9 @@ def run_v2_checks():
             errors.append(f"invalid direct harness project map in {direct_report_path}")
         else:
             direct_projects = projects_payload
-            direct_quasar = direct_projects.get("vericlaw")
-            if isinstance(direct_quasar, dict):
-                quasar = direct_quasar
+            direct_vericlaw = direct_projects.get("vericlaw")
+            if isinstance(direct_vericlaw, dict):
+                vericlaw = direct_vericlaw
             else:
                 errors.append("missing direct-harness project payload: vericlaw")
             for project in ["vericlaw", *pass_fail_projects]:
@@ -275,23 +275,23 @@ def run_v2_checks():
             continue
 
         direction = metric.get("direction")
-        ratio_max = metric.get("quasar_vs_competitor_ratio_max")
-        ratio_min = metric.get("quasar_vs_competitor_ratio_min")
-        slo_max = metric.get("quasar_slo_max")
-        slo_min = metric.get("quasar_slo_min")
-        value = get_metric(quasar, metric_id)
+        ratio_max = metric.get("vericlaw_vs_competitor_ratio_max")
+        ratio_min = metric.get("vericlaw_vs_competitor_ratio_min")
+        slo_max = metric.get("vericlaw_slo_max")
+        slo_min = metric.get("vericlaw_slo_min")
+        value = get_metric(vericlaw, metric_id)
         metric_record = {
             "metric_id": metric_id,
             "direction": direction,
-            "quasar_value": value if is_number(value) else None,
-            "quasar_slo_max": slo_max if is_number(slo_max) else None,
-            "quasar_slo_min": slo_min if is_number(slo_min) else None,
+            "vericlaw_value": value if is_number(value) else None,
+            "vericlaw_slo_max": slo_max if is_number(slo_max) else None,
+            "vericlaw_slo_min": slo_min if is_number(slo_min) else None,
             "comparisons": [],
         }
 
-        if metric_is_explicitly_unsupported(quasar, metric_id):
+        if metric_is_explicitly_unsupported(vericlaw, metric_id):
             errors.append(
-                f"unsupported metric: {metric_id} collector={metric_collector(quasar, metric_id)}"
+                f"unsupported metric: {metric_id} collector={metric_collector(vericlaw, metric_id)}"
             )
             if metric_id in regression_metric_ids:
                 metric_record["status"] = "fail"
@@ -326,7 +326,7 @@ def run_v2_checks():
                 comparison = {
                     "project": project,
                     "competitor_value": None,
-                    "quasar_to_competitor_ratio": None,
+                    "vericlaw_to_competitor_ratio": None,
                     "ratio_max": ratio_max if is_number(ratio_max) else None,
                     "ratio_min": ratio_min if is_number(ratio_min) else None,
                     "status": "pass",
@@ -358,7 +358,7 @@ def run_v2_checks():
                     comparison["failure_reason"] = "non_positive_competitor_metric"
                     metric_record["comparisons"].append(comparison)
                     continue
-                comparison["quasar_to_competitor_ratio"] = value / competitor_value
+                comparison["vericlaw_to_competitor_ratio"] = value / competitor_value
 
                 if is_number(ratio_max):
                     if direction == "lower_is_better":
@@ -368,7 +368,7 @@ def run_v2_checks():
                     comparison["ratio_check_max_observed"] = gate_ratio
                     if gate_ratio > ratio_max:
                         errors.append(
-                            f"ratio max exceeded: {metric_id} quasar={value} {project}={competitor_value} gate_ratio={gate_ratio:.3f} max={ratio_max}"
+                            f"ratio max exceeded: {metric_id} vericlaw={value} {project}={competitor_value} gate_ratio={gate_ratio:.3f} max={ratio_max}"
                         )
                         comparison["status"] = "fail"
                         comparison["failure_reason"] = "ratio_max_exceeded"
@@ -380,7 +380,7 @@ def run_v2_checks():
                     comparison["ratio_check_min_observed"] = gate_ratio
                     if gate_ratio < ratio_min:
                         errors.append(
-                            f"ratio min missed: {metric_id} quasar={value} {project}={competitor_value} gate_ratio={gate_ratio:.3f} min={ratio_min}"
+                            f"ratio min missed: {metric_id} vericlaw={value} {project}={competitor_value} gate_ratio={gate_ratio:.3f} min={ratio_min}"
                         )
                         comparison["status"] = "fail"
                         comparison["failure_reason"] = "ratio_min_missed"
@@ -398,29 +398,29 @@ def run_v2_checks():
             )
             regression_checks.append(metric_record)
 
-    quasar_scorecard = baseline.get("quasar_scorecard", {})
-    if not isinstance(quasar_scorecard, dict):
-        quasar_scorecard = {}
-    quasar_feature = quasar_scorecard.get("feature_parity", {})
-    if not isinstance(quasar_feature, dict):
-        quasar_feature = {}
-    quasar_deployment = quasar_scorecard.get("deployment_maturity", {})
-    if not isinstance(quasar_deployment, dict):
-        quasar_deployment = {}
-    quasar_security_fallback = quasar_scorecard.get("security_non_regression", {})
-    if not isinstance(quasar_security_fallback, dict):
-        quasar_security_fallback = {}
+    vericlaw_scorecard = baseline.get("vericlaw_scorecard", {})
+    if not isinstance(vericlaw_scorecard, dict):
+        vericlaw_scorecard = {}
+    vericlaw_feature = vericlaw_scorecard.get("feature_parity", {})
+    if not isinstance(vericlaw_feature, dict):
+        vericlaw_feature = {}
+    vericlaw_deployment = vericlaw_scorecard.get("deployment_maturity", {})
+    if not isinstance(vericlaw_deployment, dict):
+        vericlaw_deployment = {}
+    vericlaw_security_fallback = vericlaw_scorecard.get("security_non_regression", {})
+    if not isinstance(vericlaw_security_fallback, dict):
+        vericlaw_security_fallback = {}
 
     for counter in baseline.get("feature_parity_counters", []):
         counter_id = counter.get("id")
-        quasar_value = quasar_feature.get(counter_id)
-        if not is_number(quasar_value):
-            errors.append(f"missing quasar feature parity value: {counter_id}")
+        vericlaw_value = vericlaw_feature.get(counter_id)
+        if not is_number(vericlaw_value):
+            errors.append(f"missing vericlaw feature parity value: {counter_id}")
             continue
-        quasar_min = counter.get("quasar_min")
-        if is_number(quasar_min) and quasar_value < quasar_min:
-            errors.append(f"feature parity minimum missed: {counter_id} value={quasar_value} min={quasar_min}")
-        diff_min = counter.get("quasar_minus_competitor_min")
+        vericlaw_min = counter.get("vericlaw_min")
+        if is_number(vericlaw_min) and vericlaw_value < vericlaw_min:
+            errors.append(f"feature parity minimum missed: {counter_id} value={vericlaw_value} min={vericlaw_min}")
+        diff_min = counter.get("vericlaw_minus_competitor_min")
         if not is_number(diff_min):
             continue
         for project in pass_fail_projects:
@@ -431,22 +431,22 @@ def run_v2_checks():
             if not is_number(competitor_value):
                 errors.append(f"missing competitor feature parity value: {project}.{counter_id}")
                 continue
-            delta = quasar_value - competitor_value
+            delta = vericlaw_value - competitor_value
             if delta < diff_min:
                 errors.append(
-                    f"feature parity delta missed: {counter_id} quasar-{project}={delta} min={diff_min}"
+                    f"feature parity delta missed: {counter_id} vericlaw-{project}={delta} min={diff_min}"
                 )
 
     for check in baseline.get("deployment_maturity_checks", []):
         check_id = check.get("id")
         check_type = check.get("check_type")
-        quasar_value = quasar_deployment.get(check_id)
+        vericlaw_value = vericlaw_deployment.get(check_id)
         if check_type == "bool":
-            expected = check.get("quasar_expected")
-            if not isinstance(quasar_value, bool):
-                errors.append(f"missing quasar deployment bool: {check_id}")
-            elif isinstance(expected, bool) and quasar_value != expected:
-                errors.append(f"quasar deployment mismatch: {check_id} value={quasar_value} expected={expected}")
+            expected = check.get("vericlaw_expected")
+            if not isinstance(vericlaw_value, bool):
+                errors.append(f"missing vericlaw deployment bool: {check_id}")
+            elif isinstance(expected, bool) and vericlaw_value != expected:
+                errors.append(f"vericlaw deployment mismatch: {check_id} value={vericlaw_value} expected={expected}")
             competitor_expected = check.get("competitor_expected")
             for project in pass_fail_projects:
                 payload = competitor_payloads.get(project)
@@ -461,12 +461,12 @@ def run_v2_checks():
                             f"competitor deployment mismatch: {project}.{check_id} value={competitor_value} expected={competitor_expected}"
                         )
         elif check_type == "count":
-            if not is_number(quasar_value):
-                errors.append(f"missing quasar deployment count: {check_id}")
+            if not is_number(vericlaw_value):
+                errors.append(f"missing vericlaw deployment count: {check_id}")
                 continue
-            quasar_min = check.get("quasar_min")
-            if is_number(quasar_min) and quasar_value < quasar_min:
-                errors.append(f"quasar deployment minimum missed: {check_id} value={quasar_value} min={quasar_min}")
+            vericlaw_min = check.get("vericlaw_min")
+            if is_number(vericlaw_min) and vericlaw_value < vericlaw_min:
+                errors.append(f"vericlaw deployment minimum missed: {check_id} value={vericlaw_value} min={vericlaw_min}")
             competitor_min = check.get("competitor_min")
             for project in pass_fail_projects:
                 payload = competitor_payloads.get(project)
@@ -504,7 +504,7 @@ def run_v2_checks():
         check_id = check.get("id")
         source_key = check.get("source_key")
         expected = check.get("expected")
-        value = security_defaults.get(source_key, quasar_security_fallback.get(source_key))
+        value = security_defaults.get(source_key, vericlaw_security_fallback.get(source_key))
         if value is None:
             errors.append(f"missing security non-regression source key: {source_key}")
             continue
@@ -520,11 +520,11 @@ def run_v2_checks():
             counter_id = counter.get("id")
             if not isinstance(counter_id, str) or not counter_id:
                 continue
-            quasar_value = quasar_feature.get(counter_id)
+            vericlaw_value = vericlaw_feature.get(counter_id)
             competitor_value = get_scorecard_value(payload, "feature_parity", counter_id)
-            entry = {"vericlaw": quasar_value, project: competitor_value}
-            if is_number(quasar_value) and is_number(competitor_value):
-                entry["delta_vericlaw_minus_project"] = quasar_value - competitor_value
+            entry = {"vericlaw": vericlaw_value, project: competitor_value}
+            if is_number(vericlaw_value) and is_number(competitor_value):
+                entry["delta_vericlaw_minus_project"] = vericlaw_value - competitor_value
             feature_comparison[counter_id] = entry
         deployment_comparison = {}
         for check in baseline.get("deployment_maturity_checks", []):
@@ -532,7 +532,7 @@ def run_v2_checks():
             if not isinstance(check_id, str) or not check_id:
                 continue
             deployment_comparison[check_id] = {
-                "vericlaw": quasar_deployment.get(check_id),
+                "vericlaw": vericlaw_deployment.get(check_id),
                 project: get_scorecard_value(payload, "deployment_maturity", check_id),
             }
         comparative_dimensions[project] = {
@@ -548,9 +548,9 @@ def run_v2_checks():
         "pass_fail_projects": pass_fail_projects,
         "scorecard_only_projects": scorecard_only_projects,
         "vericlaw": {
-            "feature_parity": quasar_feature,
-            "deployment_maturity": quasar_deployment,
-            "security_non_regression": quasar_security_fallback,
+            "feature_parity": vericlaw_feature,
+            "deployment_maturity": vericlaw_deployment,
+            "security_non_regression": vericlaw_security_fallback,
         },
         "comparative_dimensions": comparative_dimensions,
     }

@@ -52,3 +52,17 @@ tests/competitive_v2_release_readiness_step_logs/
 operator-console/tests
 # Local bootstrap overrides
 config/bootstrap.local.env
+# Generated benchmark and test report artifacts (re-created by make targets)
+tests/*_report.json
+tests/*_report.md
+tests/competitive_benchmark_report_linux_*.json
+tests/competitive_direct_benchmark_report_linux_*.json
+tests/competitive_multiarch_benchmark_report.json
+tests/*.sha256
+tests/sbom.spdx.json
+tests/provenance_attestation.json
+# Security gate scan results (policy files in *_policy.json are kept)
+tests/security_gate/*_licenses.json
+tests/security_gate/*_licenses.log
+tests/security_gate/*_vulnerabilities.json
+tests/security_gate/*_vulnerabilities.log

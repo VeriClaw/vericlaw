@@ -6,7 +6,7 @@ usage() {
   cat <<'USAGE'
 Usage: ./scripts/run_competitive_multiarch_benchmarks.sh [--runs N] [--profile PROFILE] [--binder-mode MODE] [--platforms CSV] [--output PATH] [--zeroclaw-json PATH] [--nullclaw-json PATH] [--openclaw-json PATH] [--baseline PATH]
 
-Runs Quasar competitive benchmark + direct harness reports for each platform in CSV.
+Runs VeriClaw competitive benchmark + direct harness reports for each platform in CSV.
 Default platforms: linux/arm64,linux/arm/v7.
 Writes per-platform artifacts under tests/ plus a matrix summary report.
 USAGE
@@ -146,23 +146,23 @@ for raw_platform in "${platform_list[@]}"; do
   fi
 
   platform_id="${platform//\//_}"
-  quasar_report="${project_root}/tests/competitive_benchmark_report_${platform_id}.json"
+  vericlaw_report="${project_root}/tests/competitive_benchmark_report_${platform_id}.json"
   direct_report="${project_root}/tests/competitive_direct_benchmark_report_${platform_id}.json"
 
-  quasar_args=(--runs "${runs}" --profile "${profile}" --target-platform "${platform}" --output "${quasar_report}")
+  vericlaw_args=(--runs "${runs}" --profile "${profile}" --target-platform "${platform}" --output "${vericlaw_report}")
   if [[ -n "${binder_mode}" ]]; then
-    quasar_args+=(--binder-mode "${binder_mode}")
+    vericlaw_args+=(--binder-mode "${binder_mode}")
   fi
   if [[ -n "${zeroclaw_json}" ]]; then
-    quasar_args+=(--zeroclaw-json "${zeroclaw_json}")
+    vericlaw_args+=(--zeroclaw-json "${zeroclaw_json}")
   fi
   if [[ -n "${nullclaw_json}" ]]; then
-    quasar_args+=(--nullclaw-json "${nullclaw_json}")
+    vericlaw_args+=(--nullclaw-json "${nullclaw_json}")
   fi
 
-  COMPETITIVE_FORCE_CONTAINER=1 ADA_CONTAINER_PLATFORM="${platform}" ADA_CONTAINER_IMAGE="${container_image}" "${project_root}/scripts/run_competitive_benchmarks.sh" "${quasar_args[@]}" >/dev/null
+  COMPETITIVE_FORCE_CONTAINER=1 ADA_CONTAINER_PLATFORM="${platform}" ADA_CONTAINER_IMAGE="${container_image}" "${project_root}/scripts/run_competitive_benchmarks.sh" "${vericlaw_args[@]}" >/dev/null
 
-  direct_args=(--quasar-report "${quasar_report}" --output "${direct_report}")
+  direct_args=(--vericlaw-report "${vericlaw_report}" --output "${direct_report}")
   if [[ -n "${zeroclaw_json}" ]]; then
     direct_args+=(--zeroclaw-json "${zeroclaw_json}")
   fi
@@ -178,7 +178,7 @@ for raw_platform in "${platform_list[@]}"; do
 
   "${project_root}/scripts/run_direct_competitor_harness.sh" "${direct_args[@]}" >/dev/null
 
-  printf '%s|%s|%s\n' "${platform}" "${quasar_report#${project_root}/}" "${direct_report#${project_root}/}" >>"${tmp_results}"
+  printf '%s|%s|%s\n' "${platform}" "${vericlaw_report#${project_root}/}" "${direct_report#${project_root}/}" >>"${tmp_results}"
   echo "competitive-bench-multiarch: ${platform}=pass"
 done
 
@@ -204,11 +204,11 @@ results_path = pathlib.Path(sys.argv[7])
 
 targets = []
 for line in results_path.read_text(encoding="utf-8").splitlines():
-    platform, quasar_report, direct_report = line.split("|", 2)
+    platform, vericlaw_report, direct_report = line.split("|", 2)
     targets.append(
         {
             "platform": platform,
-            "quasar_report": quasar_report,
+            "vericlaw_report": vericlaw_report,
             "direct_harness_report": direct_report,
         }
     )

@@ -3,7 +3,7 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 systemd_unit="${project_root}/deploy/systemd/vericlaw.service"
-launchd_plist="${project_root}/deploy/launchd/com.quasar.claw.plist"
+launchd_plist="${project_root}/deploy/launchd/com.vericlaw.plist"
 windows_installer="${project_root}/deploy/windows/install-vericlaw-service.ps1"
 
 for file in "${systemd_unit}" "${launchd_plist}" "${windows_installer}"; do
@@ -39,8 +39,8 @@ else:
         },
         "Service": {
             "Type": "simple",
-            "User": "quasar",
-            "Group": "quasar",
+            "User": "vericlaw",
+            "Group": "vericlaw",
             "WorkingDirectory": "/opt/vericlaw",
             "ExecStart": "/opt/vericlaw/bin/vericlaw",
             "Restart": "on-failure",
@@ -85,9 +85,9 @@ except Exception as exc:
     errors.append(f"Unable to parse launchd plist '{launchd_path}': {exc}")
 else:
     required_plist = {
-        "Label": "com.quasar.claw",
+        "Label": "com.vericlaw",
         "WorkingDirectory": "/opt/vericlaw",
-        "UserName": "quasar",
+        "UserName": "vericlaw",
         "RunAtLoad": True,
         "KeepAlive": False,
         "StandardOutPath": "/var/log/vericlaw.out.log",

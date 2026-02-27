@@ -54,7 +54,7 @@ run_step() {
 }
 
 run_step "competitive-bench" "${project_root}/scripts/run_competitive_benchmarks.sh" --runs "${bench_runs}" --profile edge-speed --output "${project_root}/${competitive_benchmark_report_rel_path}"
-run_step "competitive-direct-harness" "${project_root}/scripts/run_direct_competitor_harness.sh" --quasar-report "${project_root}/${competitive_benchmark_report_rel_path}" --output "${project_root}/${competitive_direct_report_rel_path}"
+run_step "competitive-direct-harness" "${project_root}/scripts/run_direct_competitor_harness.sh" --vericlaw-report "${project_root}/${competitive_benchmark_report_rel_path}" --output "${project_root}/${competitive_direct_report_rel_path}"
 run_step "competitive-regression-gate" "${project_root}/scripts/check_competitive_baseline.sh" --report "${project_root}/${competitive_benchmark_report_rel_path}" --direct-report "${project_root}/${competitive_direct_report_rel_path}" --scorecard-report "${project_root}/${competitive_scorecard_report_rel_path}" --regression-report "${project_root}/${competitive_regression_report_rel_path}"
 run_step "competitive-final-report" "${project_root}/scripts/generate_competitive_v2_final_report.sh" --regression-report "${project_root}/${competitive_regression_report_rel_path}" --scorecard-report "${project_root}/${competitive_scorecard_report_rel_path}" --direct-report "${project_root}/${competitive_direct_report_rel_path}" --output "${project_root}/${competitive_final_report_rel_path}"
 run_step "conformance-suite" env CONFORMANCE_REPORT_PATH="${conformance_report_rel_path}" make -C "${project_root}" conformance-suite

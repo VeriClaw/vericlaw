@@ -113,18 +113,18 @@ comparative_dimensions = scorecard.get("comparative_dimensions", {})
 if not isinstance(comparative_dimensions, dict):
     comparative_dimensions = {}
 
-quasar_payload = scorecard.get("vericlaw", {})
-if not isinstance(quasar_payload, dict):
-    quasar_payload = {}
-quasar_feature = quasar_payload.get("feature_parity", {})
-if not isinstance(quasar_feature, dict):
-    quasar_feature = {}
-quasar_deployment = quasar_payload.get("deployment_maturity", {})
-if not isinstance(quasar_deployment, dict):
-    quasar_deployment = {}
-quasar_security = quasar_payload.get("security_non_regression", {})
-if not isinstance(quasar_security, dict):
-    quasar_security = {}
+vericlaw_payload = scorecard.get("vericlaw", {})
+if not isinstance(vericlaw_payload, dict):
+    vericlaw_payload = {}
+vericlaw_feature = vericlaw_payload.get("feature_parity", {})
+if not isinstance(vericlaw_feature, dict):
+    vericlaw_feature = {}
+vericlaw_deployment = vericlaw_payload.get("deployment_maturity", {})
+if not isinstance(vericlaw_deployment, dict):
+    vericlaw_deployment = {}
+vericlaw_security = vericlaw_payload.get("security_non_regression", {})
+if not isinstance(vericlaw_security, dict):
+    vericlaw_security = {}
 
 direct_projects = direct.get("projects", {})
 if not isinstance(direct_projects, dict):
@@ -138,15 +138,15 @@ performance_status = "pass" if regression.get("status") == "pass" else "fail"
 if performance_status != "pass":
     errors.append("competitive regression gate status is not pass")
 
-if not quasar_feature:
+if not vericlaw_feature:
     feature_status = "fail"
-    errors.append("missing quasar feature parity snapshot")
-if not quasar_deployment:
+    errors.append("missing vericlaw feature parity snapshot")
+if not vericlaw_deployment:
     deployment_status = "fail"
-    errors.append("missing quasar deployment maturity snapshot")
-if not quasar_security:
+    errors.append("missing vericlaw deployment maturity snapshot")
+if not vericlaw_security:
     security_status = "fail"
-    errors.append("missing quasar security non-regression snapshot")
+    errors.append("missing vericlaw security non-regression snapshot")
 
 feature_peer_deltas = {}
 deployment_peer_comparison = {}
@@ -164,7 +164,7 @@ for project in pass_fail_projects:
         for counter_id, counter_data in feature_map.items():
             if not isinstance(counter_data, dict):
                 continue
-            delta = counter_data.get("delta_quasar_minus_project")
+            delta = counter_data.get("delta_vericlaw_minus_project")
             if is_number(delta) and delta < 0:
                 feature_status = "fail"
                 errors.append(f"feature parity below {project}: {counter_id}")
@@ -189,9 +189,9 @@ for project in pass_fail_projects:
 
     mismatches = {}
     if not peer_security:
-        mismatches["__missing_security_snapshot__"] = {"vericlaw": quasar_security, project: None}
+        mismatches["__missing_security_snapshot__"] = {"vericlaw": vericlaw_security, project: None}
     else:
-        for key, expected_value in quasar_security.items():
+        for key, expected_value in vericlaw_security.items():
             observed_value = peer_security.get(key)
             if observed_value != expected_value:
                 mismatches[key] = {"vericlaw": expected_value, project: observed_value}
@@ -210,7 +210,7 @@ for check in regression.get("checks", []):
         continue
     metric_id = check.get("metric_id")
     direction = check.get("direction")
-    quasar_value = check.get("vericlaw_value")
+    vericlaw_value = check.get("vericlaw_value")
     comparisons = {}
     for comparison in check.get("comparisons", []):
         if not isinstance(comparison, dict):
@@ -221,11 +221,11 @@ for check in regression.get("checks", []):
         peer_value = comparison.get("competitor_value")
         ratio = comparison.get("vericlaw_to_competitor_ratio")
         assessment = None
-        if is_number(quasar_value) and is_number(peer_value):
+        if is_number(vericlaw_value) and is_number(peer_value):
             if direction == "higher_is_better":
-                assessment = "vericlaw_better" if quasar_value >= peer_value else "vericlaw_worse"
+                assessment = "vericlaw_better" if vericlaw_value >= peer_value else "vericlaw_worse"
             else:
-                assessment = "vericlaw_better" if quasar_value <= peer_value else "vericlaw_worse"
+                assessment = "vericlaw_better" if vericlaw_value <= peer_value else "vericlaw_worse"
         comparisons[project] = {
             "value": peer_value,
             "vericlaw_to_peer_ratio": ratio,
@@ -236,7 +236,7 @@ for check in regression.get("checks", []):
             "metric_id": metric_id,
             "metric_label": metric_id,
             "direction": direction,
-            "vericlaw_value": quasar_value,
+            "vericlaw_value": vericlaw_value,
             "regression_gate_status": check.get("status"),
             "strict_peer_comparisons": comparisons,
         }
@@ -251,8 +251,8 @@ if isinstance(openclaw_dimensions, dict):
     if not isinstance(openclaw_feature, dict):
         openclaw_feature = {}
     for counter_id, counter_data in openclaw_feature.items():
-        if isinstance(counter_data, dict) and is_number(counter_data.get("delta_quasar_minus_project")):
-            if counter_data.get("delta_quasar_minus_project", 0) < 0:
+        if isinstance(counter_data, dict) and is_number(counter_data.get("delta_vericlaw_minus_project")):
+            if counter_data.get("delta_vericlaw_minus_project", 0) < 0:
                 openclaw_feature_trailing.append(counter_id)
 
     openclaw_security = {}
@@ -262,7 +262,7 @@ if isinstance(openclaw_dimensions, dict):
     if not isinstance(openclaw_security, dict):
         openclaw_security = {}
     security_delta = {}
-    for key, expected_value in quasar_security.items():
+    for key, expected_value in vericlaw_security.items():
         observed_value = openclaw_security.get(key)
         if observed_value != expected_value:
             security_delta[key] = {"vericlaw": expected_value, "openclaw": observed_value}
@@ -272,9 +272,9 @@ if isinstance(openclaw_dimensions, dict):
         "project": "openclaw",
         "scope": "scorecard_only_non_gating",
         "note": "OpenClaw is excluded from strict quantitative pass/fail gating and included for scorecard insights only.",
-        "feature_delta_vs_quasar": openclaw_feature,
-        "deployment_delta_vs_quasar": openclaw_dimensions.get("deployment_maturity", {}),
-        "security_delta_vs_quasar": security_delta,
+        "feature_delta_vs_vericlaw": openclaw_feature,
+        "deployment_delta_vs_vericlaw": openclaw_dimensions.get("deployment_maturity", {}),
+        "security_delta_vs_vericlaw": security_delta,
     }
 
 overall_status = "pass"
@@ -306,15 +306,15 @@ report = {
             "metric_outcomes": metric_outcomes,
         },
         "feature": {
-            "quasar_feature_parity": quasar_feature,
+            "vericlaw_feature_parity": vericlaw_feature,
             "peer_deltas": feature_peer_deltas,
         },
         "deployment": {
-            "quasar_deployment_maturity": quasar_deployment,
+            "vericlaw_deployment_maturity": vericlaw_deployment,
             "peer_comparison": deployment_peer_comparison,
         },
         "security": {
-            "quasar_security_defaults": quasar_security,
+            "vericlaw_security_defaults": vericlaw_security,
             "peer_alignment": security_peer_alignment,
         },
     },
@@ -326,18 +326,18 @@ report = {
         },
         "feature": {
             "status": feature_status,
-            "quasar_feature_parity": quasar_feature,
+            "vericlaw_feature_parity": vericlaw_feature,
         },
         "deployment": {
             "status": deployment_status,
-            "quasar_deployment_maturity": quasar_deployment,
+            "vericlaw_deployment_maturity": vericlaw_deployment,
         },
         "security": {
             "status": security_status,
             "strict_peer_mismatches": strict_peer_mismatches,
         },
         "openclaw_scorecard_insights": {
-            "feature_counters_where_quasar_trails": sorted(set(openclaw_feature_trailing)),
+            "feature_counters_where_vericlaw_trails": sorted(set(openclaw_feature_trailing)),
             "security_controls_where_openclaw_trails": sorted(set(openclaw_security_trailing)),
         },
     },

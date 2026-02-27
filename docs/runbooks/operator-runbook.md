@@ -1,4 +1,4 @@
-# Quasar Operator Runbook
+# VeriClaw Operator Runbook
 
 ## Deploy (container-first)
 1. Build image:
@@ -29,7 +29,7 @@
 
 ## Service packaging
 - Linux (systemd): `deploy/systemd/vericlaw.service`
-- macOS (launchd): `deploy/launchd/com.quasar.claw.plist`
+- macOS (launchd): `deploy/launchd/com.vericlaw.plist`
 - Windows (service installer): `deploy/windows/install-vericlaw-service.ps1`
 
 ## Incident response

@@ -86,7 +86,7 @@ sbom_payload = {
     "spdxVersion": "SPDX-2.3",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "vericlaw-source-sbom",
-    "documentNamespace": "https://quasar.local/spdx/vericlaw",
+    "documentNamespace": "https://vericlaw.local/spdx/vericlaw",
     "creationInfo": {"created": generated_at, "creators": ["Tool: scripts/generate_attestation_artifacts.sh"]},
     "packages": [],
     "files": components,
