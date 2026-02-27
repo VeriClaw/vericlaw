@@ -2,7 +2,7 @@
 
 > **Active development — `test` branch has all the latest features. `main` is an empty stub.**
 
-[![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ada-ci.yml)
+[![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml)
 
 VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
 
@@ -86,6 +86,54 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - `[IMAGE:url]` markers — pass image URLs to OpenAI/Anthropic/Gemini vision endpoints
 - Automatic MIME type detection (JPEG, PNG, GIF, WebP)
 - Supports up to 4 images per message
+
+## Installation
+
+### Quick Install (recommended)
+```bash
+curl -fsSL https://get.vericlaw.dev | sh
+```
+
+### Homebrew (macOS / Linux)
+```bash
+brew install vericlaw/tap/vericlaw
+```
+
+### Scoop (Windows)
+```powershell
+scoop bucket add vericlaw https://github.com/vericlaw/scoop-vericlaw
+scoop install vericlaw
+```
+
+### APT (Debian/Ubuntu)
+```bash
+# Add repository (one-time)
+curl -fsSL https://apt.vericlaw.dev/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/vericlaw.gpg
+echo "deb [signed-by=/usr/share/keyrings/vericlaw.gpg] https://apt.vericlaw.dev stable main" | sudo tee /etc/apt/sources.list.d/vericlaw.list
+sudo apt update && sudo apt install vericlaw
+```
+
+### From Source
+```bash
+# Requires Alire (Ada package manager)
+curl -L https://alire.ada.dev/install.sh | bash
+git clone https://github.com/vericlaw/vericlaw
+cd vericlaw
+alr build -- -XBUILD_PROFILE=release
+```
+
+### Docker
+```bash
+docker pull ghcr.io/vericlaw/vericlaw:latest
+docker run --rm -it ghcr.io/vericlaw/vericlaw
+```
+
+### Verify Installation
+```bash
+vericlaw --version
+vericlaw doctor
+vericlaw update-check
+```
 
 ## Project Structure
 
@@ -181,7 +229,9 @@ vericlaw/
 │   └── windows/install-vericlaw-service.ps1
 │
 ├── operator-console/                 # Local web operator console (HTML/CSS/JS)
-├── .github/workflows/ada-ci.yml      # GitHub Actions CI
+├── .github/workflows/ci.yml           # GitHub Actions CI (9-stage pipeline)
+├── .github/workflows/release.yml     # Tag-based release automation
+├── .github/workflows/build-matrix.yml # Cross-platform build matrix
 ├── vericlaw.gpr                      # GPRbuild project file
 ├── spark.adc                         # SPARK configuration (Silver level)
 ├── Makefile                          # All build, test, and release targets

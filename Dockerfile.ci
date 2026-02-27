@@ -1,0 +1,55 @@
+# VeriClaw CI Build Image
+# Purpose-built for cross-platform Ada/SPARK compilation in CI.
+# Tag with version, NEVER use :latest in CI.
+#
+# Build: docker build -f Dockerfile.ci -t ghcr.io/vericlaw/ci:14.2.1 .
+# Usage: docker run --rm -v $(pwd):/workspace ghcr.io/vericlaw/ci:14.2.1 alr build
+
+FROM ubuntu:24.04
+
+LABEL maintainer="VeriClaw Team <ci@vericlaw.dev>"
+LABEL description="Ada/SPARK CI toolchain with cross-compilers"
+
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install base Ada toolchain + cross-compilers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Native Ada/SPARK toolchain
+    gnat-14 \
+    gprbuild \
+    gnatprove \
+    # Cross-compilers
+    gcc-aarch64-linux-gnu \
+    gnat-14-aarch64-linux-gnu \
+    gcc-mingw-w64-x86-64 \
+    # Build dependencies
+    libsqlite3-dev \
+    libcurl4-openssl-dev \
+    # Security tools
+    checksec \
+    # Utilities
+    curl \
+    git \
+    make \
+    python3 \
+    zip \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Alire
+ARG ALIRE_VERSION=2.0.2
+RUN curl -fsSL "https://github.com/alire-project/alire/releases/download/v${ALIRE_VERSION}/alr-${ALIRE_VERSION}-bin-x86_64-linux.zip" \
+    -o /tmp/alire.zip && \
+    unzip -q /tmp/alire.zip -d /usr/local/bin/ && \
+    rm /tmp/alire.zip && \
+    chmod +x /usr/local/bin/alr
+
+# Pin toolchain version for reproducibility
+RUN alr toolchain --select gnat_native=14.2.1 2>/dev/null || true
+
+# Set up workspace
+WORKDIR /workspace
+
+# Verify toolchain
+RUN gnat --version && gprbuild --version

@@ -171,3 +171,40 @@ VERICLAW_CONFIG env var (path to config file)
 ```
 
 All configuration is validated at startup. Unknown keys are rejected. Invalid values produce a clear error message and a non-zero exit code. The config loader also validates URLs, strings, and API keys against injection patterns (e.g., embedded newlines, shell metacharacters) before the runtime accepts them.
+
+---
+
+## CI/CD Pipeline
+
+VeriClaw uses a defense-in-depth CI pipeline with 9 stages:
+
+```
+compile ──┬── spark-prove ──────────┬── cross-platform ── hardening-check
+          ├── static-analysis       │
+          ├── unit-tests ── integration
+          ├── fuzz-test (scheduled)
+          └── security-scan
+```
+
+### Pipeline Stages
+1. **Compile** — Strict Ada 2022 with `-gnatwa -gnatwe` (warnings as errors)
+2. **SPARK Prove** — Level 2 formal verification (level 4 weekly)
+3. **Static Analysis** — GNATcheck rules enforcement
+4. **Unit Tests** — GNATcov branch coverage with Codecov integration
+5. **Integration Tests** — BBT behavioral specs + gateway integration
+6. **Fuzz Testing** — AFL++ QEMU mode (weekly + on-demand)
+7. **Security Scan** — Trivy + git-secrets + trufflehog
+8. **Cross-Platform** — Linux x86_64/aarch64, macOS Intel/ARM, Windows
+9. **Hardening Check** — checksec verification (RELRO, PIE, NX, canary)
+
+### Release Process
+Tag-based: `git tag v1.0.0 && git push --tags` triggers:
+1. Cross-platform build matrix (5 targets)
+2. SHA-256 checksum generation + GPG signing
+3. GitHub Release with binaries + checksums
+4. Package manager updates (Homebrew, Scoop, APT)
+
+### Runtime Sandboxing
+- **Linux**: seccomp BPF filter + AppArmor profile (`deploy/linux/`)
+- **macOS**: sandbox-exec profile (`deploy/macos/vericlaw.sb`)
+- **Windows**: Restricted token (planned)
