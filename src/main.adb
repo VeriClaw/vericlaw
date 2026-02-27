@@ -390,7 +390,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.Telegram.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[Telegram]: memory open failed: "
                                   & To_String (T_Err));
@@ -408,7 +408,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.Signal.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[Signal]: memory open failed: "
                                   & To_String (T_Err));
@@ -426,7 +426,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.WhatsApp.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[WhatsApp]: memory open failed: "
                                   & To_String (T_Err));
@@ -444,7 +444,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.Discord.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[Discord]: memory open failed: "
                                   & To_String (T_Err));
@@ -462,7 +462,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.Slack.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[Slack]: memory open failed: "
                                   & To_String (T_Err));
@@ -480,7 +480,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.Email.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[Email]: memory open failed: "
                                   & To_String (T_Err));
@@ -498,7 +498,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.IRC.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[IRC]: memory open failed: "
                                   & To_String (T_Err));
@@ -516,7 +516,7 @@ begin
                         CR.Config.Memory.Session_Retention_Days);
                      if T_OK then
                         Channels.Matrix.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
+                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
                      else
                         Put_Line ("Gateway[Matrix]: memory open failed: "
                                   & To_String (T_Err));
@@ -587,7 +587,7 @@ begin
    end;
 
    if Mem_OK then
-      Memory.SQLite.Close (Mem);
+      Memory.SQLite.Close (Mem);  --  explicit close; Finalize is the safety-net on exception
    end if;
 
 end Main;

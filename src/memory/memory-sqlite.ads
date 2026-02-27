@@ -2,6 +2,7 @@
 --  Uses direct SQLite3 C bindings (no GNATCOLL dependency).
 --  Thread-safety: each call serialises internally; use one handle per thread.
 
+with Ada.Finalization;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
 with System;
@@ -114,9 +115,11 @@ package Memory.SQLite is
 
 private
 
-   type Memory_Handle is limited record
+   type Memory_Handle is new Ada.Finalization.Limited_Controlled with record
       DB   : System.Address := System.Null_Address;
       Open : Boolean        := False;
    end record;
+
+   overriding procedure Finalize (Self : in out Memory_Handle);
 
 end Memory.SQLite;

@@ -276,6 +276,13 @@ package body Memory.SQLite is
       return Handle.Open;
    end Is_Open;
 
+   overriding procedure Finalize (Self : in out Memory_Handle) is
+   begin
+      if Self.Open then
+         Close (Self);  --  safety-net: close DB if scope exited without explicit Close
+      end if;
+   end Finalize;
+
    procedure Save_Message
      (Handle     : Memory_Handle;
       Session_ID : String;
