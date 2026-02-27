@@ -35,6 +35,7 @@ with Config.Reload;
 with Tools.Cron;
 with Audit.Syslog;
 with Metrics.Cost;
+with Observability.Tracing;
 
 pragma SPARK_Mode (Off);
 procedure Main is
@@ -504,6 +505,10 @@ begin
    if not CR.Success then
       return;
    end if;
+
+   --  Initialize OpenTelemetry tracing (no-ops if endpoint is empty).
+   Observability.Tracing.Initialize
+     (To_String (CR.Config.Observability.OTLP_Endpoint));
 
    --  Open memory database.
    Open_Memory_Or_Warn (CR.Config, Mem, Mem_OK);

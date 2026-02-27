@@ -9,6 +9,7 @@ with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
 with Ada.Strings.Fixed;
+with Observability.Tracing;
 
 pragma SPARK_Mode (Off);
 package body Memory.SQLite is
@@ -374,6 +375,8 @@ package body Memory.SQLite is
       Content    : String;
       Name       : String := "")
    is
+      Mem_Span : constant Observability.Tracing.Span_ID :=
+        Observability.Tracing.Start_Span ("memory.query");
       SQL  : constant String :=
         "INSERT INTO messages (session_id, channel, role, name, content,"
         & " created_at) VALUES (?, ?, ?, ?, ?, ?)";
@@ -411,6 +414,8 @@ package body Memory.SQLite is
             Rc := c_finalize (FStmt);
          end if;
       end;
+      Observability.Tracing.Set_Attribute (Mem_Span, "operation", "save_message");
+      Observability.Tracing.End_Span (Mem_Span);
       pragma Unreferenced (Rc);
    end Save_Message;
 
@@ -420,6 +425,8 @@ package body Memory.SQLite is
       Max_Msgs   : Positive;
       Conv       : out Agent.Context.Conversation)
    is
+      Mem_Span : constant Observability.Tracing.Span_ID :=
+        Observability.Tracing.Start_Span ("memory.query");
       SQL  : constant String :=
         "SELECT role, name, content FROM messages"
         & " WHERE session_id = ? ORDER BY id DESC LIMIT ?";
@@ -463,6 +470,8 @@ package body Memory.SQLite is
             To_String (Contents (I)),
             To_String (Names (I)));
       end loop;
+      Observability.Tracing.Set_Attribute (Mem_Span, "operation", "load_history");
+      Observability.Tracing.End_Span (Mem_Span);
    end Load_History;
 
    procedure Export_Session
@@ -536,6 +545,8 @@ package body Memory.SQLite is
       Query  : String;
       Limit  : Positive := 5) return Search_Results
    is
+      Mem_Span : constant Observability.Tracing.Span_ID :=
+        Observability.Tracing.Start_Span ("memory.query");
       SQL  : constant String :=
         "SELECT m.session_id, m.role, m.content, rank"
         & " FROM messages_fts f"
@@ -565,6 +576,8 @@ package body Memory.SQLite is
       end loop;
       Rc := c_finalize (Stmt);
       pragma Unreferenced (Rc);
+      Observability.Tracing.Set_Attribute (Mem_Span, "operation", "search");
+      Observability.Tracing.End_Span (Mem_Span);
       return Tmp (1 .. Count);
    end Search;
 

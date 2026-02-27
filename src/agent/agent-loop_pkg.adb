@@ -8,6 +8,7 @@ with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
 with Metrics;
 with Metrics.Cost;
+with Observability.Tracing;
 
 pragma SPARK_Mode (Off);
 package body Agent.Loop_Pkg is
@@ -133,10 +134,22 @@ package body Agent.Loop_Pkg is
          declare
             Prov_Label : constant String :=
               Provider_Label (Cfg.Providers (1).Kind);
+            LLM_Span : constant Observability.Tracing.Span_ID :=
+              Observability.Tracing.Start_Span ("llm.chat");
             Prov_Resp : Provider_Response :=
               Provider.Chat (Conv, Tool_Schemas, Num_Tools);
             Used_Failover : Boolean := False;
          begin
+            Observability.Tracing.Set_Attribute
+              (LLM_Span, "provider", Prov_Label);
+            Observability.Tracing.Set_Attribute
+              (LLM_Span, "model",
+               To_String (Cfg.Providers (1).Model));
+            if not Prov_Resp.Success then
+               Observability.Tracing.Set_Error
+                 (LLM_Span, To_String (Prov_Resp.Error));
+            end if;
+            Observability.Tracing.End_Span (LLM_Span);
             Metrics.Increment ("provider_calls_total", Prov_Label);
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
                --  Try failover provider.
@@ -310,6 +323,8 @@ package body Agent.Loop_Pkg is
                         TC    : constant Tool_Call :=
                           Prov_Resp.Tool_Calls (I);
                         TName : constant String := To_String (TC.Name);
+                        Tool_Span : constant Observability.Tracing.Span_ID :=
+                          Observability.Tracing.Start_Span ("tool.execute");
                         TRes  : constant Agent.Tools.Tool_Result :=
                           Agent.Tools.Safe_Dispatch
                             (Name      => TName,
@@ -318,6 +333,13 @@ package body Agent.Loop_Pkg is
                              Mem       => Mem,
                              Workspace => Home_Workspace);
                      begin
+                        Observability.Tracing.Set_Attribute
+                          (Tool_Span, "tool_name", TName);
+                        if not TRes.Success then
+                           Observability.Tracing.Set_Error
+                             (Tool_Span, To_String (TRes.Error));
+                        end if;
+                        Observability.Tracing.End_Span (Tool_Span);
                         Outputs (I) :=
                           To_Unbounded_String
                             (if TRes.Success
@@ -402,10 +424,23 @@ package body Agent.Loop_Pkg is
          exit when Round > Max_Tool_Rounds;
 
          declare
+            LLM_Span_S : constant Observability.Tracing.Span_ID :=
+              Observability.Tracing.Start_Span ("llm.chat");
             Prov_Resp : Provider_Response :=
               Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
             Used_Failover : Boolean := False;
          begin
+            Observability.Tracing.Set_Attribute
+              (LLM_Span_S, "provider",
+               Provider_Label (Cfg.Providers (1).Kind));
+            Observability.Tracing.Set_Attribute
+              (LLM_Span_S, "model",
+               To_String (Cfg.Providers (1).Model));
+            if not Prov_Resp.Success then
+               Observability.Tracing.Set_Error
+                 (LLM_Span_S, To_String (Prov_Resp.Error));
+            end if;
+            Observability.Tracing.End_Span (LLM_Span_S);
             if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
                declare
                   Failover : access Provider_Type'Class :=
@@ -471,6 +506,8 @@ package body Agent.Loop_Pkg is
                declare
                   TC    : constant Tool_Call := Prov_Resp.Tool_Calls (I);
                   TName : constant String    := To_String (TC.Name);
+                  Tool_Span_S : constant Observability.Tracing.Span_ID :=
+                    Observability.Tracing.Start_Span ("tool.execute");
                   TRes  : constant Agent.Tools.Tool_Result :=
                     Agent.Tools.Safe_Dispatch
                       (Name      => TName,
@@ -483,6 +520,13 @@ package body Agent.Loop_Pkg is
                      then To_String (TRes.Output)
                      else "ERROR: " & To_String (TRes.Error));
                begin
+                  Observability.Tracing.Set_Attribute
+                    (Tool_Span_S, "tool_name", TName);
+                  if not TRes.Success then
+                     Observability.Tracing.Set_Error
+                       (Tool_Span_S, To_String (TRes.Error));
+                  end if;
+                  Observability.Tracing.End_Span (Tool_Span_S);
                   Agent.Context.Append_Message
                     (Conv, Agent.Context.Tool_Result,
                      Output,

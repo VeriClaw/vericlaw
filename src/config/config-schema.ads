@@ -113,6 +113,14 @@ package Config.Schema is
    end record;
 
    --  -----------------------------------------------------------------------
+   --  Observability config
+   --  -----------------------------------------------------------------------
+
+   type Observability_Config is record
+      OTLP_Endpoint : Unbounded_String;  -- empty = tracing disabled
+   end record;
+
+   --  -----------------------------------------------------------------------
    --  Top-level agent config
    --  -----------------------------------------------------------------------
 
@@ -133,9 +141,10 @@ package Config.Schema is
          others => <>);
 
       --  Subsystems
-      Tools   : Tool_Config;
-      Memory  : Memory_Config;
-      Gateway : Gateway_Config;
+      Tools         : Tool_Config;
+      Memory        : Memory_Config;
+      Gateway       : Gateway_Config;
+      Observability : Observability_Config;
    end record;
 
    function Default_Config return Agent_Config;

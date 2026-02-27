@@ -270,6 +270,18 @@ package body Config.Loader is
                   Get_String (G, "tls_key"));
             end;
          end if;
+
+         --  Observability
+         if Has_Key (Root, "observability") then
+            declare
+               O : constant JSON_Value_Type :=
+                 Get_Object (Root, "observability");
+            begin
+               Set_Unbounded_String
+                 (Result.Config.Observability.OTLP_Endpoint,
+                  Get_String (O, "otlp_endpoint"));
+            end;
+         end if;
       end;
 
       --  Post-parse validation: reject unsafe values.
@@ -319,6 +331,15 @@ package body Config.Loader is
       then
          Set_Unbounded_String
            (Result.Error, "Gateway bind_host contains invalid characters");
+         return Result;
+      end if;
+
+      if Length (Result.Config.Observability.OTLP_Endpoint) > 0
+        and then not Is_Safe_URL
+          (To_String (Result.Config.Observability.OTLP_Endpoint))
+      then
+         Set_Unbounded_String
+           (Result.Error, "Observability otlp_endpoint is invalid");
          return Result;
       end if;
 
