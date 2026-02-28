@@ -92,16 +92,19 @@ package body Channels.Security with SPARK_Mode is
       if Allowlist_Policy_Decision
           (Channel           => Channel,
            Allowlist_Size    => Allowlist_Size,
-           Candidate_Matches => Candidate_Matches) /= Allowlist_Allow then
+           Candidate_Matches => Candidate_Matches) /= Allowlist_Allow
+      then
          return (Allowed => False, Decision => Channel_Request_Deny_Allowlist);
       elsif Rate_Limit_Policy_Decision
           (Limiter_Configured => Limiter_Configured,
            Requests_In_Window => Requests_In_Window,
-           Max_Requests       => Max_Requests) /= Rate_Limit_Allow then
+           Max_Requests       => Max_Requests) /= Rate_Limit_Allow
+      then
          return (Allowed => False, Decision => Channel_Request_Deny_Rate_Limit);
       elsif Replay_Policy_Decision
           (Idempotency_Key_Present => Idempotency_Key_Present,
-           Seen_Before             => Seen_Before) /= Replay_Allow then
+           Seen_Before             => Seen_Before) /= Replay_Allow
+      then
          return (Allowed => False, Decision => Channel_Request_Deny_Replay);
       end if;
 

@@ -45,7 +45,8 @@ package body Gateway.Provider.Routing with SPARK_Mode is
    begin
       if Gateway.Provider.Registry.Provider_Enabled
           (Config   => Config,
-           Provider => Gateway.Provider.Registry.Primary_Provider) then
+           Provider => Gateway.Provider.Registry.Primary_Provider)
+      then
          return (Allowed  => True,
                  Provider => Gateway.Provider.Registry.Primary_Provider,
                  Decision => Route_Allow_Primary);
@@ -61,7 +62,8 @@ package body Gateway.Provider.Routing with SPARK_Mode is
    begin
       if Gateway.Provider.Registry.Provider_Enabled
           (Config   => Config,
-           Provider => Gateway.Provider.Registry.Failover_Provider) then
+           Provider => Gateway.Provider.Registry.Failover_Provider)
+      then
          return (Allowed  => True,
                  Provider => Gateway.Provider.Registry.Failover_Provider,
                  Decision => Route_Allow_Failover);
@@ -83,7 +85,8 @@ package body Gateway.Provider.Routing with SPARK_Mode is
           return Failover_Result;
        elsif Gateway.Provider.Registry.Provider_Enabled
            (Config   => Config,
-            Provider => Gateway.Provider.Registry.Long_Tail_Provider) then
+            Provider => Gateway.Provider.Registry.Long_Tail_Provider)
+       then
           return (Allowed  => True,
                   Provider => Gateway.Provider.Registry.Long_Tail_Provider,
                   Decision => Route_Allow_Long_Tail);

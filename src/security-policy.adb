@@ -20,7 +20,8 @@ package body Security.Policy with SPARK_Mode is
       Candidate_Matches : Boolean) return Command_Decision is
    begin
       if Allowlist_Policy_Decision (Allowlist_Size, Candidate_Matches) =
-           Command_Allow_Allowlisted then
+           Command_Allow_Allowlisted
+      then
          return Allow;
       end if;
       return Deny;
@@ -130,10 +131,12 @@ package body Security.Policy with SPARK_Mode is
            Pattern_Matches => Pattern_Matches);
    begin
       if Credential_Scope =
-          Gateway.Provider.Credentials.Credential_Deny_Missing_Token then
+          Gateway.Provider.Credentials.Credential_Deny_Missing_Token
+      then
          return Secret_Injection_Deny_Missing_Token;
       elsif Credential_Scope =
-          Gateway.Provider.Credentials.Credential_Deny_Provider_Mismatch then
+          Gateway.Provider.Credentials.Credential_Deny_Provider_Mismatch
+      then
          return Secret_Injection_Deny_Provider_Mismatch;
       elsif Credential_Scope =
           Gateway.Provider.Credentials.Credential_Deny_Cross_Provider_Fallback
