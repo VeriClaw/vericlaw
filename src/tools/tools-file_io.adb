@@ -7,6 +7,7 @@ with Interfaces.C.Strings;
 package body Tools.File_IO
   with SPARK_Mode => Off
 is
+   use type Interfaces.C.int;
 
    --  Thin C binding to vericlaw_symlink.c for portable symlink detection.
    function vericlaw_is_symlink

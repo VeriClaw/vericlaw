@@ -1,7 +1,6 @@
 --  Git operations tool implementation.
 --  Delegates to Tools.Shell after validating the action name.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Tools.Shell;
 
 package body Tools.Git
