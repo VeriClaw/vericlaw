@@ -14,13 +14,6 @@ is
       return "{""arguments"":" & Args_JSON & "}";
    end Build_Call_Body;
 
-   --  Return True when Str starts with Prefix.
-   function Starts_With (Str, Prefix : String) return Boolean is
-   begin
-      return Str'Length >= Prefix'Length
-        and then Str (Str'First .. Str'First + Prefix'Length - 1) = Prefix;
-   end Starts_With;
-
    procedure Fetch_Tools
      (Bridge_URL : String;
       Tools      : out MCP_Tool_Array;

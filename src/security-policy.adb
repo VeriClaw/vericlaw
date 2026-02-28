@@ -1,7 +1,4 @@
-with Gateway.Provider.Credentials;
-
 package body Security.Policy with SPARK_Mode is
-   use type Gateway.Provider.Credentials.Credential_Decision;
    function Allowlist_Policy_Decision
      (Allowlist_Size    : Natural;
       Candidate_Matches : Boolean) return Command_Policy_Decision is

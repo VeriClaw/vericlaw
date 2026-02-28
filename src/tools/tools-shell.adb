@@ -1,7 +1,6 @@
 with Interfaces.C;         use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with System;
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package body Tools.Shell
   with SPARK_Mode => Off
@@ -53,6 +52,7 @@ is
       C_Cmd      : chars_ptr := New_String (Full_Cmd);
       C_Mode     : chars_ptr := New_String ("r");
       Stream     : FILE_Ptr;
+      pragma Warnings (Off, Stream);  --  modified behind pointer by C fgets
       Buf_Size   : constant := 4096;
       Buf        : String (1 .. Buf_Size);
       C_Buf      : chars_ptr;

@@ -1,7 +1,6 @@
 --  Spawn sub-agent tool: run a focused one-shot sub-conversation.
 --  Sub-agents do not spawn further sub-agents (depth capped at 1).
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 
 package Tools.Spawn

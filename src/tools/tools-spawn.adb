@@ -1,3 +1,4 @@
+with Ada.Strings.Unbounded;
 with Agent.Context;
 with Config.Schema;            use Config.Schema;
 with Providers.Interface_Pkg;  use Providers.Interface_Pkg;
@@ -12,6 +13,7 @@ is
 
    Spawn_Depth : Natural := 0;
 
+   pragma Warnings (Off, "anonymous access type allocator");
    function Make_Provider_Local
      (Cfg : Provider_Config) return access Provider_Type'Class
    is
@@ -31,6 +33,7 @@ is
               (Providers.Gemini.Create (Cfg));
       end case;
    end Make_Provider_Local;
+   pragma Warnings (On, "anonymous access type allocator");
 
    function Run_Subagent
      (Prompt : String;
@@ -46,7 +49,9 @@ is
       if Spawn_Depth >= Max_Spawn_Depth then
          return "Error: maximum spawn depth reached";
       end if;
+      pragma Warnings (Off, "condition can only be");
       if Cfg.Num_Providers < 1 then
+         pragma Warnings (On, "condition can only be");
          return "Error: no providers configured";
       end if;
 

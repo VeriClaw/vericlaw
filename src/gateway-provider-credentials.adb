@@ -1,5 +1,4 @@
 package body Gateway.Provider.Credentials with SPARK_Mode is
-   use type Gateway.Provider.Registry.Provider_Id;
 
    function Bind_Token
      (Provider      : Gateway.Provider.Registry.Provider_Id;
