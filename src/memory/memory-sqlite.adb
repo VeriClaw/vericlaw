@@ -8,7 +8,6 @@ with System;                   use System;
 with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
-with Ada.Strings.Fixed;
 with Observability.Tracing;
 
 package body Memory.SQLite
@@ -103,9 +102,6 @@ is
       Col  : int) return int
    with Import, Convention => C, External_Name => "sqlite3_column_int";
 
-   function c_errmsg (DB : System.Address) return chars_ptr
-   with Import, Convention => C, External_Name => "sqlite3_errmsg";
-
    --  -----------------------------------------------------------------------
    --  Schema DDL (run on first open)
    --  -----------------------------------------------------------------------
@@ -152,11 +148,20 @@ is
      & " enabled INTEGER DEFAULT 1"
      & ");";
 
-   Current_Schema_Version : constant := 2;
-
    --  -----------------------------------------------------------------------
    --  Internal helpers
    --  -----------------------------------------------------------------------
+
+   --  Execute c_step then c_finalize, discarding both return codes.
+   --  Used when we only care about prepare_v2 success.
+   procedure Step_Finalize (Stmt : System.Address) is
+      pragma Warnings (Off, "useless assignment");
+      Dummy : int;
+      pragma Unreferenced (Dummy);
+   begin
+      Dummy := c_step (Stmt);
+      Dummy := c_finalize (Stmt);
+   end Step_Finalize;
 
    --  Execute a DDL statement (no parameters, no result set).
    procedure Exec_DDL (DB : System.Address; SQL : String) is
@@ -332,10 +337,8 @@ is
             Free (CS);
             if Rc = SQLITE_OK then
                Bind_Int (Stmt, 1, Retention_Days);
-               Rc := c_step (Stmt);
-               Rc := c_finalize (Stmt);
+               Step_Finalize (Stmt);
             end if;
-            pragma Unreferenced (Rc);
          end;
       end if;
 
@@ -395,8 +398,7 @@ is
       Bind_Text (Stmt, 4, Name);
       Bind_Text (Stmt, 5, Content);
       Bind_Text (Stmt, 6, Now_ISO);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
+      Step_Finalize (Stmt);
 
       --  Keep FTS in sync.
       declare
@@ -411,13 +413,11 @@ is
          if Rc = SQLITE_OK then
             Bind_Text (FStmt, 1, Content);
             Bind_Text (FStmt, 2, Session_ID);
-            Rc := c_step (FStmt);
-            Rc := c_finalize (FStmt);
+            Step_Finalize (FStmt);
          end if;
       end;
       Observability.Tracing.Set_Attribute (Mem_Span, "operation", "save_message");
       Observability.Tracing.End_Span (Mem_Span);
-      pragma Unreferenced (Rc);
    end Save_Message;
 
    procedure Load_History
@@ -501,9 +501,7 @@ is
       Bind_Text (Stmt, 1, Key);
       Bind_Text (Stmt, 2, Value);
       Bind_Text (Stmt, 3, Now_ISO);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
-      pragma Unreferenced (Rc);
+      Step_Finalize (Stmt);
    end Upsert_Fact;
 
    function Get_Fact (Handle : Memory_Handle; Key : String) return String is
@@ -536,9 +534,7 @@ is
       Free (CS);
       if Rc /= SQLITE_OK then return; end if;
       Bind_Text (Stmt, 1, Key);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
-      pragma Unreferenced (Rc);
+      Step_Finalize (Stmt);
    end Delete_Fact;
 
    function Search
@@ -611,9 +607,7 @@ is
       Bind_Text (Stmt, 3, Prompt);
       Bind_Text (Stmt, 4, Session_ID);
       Bind_Text (Stmt, 5, Next_Run);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
-      pragma Unreferenced (Rc);
+      Step_Finalize (Stmt);
    end Cron_Insert;
 
    function Cron_Fill_Jobs
@@ -664,9 +658,7 @@ is
       Free (CS);
       if Rc /= SQLITE_OK then return; end if;
       Bind_Text (Stmt, 1, Name);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
-      pragma Unreferenced (Rc);
+      Step_Finalize (Stmt);
    end Cron_Delete;
 
    function Cron_Due_Jobs (Handle : Memory_Handle) return Cron_List_Result is
@@ -697,9 +689,7 @@ is
       if Rc /= SQLITE_OK then return; end if;
       Bind_Text (Stmt, 1, Next_Run);
       Bind_Text (Stmt, 2, Name);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
-      pragma Unreferenced (Rc);
+      Step_Finalize (Stmt);
    end Cron_Update_Run;
 
    procedure Fork_Session
@@ -739,8 +729,7 @@ is
       Bind_Text (Stmt, 1, New_Session);
       Bind_Text (Stmt, 2, Old_Session);
       Bind_Int  (Stmt, 3, Fork_At_Msg);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
+      Step_Finalize (Stmt);
 
       --  Record the branch relationship.
       CS := New_String (SQL_Branch);
@@ -753,8 +742,7 @@ is
       Bind_Text (Stmt, 1, New_Session);
       Bind_Text (Stmt, 2, Old_Session);
       Bind_Int  (Stmt, 3, Fork_At_Msg);
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
+      Step_Finalize (Stmt);
 
       --  Sync FTS for copied messages.
       declare
@@ -770,13 +758,11 @@ is
          Free (FCS);
          if Rc = SQLITE_OK then
             Bind_Text (FStmt, 1, New_Session);
-            Rc := c_step (FStmt);
-            Rc := c_finalize (FStmt);
+            Step_Finalize (FStmt);
          end if;
       end;
 
       Success := True;
-      pragma Unreferenced (Rc);
    end Fork_Session;
 
    procedure List_Branches

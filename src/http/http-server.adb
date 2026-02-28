@@ -12,7 +12,6 @@ with Config.JSON_Parser;    use Config.JSON_Parser;
 with Config.Schema;         use Config.Schema;
 with Channels.Telegram;
 with Channels.Signal;
-with Channels.WhatsApp;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Metrics;
@@ -136,7 +135,7 @@ is
       Body_S : constant String := AWS.Status.Payload (Request);
 
       function Is_Localhost return Boolean is
-         Addr : constant String := AWS.Status.IP_Addr (Request);
+         Addr : constant String := AWS.Status.Peername (Request);
       begin
          return Addr = "127.0.0.1" or else Addr = "::1";
       end Is_Localhost;
@@ -148,7 +147,7 @@ is
             declare
                Allowed : Boolean;
             begin
-               Rate_Limiter.Check (AWS.Status.IP_Addr (Request), Allowed);
+               Rate_Limiter.Check (AWS.Status.Peername (Request), Allowed);
                if not Allowed then
                   return AWS.Response.Build
                     ("application/json",

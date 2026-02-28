@@ -2,7 +2,7 @@ pragma SPARK_Mode (Off);
 package body Metrics.Cost is
 
    protected Store is
-      procedure Record
+      procedure Log_Entry
         (Provider_Label   : String;
          Tokens_In        : Natural;
          Tokens_Out       : Natural;
@@ -19,7 +19,7 @@ package body Metrics.Cost is
 
    protected body Store is
 
-      procedure Record
+      procedure Log_Entry
         (Provider_Label   : String;
          Tokens_In        : Natural;
          Tokens_Out       : Natural;
@@ -44,7 +44,7 @@ package body Metrics.Cost is
          --  New provider entry.
          if Size < Max_Providers then
             Size := Size + 1;
-            Entries (Size).Label     := (others => ' ');
+            Entries (Size).Label     := [others => ' '];
             declare
                Len : constant Natural :=
                  Natural'Min (Provider_Label'Length, 32);
@@ -58,7 +58,7 @@ package body Metrics.Cost is
             Entries (Size).Tokens_Out := Tokens_Out;
             Entries (Size).Cost       := Call_Cost;
          end if;
-      end Record;
+      end Log_Entry;
 
       function Get_Total_Cost return Float is
          Sum : Float := 0.0;
@@ -103,7 +103,7 @@ package body Metrics.Cost is
       Price_Out_Per_1K : Float)
    is
    begin
-      Store.Record
+      Store.Log_Entry
         (Provider_Label, Tokens_In, Tokens_Out,
          Price_In_Per_1K, Price_Out_Per_1K);
    end Record_Usage;

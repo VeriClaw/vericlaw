@@ -8,7 +8,6 @@
 --    POST /api/chat           -- non-streaming chat (localhost only)
 --    POST /api/chat/stream    -- SSE streaming chat (localhost only)
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 
