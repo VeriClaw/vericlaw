@@ -13,10 +13,10 @@ is
         "{""url"":""" & URL & """,""timeout_ms"":" & Positive'Image (Timeout_Ms) & "}";
 
       JSON_Hdrs : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String ("Content-Type"),
+        [1 => (Name  => To_Unbounded_String ("Content-Type"),
                Value => To_Unbounded_String ("application/json")),
          2 => (Name  => To_Unbounded_String ("Accept"),
-               Value => To_Unbounded_String ("application/json")));
+               Value => To_Unbounded_String ("application/json"))];
 
       Http_Resp : constant HTTP.Client.Response :=
         HTTP.Client.Post_JSON
@@ -64,10 +64,10 @@ is
         "{""url"":""" & URL & """,""timeout_ms"":" & Positive'Image (Timeout_Ms) & "}";
 
       JSON_Hdrs : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String ("Content-Type"),
+        [1 => (Name  => To_Unbounded_String ("Content-Type"),
                Value => To_Unbounded_String ("application/json")),
          2 => (Name  => To_Unbounded_String ("Accept"),
-               Value => To_Unbounded_String ("application/json")));
+               Value => To_Unbounded_String ("application/json"))];
 
       Http_Resp : constant HTTP.Client.Response :=
         HTTP.Client.Post_JSON

@@ -37,12 +37,12 @@ is
         & "&safesearch=moderate&text_decorations=0";
 
       Hdrs     : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String ("Accept"),
+        [1 => (Name  => To_Unbounded_String ("Accept"),
                Value => To_Unbounded_String ("application/json")),
          2 => (Name  => To_Unbounded_String ("Accept-Encoding"),
                Value => To_Unbounded_String ("gzip")),
          3 => (Name  => To_Unbounded_String ("X-Subscription-Token"),
-               Value => To_Unbounded_String (API_Key)));
+               Value => To_Unbounded_String (API_Key))];
 
       Http_Resp : constant HTTP.Client.Response :=
         HTTP.Client.Get (URL => URL, Headers => Hdrs, Timeout_Ms => 15_000);

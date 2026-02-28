@@ -153,7 +153,7 @@ package body Memory.Vector is
         "{""model"":""text-embedding-3-small"","
         & """input"":""" & JSON_Escape (Text) & """}";
       Auth_Hdr  : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => Ada.Strings.Unbounded.To_Unbounded_String
+        [1 => (Name  => Ada.Strings.Unbounded.To_Unbounded_String
                           ("Authorization"),
                Value => Ada.Strings.Unbounded.To_Unbounded_String
                           ("Bearer " & API_Key)));

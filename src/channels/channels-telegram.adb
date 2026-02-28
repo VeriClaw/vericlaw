@@ -8,7 +8,6 @@ with Config.Loader;
 with Config.Reload;
 with Agent.Context;
 with Agent.Loop_Pkg;
-with Channels.Security;   -- SPARK security policy checks
 with Channels.Rate_Limit;
 with Metrics;
 with Audit.Syslog;
@@ -42,8 +41,8 @@ is
 
             Body_Obj  : JSON_Value_Type := Build_Object;
             Hdrs      : constant HTTP.Client.Header_Array :=
-              (1 => (Name  => To_Unbounded_String ("Content-Type"),
-                     Value => To_Unbounded_String ("application/json")));
+              [1 => (Name  => To_Unbounded_String ("Content-Type"),
+                     Value => To_Unbounded_String ("application/json"))];
             Resp      : HTTP.Client.Response;
          begin
             Set_Field (Body_Obj, "chat_id", Chat_ID);
@@ -70,7 +69,6 @@ is
       Mem         : Memory.SQLite.Memory_Handle) return String
    is
       PR      : constant Parse_Result := Parse (Update_JSON);
-      Result  : Unbounded_String;
    begin
       if not PR.Valid then
          return "";

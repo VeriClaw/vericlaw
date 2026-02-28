@@ -133,8 +133,8 @@ is
       Auth_Hdr_Name : constant String :=
         (if Provider.Is_Azure then "api-key" else "Authorization");
       Hdrs     : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String (Auth_Hdr_Name),
-               Value => To_Unbounded_String (Auth_Val)));
+        [1 => (Name  => To_Unbounded_String (Auth_Hdr_Name),
+               Value => To_Unbounded_String (Auth_Val))];
       Body_Str  : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
       Http_Resp : constant HTTP.Client.Response :=
@@ -247,8 +247,8 @@ is
       Auth_Hdr_Name : constant String :=
         (if Provider.Is_Azure then "api-key" else "Authorization");
       Hdrs      : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String (Auth_Hdr_Name),
-               Value => To_Unbounded_String (Auth_Val)));
+        [1 => (Name  => To_Unbounded_String (Auth_Hdr_Name),
+               Value => To_Unbounded_String (Auth_Val))];
 
       --  Build request body with stream=true.
       Root     : JSON_Value_Type := Build_Object;

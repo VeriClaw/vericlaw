@@ -1,5 +1,3 @@
-with GNATCOLL.JSON; use GNATCOLL.JSON;
-
 package body Config.JSON_Parser
   with SPARK_Mode => Off
 is
@@ -11,7 +9,7 @@ is
       Result.Valid := True;
       return Result;
    exception
-      when E : others =>
+      when others =>
          Result.Valid := False;
          Set_Unbounded_String
            (Result.Error, "JSON parse error: " & Source'Length'Image & " bytes");

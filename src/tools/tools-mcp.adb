@@ -28,8 +28,8 @@ is
    is
       URL       : constant String := Bridge_URL & "/tools";
       JSON_Hdrs : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String ("Accept"),
-               Value => To_Unbounded_String ("application/json")));
+        [1 => (Name  => To_Unbounded_String ("Accept"),
+               Value => To_Unbounded_String ("application/json"))];
       Resp      : constant HTTP.Client.Response :=
         HTTP.Client.Get (URL, JSON_Hdrs, Timeout_Ms => 10_000);
    begin
@@ -90,10 +90,10 @@ is
       URL       : constant String :=
         Bridge_URL & "/tools/" & Name & "/call";
       JSON_Hdrs : constant HTTP.Client.Header_Array :=
-        (1 => (Name  => To_Unbounded_String ("Content-Type"),
+        [1 => (Name  => To_Unbounded_String ("Content-Type"),
                Value => To_Unbounded_String ("application/json")),
          2 => (Name  => To_Unbounded_String ("Accept"),
-               Value => To_Unbounded_String ("application/json")));
+               Value => To_Unbounded_String ("application/json"))];
       Body_Str  : constant String := Build_Call_Body (Args_JSON);
       Resp      : constant HTTP.Client.Response :=
         HTTP.Client.Post_JSON (URL, JSON_Hdrs, Body_Str, Timeout_Ms => 30_000);
