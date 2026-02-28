@@ -3,7 +3,6 @@
 --  Prod mode: webhook receiver via HTTP.Server.
 --  Uses channels-security.ads SPARK policy for allowlist/rate-limit checks.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 

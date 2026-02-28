@@ -3,7 +3,6 @@
 --  Default bridge URL: http://localhost:3002
 --  Polls GET /sessions/discord/messages for incoming messages.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 

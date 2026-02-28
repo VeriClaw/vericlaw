@@ -3,7 +3,6 @@
 --  Default bridge URL: http://localhost:3001
 --  Polls GET /sessions/slack/messages for incoming messages.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 

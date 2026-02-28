@@ -31,7 +31,7 @@ is
 
       Resp := HTTP.Client.Post_JSON
         (URL       => Bridge_URL & "/sessions/irc/messages",
-         Headers   => (1 .. 0 => <>),
+         Headers   => [1 .. 0 => <>],
          Body_JSON => To_JSON_String (Body_Obj));
 
       return HTTP.Client.Is_Success (Resp);
@@ -43,7 +43,7 @@ is
    is
       Current_Cfg : Config.Schema.Agent_Config := Cfg;
       Chan_Cfg    : Config.Schema.Channel_Config :=
-        Find_Channel (Current_Cfg, IRC);
+        Find_Channel (Current_Cfg, Config.Schema.IRC);
       Bridge_URL  : Unbounded_String :=
         Chan_Cfg.Bridge_URL;
    begin
@@ -64,7 +64,7 @@ is
             begin
                if New_CR.Success then
                   Current_Cfg := New_CR.Config;
-                  Chan_Cfg    := Find_Channel (Current_Cfg, IRC);
+                  Chan_Cfg    := Find_Channel (Current_Cfg, Config.Schema.IRC);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
                   Logging.Info ("Config reloaded.");
                end if;
@@ -77,7 +77,7 @@ is
             Resp : constant HTTP.Client.Response :=
               HTTP.Client.Get
                 (URL        => BU & "/sessions/irc/messages?limit=10",
-                 Headers    => (1 .. 0 => <>),
+                 Headers    => [1 .. 0 => <>],
                  Timeout_Ms => 10_000);
          begin
             if HTTP.Client.Is_Success (Resp) then
@@ -91,87 +91,87 @@ is
                           Value_To_Array (PR.Root);
                      begin
                         for I in 1 .. Array_Length (Root_Arr) loop
-                        declare
-                           Item    : constant JSON_Value_Type :=
-                             Array_Item (Root_Arr, I);
-                           Msg_ID  : constant String :=
-                             Get_String (Item, "id");
-                           Nick    : constant String :=
-                             Get_String (Item, "from");
-                           Channel : constant String :=
-                             Get_String (Item, "channel");
-                           Text    : constant String :=
-                             Get_String (Item, "text");
-                        begin
-                           --  Skip already-processed messages.
-                           if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
-                              goto Next_Item;
-                           end if;
-                           Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
+                           declare
+                              Item    : constant JSON_Value_Type :=
+                                Array_Item (Root_Arr, I);
+                              Msg_ID  : constant String :=
+                                Get_String (Item, "id");
+                              Nick    : constant String :=
+                                Get_String (Item, "from");
+                              Channel : constant String :=
+                                Get_String (Item, "channel");
+                              Text    : constant String :=
+                                Get_String (Item, "text");
+                           begin
+                              --  Skip already-processed messages.
+                              if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
+                                 goto Next_Item;
+                              end if;
+                              Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
-                           if Nick'Length > 0 and then Text'Length > 0 then
-                              --  Allowlist check via SPARK-proved policy.
-                              declare
-                                 Allowlist : constant String :=
-                                   To_String (Chan_Cfg.Allowlist);
-                                 Matches   : constant Boolean :=
-                                   Allowlist = "*"
-                                   or else Index (Allowlist, Nick) > 0;
-                              begin
-                                 if not Channels.Security.Allowlist_Allows
-                                   (Channel           =>
-                                      Channels.Security.Chat_Channel,
-                                    Allowlist_Size    => Allowlist'Length,
-                                    Candidate_Matches => Matches)
+                              if Nick'Length > 0 and then Text'Length > 0 then
+                                 --  Allowlist check via SPARK-proved policy.
+                                 declare
+                                    Allowlist : constant String :=
+                                      To_String (Chan_Cfg.Allowlist);
+                                    Matches   : constant Boolean :=
+                                      Allowlist = "*"
+                                      or else Index (Allowlist, Nick) > 0;
+                                 begin
+                                    if not Channels.Security.Allowlist_Allows
+                                      (Channel           =>
+                                         Channels.Security.Chat_Channel,
+                                       Allowlist_Size    => Allowlist'Length,
+                                       Candidate_Matches => Matches)
+                                    then
+                                       goto Next_Item;
+                                    end if;
+                                 end;
+
+                                 --  Rate limit: enforce Max_RPS per nick.
+                                 if not Channels.Rate_Limit.Check
+                                   ("irc:" & Nick, Chan_Cfg.Max_RPS)
                                  then
                                     goto Next_Item;
                                  end if;
-                              end;
 
-                              --  Rate limit: enforce Max_RPS per nick.
-                              if not Channels.Rate_Limit.Check
-                                ("irc:" & Nick, Chan_Cfg.Max_RPS)
-                              then
-                                 goto Next_Item;
-                              end if;
+                                 declare
+                                    Conv  : Agent.Context.Conversation;
+                                    Reply : Agent.Loop_Pkg.Agent_Reply;
+                                 begin
+                                    Set_Unbounded_String
+                                      (Conv.Session_ID,
+                                       "irc:" & Channel & ":" & Nick);
+                                    Set_Unbounded_String
+                                      (Conv.Channel, "irc:" & Channel);
 
-                              declare
-                                 Conv  : Agent.Context.Conversation;
-                                 Reply : Agent.Loop_Pkg.Agent_Reply;
-                              begin
-                                 Set_Unbounded_String
-                                   (Conv.Session_ID,
-                                    "irc:" & Channel & ":" & Nick);
-                                 Set_Unbounded_String
-                                   (Conv.Channel, "irc:" & Channel);
-
-                                 if Memory.SQLite.Is_Open (Mem) then
-                                    Memory.SQLite.Load_History
-                                      (Mem,
-                                       "irc:" & Channel & ":" & Nick,
-                                       Current_Cfg.Memory.Max_History, Conv);
-                                 end if;
-
-                                 Reply :=
-                                   Agent.Loop_Pkg.Process_Message
-                                     (User_Input => Text,
-                                      Conv       => Conv,
-                                      Cfg        => Current_Cfg,
-                                      Mem        => Mem);
-
-                                 if Reply.Success then
-                                    if not Send_Message
-                                      (BU, Channel,
-                                       To_String (Reply.Content))
-                                    then
-                                       Logging.Error
-                                         ("IRC: send failed to " & Channel);
+                                    if Memory.SQLite.Is_Open (Mem) then
+                                       Memory.SQLite.Load_History
+                                         (Mem,
+                                          "irc:" & Channel & ":" & Nick,
+                                          Current_Cfg.Memory.Max_History, Conv);
                                     end if;
-                                 end if;
-                              end;
-                           end if;
-                           <<Next_Item>>
-                        end;
+
+                                    Reply :=
+                                      Agent.Loop_Pkg.Process_Message
+                                        (User_Input => Text,
+                                         Conv       => Conv,
+                                         Cfg        => Current_Cfg,
+                                         Mem        => Mem);
+
+                                    if Reply.Success then
+                                       if not Send_Message
+                                         (BU, Channel,
+                                          To_String (Reply.Content))
+                                       then
+                                          Logging.Error
+                                            ("IRC: send failed to " & Channel);
+                                       end if;
+                                    end if;
+                                 end;
+                              end if;
+                              <<Next_Item>>
+                           end;
                         end loop;
                      end;
                   end if;

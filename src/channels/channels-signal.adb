@@ -33,7 +33,7 @@ is
 
       Resp := HTTP.Client.Post_JSON
         (URL       => Bridge_URL & "/v1/send",
-         Headers   => (1 .. 0 => <>),
+         Headers   => [1 .. 0 => <>],
          Body_JSON => To_JSON_String (Body_Obj));
 
       return HTTP.Client.Is_Success (Resp);
@@ -46,7 +46,7 @@ is
    is
       PR      : constant Parse_Result := Parse (Msg_JSON);
       Chan    : constant Config.Schema.Channel_Config :=
-        Find_Channel (Cfg, Signal);
+        Find_Channel (Cfg, Config.Schema.Signal);
    begin
       if not PR.Valid then
          return "";
@@ -144,7 +144,7 @@ is
    is
       Current_Cfg : Config.Schema.Agent_Config := Cfg;
       Chan_Cfg    : Config.Schema.Channel_Config :=
-        Find_Channel (Current_Cfg, Signal);
+        Find_Channel (Current_Cfg, Config.Schema.Signal);
       Bridge_URL  : Unbounded_String := Chan_Cfg.Bridge_URL;
       Our_Number  : Unbounded_String := Chan_Cfg.Token;
    begin
@@ -165,7 +165,7 @@ is
             begin
                if New_CR.Success then
                   Current_Cfg := New_CR.Config;
-                  Chan_Cfg    := Find_Channel (Current_Cfg, Signal);
+                  Chan_Cfg    := Find_Channel (Current_Cfg, Config.Schema.Signal);
                   Bridge_URL  := Chan_Cfg.Bridge_URL;
                   Our_Number  := Chan_Cfg.Token;
                   Logging.Info ("Config reloaded.");
@@ -180,7 +180,7 @@ is
             Resp : constant HTTP.Client.Response :=
               HTTP.Client.Get
                 (URL        => BU & "/v1/receive/" & Num,
-                 Headers    => (1 .. 0 => <>),
+                 Headers    => [1 .. 0 => <>],
                  Timeout_Ms => 10_000);
          begin
             if HTTP.Client.Is_Success (Resp) then

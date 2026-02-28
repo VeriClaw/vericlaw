@@ -31,7 +31,7 @@ is
 
       Resp := HTTP.Client.Post_JSON
         (URL       => Bridge_URL & "/sessions/slack/messages",
-         Headers   => (1 .. 0 => <>),
+         Headers   => [1 .. 0 => <>],
          Body_JSON => To_JSON_String (Body_Obj));
 
       return HTTP.Client.Is_Success (Resp);
@@ -42,7 +42,7 @@ is
       Mem : Memory.SQLite.Memory_Handle)
    is
       Chan_Cfg   : constant Config.Schema.Channel_Config :=
-        Find_Channel (Cfg, Slack);
+        Find_Channel (Cfg, Config.Schema.Slack);
       Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
    begin
       if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
@@ -57,7 +57,7 @@ is
             Resp : constant HTTP.Client.Response :=
               HTTP.Client.Get
                 (URL       => Bridge_URL & "/sessions/slack/messages?limit=10",
-                 Headers   => (1 .. 0 => <>),
+                 Headers   => [1 .. 0 => <>],
                  Timeout_Ms => 10_000);
          begin
             if HTTP.Client.Is_Success (Resp) then
@@ -71,88 +71,88 @@ is
                           Value_To_Array (PR.Root);
                      begin
                         for I in 1 .. Array_Length (Root_Arr) loop
-                        declare
-                           Item      : constant JSON_Value_Type :=
-                             Array_Item (Root_Arr, I);
-                           Msg_ID    : constant String :=
-                             Get_String (Item, "id");
-                           From_User : constant String :=
-                             Get_String (Item, "from");
-                           Chan_ID   : constant String :=
-                             Get_String (Item, "channel");
-                           Text      : constant String :=
-                             Get_String (Item, "text");
-                           Thread_TS : constant String :=
-                             Get_String (Item, "thread_ts");
-                        begin
-                           --  Skip already-processed messages (client-side dedup)
-                           if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
-                              goto Next_Item;
-                           end if;
-                           Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
+                           declare
+                              Item      : constant JSON_Value_Type :=
+                                Array_Item (Root_Arr, I);
+                              Msg_ID    : constant String :=
+                                Get_String (Item, "id");
+                              From_User : constant String :=
+                                Get_String (Item, "from");
+                              Chan_ID   : constant String :=
+                                Get_String (Item, "channel");
+                              Text      : constant String :=
+                                Get_String (Item, "text");
+                              Thread_TS : constant String :=
+                                Get_String (Item, "thread_ts");
+                           begin
+                              --  Skip already-processed messages (client-side dedup)
+                              if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
+                                 goto Next_Item;
+                              end if;
+                              Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
-                           if Text'Length > 0 then
-                              --  Allowlist check via SPARK-proved policy.
-                              declare
-                                 Allowlist : constant String :=
-                                   To_String (Chan_Cfg.Allowlist);
-                                 Matches   : constant Boolean :=
-                                   Allowlist = "*"
-                                   or else Index (Allowlist, From_User) > 0;
-                              begin
-                                 if not Channels.Security.Allowlist_Allows
-                                   (Channel           =>
-                                      Channels.Security.Slack_Channel,
-                                    Allowlist_Size    => Allowlist'Length,
-                                    Candidate_Matches => Matches)
+                              if Text'Length > 0 then
+                                 --  Allowlist check via SPARK-proved policy.
+                                 declare
+                                    Allowlist : constant String :=
+                                      To_String (Chan_Cfg.Allowlist);
+                                    Matches   : constant Boolean :=
+                                      Allowlist = "*"
+                                      or else Index (Allowlist, From_User) > 0;
+                                 begin
+                                    if not Channels.Security.Allowlist_Allows
+                                      (Channel           =>
+                                         Channels.Security.Slack_Channel,
+                                       Allowlist_Size    => Allowlist'Length,
+                                       Candidate_Matches => Matches)
+                                    then
+                                       goto Next_Item;
+                                    end if;
+                                 end;
+
+                                 --  Rate limit: enforce Max_RPS per user.
+                                 if not Channels.Rate_Limit.Check
+                                   ("slack:" & From_User, Chan_Cfg.Max_RPS)
                                  then
                                     goto Next_Item;
                                  end if;
-                              end;
 
-                              --  Rate limit: enforce Max_RPS per user.
-                              if not Channels.Rate_Limit.Check
-                                ("slack:" & From_User, Chan_Cfg.Max_RPS)
-                              then
-                                 goto Next_Item;
-                              end if;
+                                 declare
+                                    Conv  : Agent.Context.Conversation;
+                                    Reply : Agent.Loop_Pkg.Agent_Reply;
+                                 begin
+                                    Set_Unbounded_String
+                                      (Conv.Session_ID, "slack:" & From_User);
+                                    Set_Unbounded_String
+                                      (Conv.Channel, "slack:" & Chan_ID);
 
-                              declare
-                                 Conv  : Agent.Context.Conversation;
-                                 Reply : Agent.Loop_Pkg.Agent_Reply;
-                              begin
-                                 Set_Unbounded_String
-                                   (Conv.Session_ID, "slack:" & From_User);
-                                 Set_Unbounded_String
-                                   (Conv.Channel, "slack:" & Chan_ID);
-
-                                 if Memory.SQLite.Is_Open (Mem) then
-                                    Memory.SQLite.Load_History
-                                      (Mem, "slack:" & From_User,
-                                       Cfg.Memory.Max_History, Conv);
-                                 end if;
-
-                                 Reply :=
-                                   Agent.Loop_Pkg.Process_Message
-                                     (User_Input => Text,
-                                      Conv       => Conv,
-                                      Cfg        => Cfg,
-                                      Mem        => Mem);
-
-                                 if Reply.Success then
-                                    if not Send_Message
-                                      (Bridge_URL, Chan_ID,
-                                       To_String (Reply.Content), Thread_TS)
-                                    then
-                                       Logging.Error
-                                         ("Slack: send failed to "
-                                          & Chan_ID);
+                                    if Memory.SQLite.Is_Open (Mem) then
+                                       Memory.SQLite.Load_History
+                                         (Mem, "slack:" & From_User,
+                                          Cfg.Memory.Max_History, Conv);
                                     end if;
-                                 end if;
-                              end;
-                           end if;
-                           <<Next_Item>>
-                        end;
+
+                                    Reply :=
+                                      Agent.Loop_Pkg.Process_Message
+                                        (User_Input => Text,
+                                         Conv       => Conv,
+                                         Cfg        => Cfg,
+                                         Mem        => Mem);
+
+                                    if Reply.Success then
+                                       if not Send_Message
+                                         (Bridge_URL, Chan_ID,
+                                          To_String (Reply.Content), Thread_TS)
+                                       then
+                                          Logging.Error
+                                            ("Slack: send failed to "
+                                             & Chan_ID);
+                                       end if;
+                                    end if;
+                                 end;
+                              end if;
+                              <<Next_Item>>
+                           end;
                         end loop;
                      end;
                   end if;

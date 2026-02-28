@@ -1,6 +1,5 @@
 --  CLI channel: interactive readline mode + one-shot mode.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 

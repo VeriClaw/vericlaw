@@ -2,7 +2,6 @@
 --  Bridge connects to a Matrix homeserver, queues incoming messages, and
 --  exposes a REST API on port 3006; VeriClaw polls and replies via HTTP.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 

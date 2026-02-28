@@ -2,7 +2,6 @@
 --  Bridge polls IMAP inbox every 30 seconds for unread messages.
 --  Exposes REST API on port 3003; VeriClaw polls and replies via HTTP.
 
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;
 with Memory.SQLite;
 

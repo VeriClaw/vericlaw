@@ -1,4 +1,5 @@
 with Logging;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 with HTTP.Client;
 with Config.JSON_Parser;  use Config.JSON_Parser;
@@ -263,7 +264,7 @@ is
                Resp  : constant HTTP.Client.Response :=
                  HTTP.Client.Get
                    (URL        => URL,
-                    Headers    => (1 .. 0 => <>),
+                    Headers    => [1 .. 0 => <>],
                     Timeout_Ms => 35_000);
             begin
                if HTTP.Client.Is_Success (Resp) then

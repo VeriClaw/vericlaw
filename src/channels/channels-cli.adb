@@ -1,6 +1,7 @@
 with Ada.Text_IO;         use Ada.Text_IO;
 with Ada.Strings.Fixed;
-with Agent.Context;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Agent.Context;       use type Agent.Context.Role;
 with Agent.Loop_Pkg;
 with Metrics;
 

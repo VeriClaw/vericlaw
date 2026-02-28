@@ -31,7 +31,7 @@ is
 
       Resp := HTTP.Client.Post_JSON
         (URL       => Bridge_URL & "/sessions/email/messages",
-         Headers   => (1 .. 0 => <>),
+         Headers   => [1 .. 0 => <>],
          Body_JSON => To_JSON_String (Body_Obj));
 
       return HTTP.Client.Is_Success (Resp);
@@ -42,7 +42,7 @@ is
       Mem : Memory.SQLite.Memory_Handle)
    is
       Chan_Cfg   : constant Config.Schema.Channel_Config :=
-        Find_Channel (Cfg, Email);
+        Find_Channel (Cfg, Config.Schema.Email);
       Bridge_URL : constant String := To_String (Chan_Cfg.Bridge_URL);
    begin
       if not Chan_Cfg.Enabled or else Bridge_URL'Length = 0 then
@@ -57,7 +57,7 @@ is
             Resp : constant HTTP.Client.Response :=
               HTTP.Client.Get
                 (URL        => Bridge_URL & "/sessions/email/messages?limit=10",
-                 Headers    => (1 .. 0 => <>),
+                 Headers    => [1 .. 0 => <>],
                  Timeout_Ms => 10_000);
          begin
             if HTTP.Client.Is_Success (Resp) then
@@ -71,86 +71,86 @@ is
                           Value_To_Array (PR.Root);
                      begin
                         for I in 1 .. Array_Length (Root_Arr) loop
-                        declare
-                           Item    : constant JSON_Value_Type :=
-                             Array_Item (Root_Arr, I);
-                           Msg_ID  : constant String :=
-                             Get_String (Item, "id");
-                           From    : constant String :=
-                             Get_String (Item, "from");
-                           Subject : constant String :=
-                             Get_String (Item, "subject");
-                           Text    : constant String :=
-                             Get_String (Item, "text");
-                        begin
-                           --  Skip already-processed messages.
-                           if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
-                              goto Next_Item;
-                           end if;
-                           Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
+                           declare
+                              Item    : constant JSON_Value_Type :=
+                                Array_Item (Root_Arr, I);
+                              Msg_ID  : constant String :=
+                                Get_String (Item, "id");
+                              From    : constant String :=
+                                Get_String (Item, "from");
+                              Subject : constant String :=
+                                Get_String (Item, "subject");
+                              Text    : constant String :=
+                                Get_String (Item, "text");
+                           begin
+                              --  Skip already-processed messages.
+                              if Channels.Message_Dedup.Was_Seen (Seen, Msg_ID) then
+                                 goto Next_Item;
+                              end if;
+                              Channels.Message_Dedup.Mark_Seen (Seen, Msg_ID);
 
-                           if From'Length > 0 and then Text'Length > 0 then
-                              --  Allowlist check via SPARK-proved policy.
-                              declare
-                                 Allowlist : constant String :=
-                                   To_String (Chan_Cfg.Allowlist);
-                                 Matches   : constant Boolean :=
-                                   Allowlist = "*"
-                                   or else Index (Allowlist, From) > 0;
-                              begin
-                                 if not Channels.Security.Allowlist_Allows
-                                   (Channel           =>
-                                      Channels.Security.Email_Channel,
-                                    Allowlist_Size    => Allowlist'Length,
-                                    Candidate_Matches => Matches)
+                              if From'Length > 0 and then Text'Length > 0 then
+                                 --  Allowlist check via SPARK-proved policy.
+                                 declare
+                                    Allowlist : constant String :=
+                                      To_String (Chan_Cfg.Allowlist);
+                                    Matches   : constant Boolean :=
+                                      Allowlist = "*"
+                                      or else Index (Allowlist, From) > 0;
+                                 begin
+                                    if not Channels.Security.Allowlist_Allows
+                                      (Channel           =>
+                                         Channels.Security.Email_Channel,
+                                       Allowlist_Size    => Allowlist'Length,
+                                       Candidate_Matches => Matches)
+                                    then
+                                       goto Next_Item;
+                                    end if;
+                                 end;
+
+                                 --  Rate limit: enforce Max_RPS per sender.
+                                 if not Channels.Rate_Limit.Check
+                                   ("email:" & From, Chan_Cfg.Max_RPS)
                                  then
                                     goto Next_Item;
                                  end if;
-                              end;
 
-                              --  Rate limit: enforce Max_RPS per sender.
-                              if not Channels.Rate_Limit.Check
-                                ("email:" & From, Chan_Cfg.Max_RPS)
-                              then
-                                 goto Next_Item;
-                              end if;
+                                 declare
+                                    Conv  : Agent.Context.Conversation;
+                                    Reply : Agent.Loop_Pkg.Agent_Reply;
+                                 begin
+                                    Set_Unbounded_String
+                                      (Conv.Session_ID, "email:" & From);
+                                    Set_Unbounded_String
+                                      (Conv.Channel, "email:" & From);
 
-                              declare
-                                 Conv  : Agent.Context.Conversation;
-                                 Reply : Agent.Loop_Pkg.Agent_Reply;
-                              begin
-                                 Set_Unbounded_String
-                                   (Conv.Session_ID, "email:" & From);
-                                 Set_Unbounded_String
-                                   (Conv.Channel, "email:" & From);
-
-                                 if Memory.SQLite.Is_Open (Mem) then
-                                    Memory.SQLite.Load_History
-                                      (Mem, "email:" & From,
-                                       Cfg.Memory.Max_History, Conv);
-                                 end if;
-
-                                 Reply :=
-                                   Agent.Loop_Pkg.Process_Message
-                                     (User_Input => Text,
-                                      Conv       => Conv,
-                                      Cfg        => Cfg,
-                                      Mem        => Mem);
-
-                                 if Reply.Success then
-                                    if not Send_Message
-                                      (Bridge_URL, From,
-                                       "Re: " & Subject,
-                                       To_String (Reply.Content))
-                                    then
-                                       Logging.Error
-                                         ("Email: send failed to " & From);
+                                    if Memory.SQLite.Is_Open (Mem) then
+                                       Memory.SQLite.Load_History
+                                         (Mem, "email:" & From,
+                                          Cfg.Memory.Max_History, Conv);
                                     end if;
-                                 end if;
-                              end;
-                           end if;
-                           <<Next_Item>>
-                        end;
+
+                                    Reply :=
+                                      Agent.Loop_Pkg.Process_Message
+                                        (User_Input => Text,
+                                         Conv       => Conv,
+                                         Cfg        => Cfg,
+                                         Mem        => Mem);
+
+                                    if Reply.Success then
+                                       if not Send_Message
+                                         (Bridge_URL, From,
+                                          "Re: " & Subject,
+                                          To_String (Reply.Content))
+                                       then
+                                          Logging.Error
+                                            ("Email: send failed to " & From);
+                                       end if;
+                                    end if;
+                                 end;
+                              end if;
+                              <<Next_Item>>
+                           end;
                         end loop;
                      end;
                   end if;
