@@ -75,11 +75,12 @@ is
       Window_Start : Ada.Calendar.Time;
    end record;
    Max_Rate_Entries : constant := 256;
+   type Rate_Entry_Array is array (1 .. Max_Rate_Entries) of Rate_Entry;
 
    protected Rate_Limiter is
       procedure Check (IP : String; Allowed : out Boolean);
    private
-      Entries     : array (1 .. Max_Rate_Entries) of Rate_Entry;
+      Entries     : Rate_Entry_Array;
       Num_Entries : Natural := 0;
    end Rate_Limiter;
 
@@ -156,7 +157,7 @@ is
                end if;
             end;
          end if;
-   
+
          --  Health check
          if URI = "/health" and then Method = "GET" then
             return AWS.Response.Build
@@ -164,7 +165,7 @@ is
                "{""status"":""ok"",""service"":""vericlaw""}",
                AWS.Messages.S200);
          end if;
-   
+
          --  Telegram webhook
          if URI = "/webhook/telegram" and then Method = "POST" then
             declare
@@ -194,7 +195,7 @@ is
                               Config.JSON_Parser.Get_String (Chat, "id"));
                         end;
                      end if;
-   
+
                      if Length (Chat_ID) > 0 then
                         for I in 1 .. Shared_Cfg.Num_Channels loop
                            if Shared_Cfg.Channels (I).Kind =
@@ -224,7 +225,7 @@ is
                "{""ok"":true}",
                AWS.Messages.S200);
          end if;
-   
+
          --  Signal webhook (signal-cli can push to a URL)
          if URI = "/webhook/signal" and then Method = "POST" then
             declare
@@ -236,7 +237,7 @@ is
                      exit;
                   end if;
                end loop;
-   
+
                declare
                   Reply_Text : constant String :=
                     Channels.Signal.Process_Message_JSON
@@ -258,7 +259,7 @@ is
                                  Config.JSON_Parser.Get_String (Env, "source"));
                            end;
                         end if;
-   
+
                         if Length (Source) > 0 then
                            declare
                               OK : Boolean;
@@ -279,7 +280,7 @@ is
               ("application/json",
                "{""ok"":true}", AWS.Messages.S200);
          end if;
-   
+
          --  Prometheus metrics
          if URI = "/metrics" and then Method = "GET" then
             return AWS.Response.Build
@@ -287,7 +288,7 @@ is
                Metrics.Render,
                AWS.Messages.S200);
          end if;
-   
+
          --  Localhost guard for operator API endpoints
          if not Is_Localhost
            and then
@@ -300,7 +301,7 @@ is
                "{""error"":""forbidden""}",
                AWS.Messages.S403);
          end if;
-   
+
          --  GET /api/status
          if URI = "/api/status" and then Method = "GET" then
             declare
@@ -323,7 +324,7 @@ is
                   AWS.Messages.S200);
             end;
          end if;
-   
+
          --  GET /api/channels
          if URI = "/api/channels" and then Method = "GET" then
             declare
@@ -347,7 +348,7 @@ is
                  ("application/json", To_String (Result), AWS.Messages.S200);
             end;
          end if;
-   
+
          --  GET /api/metrics/summary
          if URI = "/api/metrics/summary" and then Method = "GET" then
             declare
@@ -366,7 +367,7 @@ is
                   AWS.Messages.S200);
             end;
          end if;
-   
+
           --  POST /api/chat — non-streaming chat completion
          if URI = "/api/chat" and then Method = "POST" then
             if not Is_Localhost then
@@ -375,7 +376,7 @@ is
                   "{""error"":""forbidden""}",
                   AWS.Messages.S403);
             end if;
-   
+
             declare
                PR : constant Config.JSON_Parser.Parse_Result :=
                  Config.JSON_Parser.Parse (Body_S);
@@ -388,7 +389,7 @@ is
                      "{""error"":""missing 'message' field""}",
                      AWS.Messages.S400);
                end if;
-   
+
                declare
                   Msg   : constant String :=
                     Config.JSON_Parser.Get_String (PR.Root, "message");
@@ -402,7 +403,7 @@ is
                   Set_Unbounded_String (Conv.Session_ID, SID);
                   Reply := Agent.Loop_Pkg.Process_Message
                     (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
-   
+
                   if Reply.Success then
                      return AWS.Response.Build
                        ("application/json",
@@ -419,7 +420,7 @@ is
                end;
             end;
          end if;
-   
+
          --  POST /api/chat/stream — SSE streaming chat completion
          --  Returns text/event-stream with "data: {json}\n\n" per token chunk,
          --  followed by "data: [DONE]\n\n" when complete.
@@ -434,7 +435,7 @@ is
                   "{""error"":""forbidden""}",
                   AWS.Messages.S403);
             end if;
-   
+
             declare
                PR : constant Config.JSON_Parser.Parse_Result :=
                  Config.JSON_Parser.Parse (Body_S);
@@ -447,7 +448,7 @@ is
                      "{""error"":""missing 'message' field""}",
                      AWS.Messages.S400);
                end if;
-   
+
                declare
                   Msg   : constant String :=
                     Config.JSON_Parser.Get_String (PR.Root, "message");
@@ -462,7 +463,7 @@ is
                   Set_Unbounded_String (Conv.Session_ID, SID);
                   Reply := Agent.Loop_Pkg.Process_Message_Streaming
                     (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
-   
+
                   --  Build SSE payload: one data event with the full content,
                   --  then a [DONE] sentinel.
                   if Reply.Success then
@@ -477,7 +478,7 @@ is
                        (To_String (Reply.Error)));
                      Append (SSE, "}" & ASCII.LF & ASCII.LF);
                   end if;
-   
+
                   return AWS.Response.Build
                     ("text/event-stream",
                      To_String (SSE),
@@ -485,7 +486,7 @@ is
                end;
             end;
          end if;
-   
+
          --  404 for everything else
          return AWS.Response.Build
            ("application/json",
