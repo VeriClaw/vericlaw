@@ -38,17 +38,16 @@ jobs:
           set -o pipefail
           echo "=== Pass 1: Collect ALL warnings (non-fatal) ==="
           alr build -- -XBUILD_PROFILE=dev -XWARN_ERRORS=off 2>&1 | tee warnings-report.txt
-          WARN_COUNT=$(grep -c ": warning:\|: (style)" warnings-report.txt || true)
-          echo "--- Warning/style count: $WARN_COUNT ---"
-          if [ "$WARN_COUNT" -gt 0 ]; then
+          ALL_COUNT=$(grep -c ": warning:\|: (style)" warnings-report.txt || true)
+          echo "--- Total warning/style count (incl. deps): $ALL_COUNT ---"
+          if [ "$ALL_COUNT" -gt 0 ]; then
             echo ""
             echo "=== ALL warnings/style issues ==="
             grep ": warning:\|: (style)" warnings-report.txt || true
             echo ""
-            echo "ERROR: $WARN_COUNT warning(s)/style issue(s) found. Fix all before merging."
-            exit 1
+            echo "::warning::$ALL_COUNT warning(s)/style issue(s) found (non-blocking)."
           fi
-          echo "=== Pass 1 clean — no warnings ==="
+          echo "=== Pass 1 complete — warnings are non-blocking ==="
 
       - name: Upload warnings report
         if: always()
