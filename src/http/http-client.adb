@@ -131,7 +131,7 @@ is
       for Buffer'Address use UserData;
       pragma Import (Ada, Buffer);
       Chunk   : constant String :=
-        Value (Ptr, Interfaces.C.size_t (Total));
+        Value (Ptr, Total);
    begin
       if Length (Buffer) + Natural (Total) > Max_Response_Bytes then
          return 0;  -- Signal error to curl (CURLE_WRITE_ERROR)
@@ -159,7 +159,7 @@ is
    is
       pragma Unreferenced (UserData);
       Total : constant size_t := Size * NMemb;
-      Chunk : constant String := Value (Ptr, Interfaces.C.size_t (Total));
+      Chunk : constant String := Value (Ptr, Total);
       Found : Boolean;
    begin
       Append (Streaming_Buffer, Chunk);
@@ -298,7 +298,7 @@ is
       Body_Text  : String        := "";
       Timeout_Ms : Natural       := 0) return Response
    is
-      Handle      : CURL_Handle := curl_easy_init;
+      Handle      : constant CURL_Handle := curl_easy_init;
       C_URL       : chars_ptr   := New_String (URL);
       Slist       : CURL_Slist  := Null_Slist;
       Code        : CURL_Code;
@@ -467,7 +467,7 @@ is
         (Name  => To_Unbounded_String ("Content-Type"),
          Value => To_Unbounded_String ("application/json"));
       All_Headers       : Header_Array (1 .. Headers'Length + 1);
-      Handle            : CURL_Handle := curl_easy_init;
+      Handle            : constant CURL_Handle := curl_easy_init;
       C_URL             : chars_ptr   := New_String (URL);
       C_Body            : chars_ptr   := New_String (Body_JSON);
       Slist             : CURL_Slist  := Null_Slist;
