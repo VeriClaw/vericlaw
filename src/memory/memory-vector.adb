@@ -10,6 +10,7 @@ with System.Storage_Elements;
 with HTTP.Client;
 
 package body Memory.Vector is
+   use type System.Address;
 
    --  SQLite return codes
    SQLITE_OK  : constant Interfaces.C.int := 0;
@@ -156,7 +157,7 @@ package body Memory.Vector is
         [1 => (Name  => Ada.Strings.Unbounded.To_Unbounded_String
                           ("Authorization"),
                Value => Ada.Strings.Unbounded.To_Unbounded_String
-                          ("Bearer " & API_Key)));
+                          ("Bearer " & API_Key))];
       Resp : constant HTTP.Client.Response :=
         HTTP.Client.Post_JSON
           (URL        => Base_URL & "/embeddings",
@@ -255,9 +256,14 @@ package body Memory.Vector is
       Bind_Text (Stmt, 2, Content);
       Bind_Text (Stmt, 3,
         Ada.Calendar.Formatting.Image (Ada.Calendar.Clock));
-      Rc := c_step (Stmt);
-      Rc := c_finalize (Stmt);
-      pragma Unreferenced (Rc);
+      declare
+         Dummy : Interfaces.C.int;
+         pragma Warnings (Off, "useless assignment");
+      begin
+         Dummy := c_step (Stmt);
+         Dummy := c_finalize (Stmt);
+         pragma Unreferenced (Dummy);
+      end;
 
       Rowid := c_last_insert_rowid (DB);
 
@@ -267,6 +273,7 @@ package body Memory.Vector is
            "INSERT INTO vec_memories (rowid, embedding) VALUES (?, ?)";
          Rc2   : Interfaces.C.int;
          Stmt2 : System.Address;
+         pragma Warnings (Off, "useless assignment");
       begin
          CS := New_String (SQL_Vec);
          Rc2 := c_prepare_v2 (DB, CS, -1, Stmt2, System.Null_Address);

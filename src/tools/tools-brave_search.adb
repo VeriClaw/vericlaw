@@ -77,24 +77,24 @@ is
                     Value_To_Array (Items);
                begin
                   for I in 1 .. Array_Length (Items_Arr) loop
-                  exit when Result.Count >= Max_Results;
-                  declare
-                     Item : constant JSON_Value_Type := Array_Item (Items_Arr, I);
-                  begin
-                     Result.Count := Result.Count + 1;
-                     Set_Unbounded_String
-                       (Result.Results (Result.Count).Title,
-                        Get_String (Item, "title"));
-                     Set_Unbounded_String
-                       (Result.Results (Result.Count).URL,
-                        Get_String (Item, "url"));
-                     Set_Unbounded_String
-                       (Result.Results (Result.Count).Snippet,
-                        Get_String (Item, "description"));
-                  end;
-               end loop;
+                     exit when Result.Count >= Max_Results;
+                     declare
+                        Item : constant JSON_Value_Type := Array_Item (Items_Arr, I);
+                     begin
+                        Result.Count := Result.Count + 1;
+                        Set_Unbounded_String
+                          (Result.Results (Result.Count).Title,
+                           Get_String (Item, "title"));
+                        Set_Unbounded_String
+                          (Result.Results (Result.Count).URL,
+                           Get_String (Item, "url"));
+                        Set_Unbounded_String
+                          (Result.Results (Result.Count).Snippet,
+                           Get_String (Item, "description"));
+                     end;
+                  end loop;
+               end;
             end;
-         end;
          end if;
 
          Result.Success := True;
