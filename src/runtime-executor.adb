@@ -1,7 +1,3 @@
-with Channels.Security;
-with Plugins.Capabilities;
-with Security.Policy;
-
 package body Runtime.Executor with SPARK_Mode is
    use type Channels.Security.Allowlist_Decision;
    use type Security.Policy.Egress_Decision;
@@ -397,8 +393,8 @@ package body Runtime.Executor with SPARK_Mode is
                 when Plugins.Capabilities.Operator_Consent_Deny_Explicit =>
                    return Plugin_Runtime_Deny_Operator_Consent_Denied;
              end case;
-       end case;
-    end Plugin_Tool_Runtime_Decision;
+      end case;
+   end Plugin_Tool_Runtime_Decision;
 
    function Plugin_Tool_Runtime_Decision
      (Manifest       : Plugins.Capabilities.Capability_Manifest;

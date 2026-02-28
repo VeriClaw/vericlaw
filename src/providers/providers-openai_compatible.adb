@@ -8,6 +8,74 @@ package body Providers.OpenAI_Compatible
   with SPARK_Mode => Off
 is
 
+   --  -----------------------------------------------------------------------
+   --  Streaming accumulation state (package-level; CLI-only, non-concurrent).
+   --  -----------------------------------------------------------------------
+   Compat_Accumulated  : Unbounded_String;
+   Compat_Stop_Reason  : Unbounded_String;
+
+   procedure Compat_SSE_Parse (Line : String);
+
+   procedure Compat_SSE_Parse (Line : String) is
+      Prefix : constant String := "data: ";
+   begin
+      if Line'Length > Prefix'Length
+        and then Line (Line'First .. Line'First + Prefix'Length - 1) = Prefix
+      then
+         declare
+            Payload : constant String :=
+              Line (Line'First + Prefix'Length .. Line'Last);
+         begin
+            if Payload = "[DONE]" then return; end if;
+            declare
+               PR : constant Parse_Result := Parse (Payload);
+            begin
+               if PR.Valid and then Has_Key (PR.Root, "choices") then
+                  declare
+                     Choices     : constant JSON_Value_Type :=
+                       Get_Object (PR.Root, "choices");
+                     Choices_Arr : constant JSON_Array_Type :=
+                       Value_To_Array (Choices);
+                  begin
+                     if Array_Length (Choices_Arr) > 0 then
+                        declare
+                           First : constant JSON_Value_Type :=
+                             Array_Item (Choices_Arr, 1);
+                        begin
+                           if Has_Key (First, "delta") then
+                              declare
+                                 Delta_Obj : constant JSON_Value_Type :=
+                                   Get_Object (First, "delta");
+                                 Content   : constant String :=
+                                   Get_String (Delta_Obj, "content");
+                              begin
+                                 if Content'Length > 0 then
+                                    Ada.Text_IO.Put (Content);
+                                    Append (Compat_Accumulated, Content);
+                                 end if;
+                              end;
+                           end if;
+                           declare
+                              FR : constant String :=
+                                Get_String (First, "finish_reason");
+                           begin
+                              if FR'Length > 0 then
+                                 Set_Unbounded_String
+                                   (Compat_Stop_Reason, FR);
+                              end if;
+                           end;
+                        end;
+                     end if;
+                  end;
+               end if;
+            end;
+         end;
+      end if;
+   exception
+      when others =>
+         Logging.Debug ("Malformed SSE chunk discarded");
+   end Compat_SSE_Parse;
+
    function Create (Cfg : Provider_Config) return OpenAI_Compat_Provider is
       P : OpenAI_Compat_Provider;
    begin
@@ -188,31 +256,33 @@ is
                           Value_To_Array (TC_Array);
                      begin
                         for I in 1 .. Array_Length (TC_Arr) loop
-                        exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
-                        declare
-                           TC : constant JSON_Value_Type := Array_Item (TC_Arr, I);
-                           Fn : constant JSON_Value_Type :=
-                             Get_Object (TC, "function");
-                        begin
-                           Result.Num_Tool_Calls :=
-                             Result.Num_Tool_Calls + 1;
-                           Set_Unbounded_String
-                             (Result.Tool_Calls
-                                (Result.Num_Tool_Calls).ID,
-                              Get_String (TC, "id"));
-                           Set_Unbounded_String
-                             (Result.Tool_Calls
-                                (Result.Num_Tool_Calls).Name,
-                              Get_String (Fn, "name"));
-                           Set_Unbounded_String
-                             (Result.Tool_Calls
-                                (Result.Num_Tool_Calls).Arguments,
-                              Get_String (Fn, "arguments"));
-                        end;
-                     end loop;
+                           exit when Result.Num_Tool_Calls >=
+                             Max_Tool_Calls;
+                           declare
+                              TC : constant JSON_Value_Type :=
+                                Array_Item (TC_Arr, I);
+                              Fn : constant JSON_Value_Type :=
+                                Get_Object (TC, "function");
+                           begin
+                              Result.Num_Tool_Calls :=
+                                Result.Num_Tool_Calls + 1;
+                              Set_Unbounded_String
+                                (Result.Tool_Calls
+                                   (Result.Num_Tool_Calls).ID,
+                                 Get_String (TC, "id"));
+                              Set_Unbounded_String
+                                (Result.Tool_Calls
+                                   (Result.Num_Tool_Calls).Name,
+                                 Get_String (Fn, "name"));
+                              Set_Unbounded_String
+                                (Result.Tool_Calls
+                                   (Result.Num_Tool_Calls).Arguments,
+                                 Get_String (Fn, "arguments"));
+                           end;
+                        end loop;
+                     end;
                   end;
-               end;
-               end if;
+                  end if;
             end;
          end if;
 
@@ -256,70 +326,13 @@ is
       Msgs_Raw : constant Agent.Context.Message_Array :=
         Agent.Context.Format_For_Provider (Conv);
 
-      Result      : Provider_Response;
-      Accumulated : Unbounded_String;
-      Http_Resp   : HTTP.Client.Response;
-
-      procedure On_SSE_Line (Line : String) is
-         Prefix : constant String := "data: ";
-      begin
-         if Line'Length > Prefix'Length
-           and then Line (Line'First .. Line'First + Prefix'Length - 1) = Prefix
-         then
-            declare
-               Payload : constant String :=
-                 Line (Line'First + Prefix'Length .. Line'Last);
-            begin
-               if Payload = "[DONE]" then return; end if;
-               declare
-                  PR : constant Parse_Result := Parse (Payload);
-               begin
-                  if PR.Valid and then Has_Key (PR.Root, "choices") then
-                     declare
-                        Choices     : constant JSON_Value_Type :=
-                          Get_Object (PR.Root, "choices");
-                        Choices_Arr : constant JSON_Array_Type :=
-                          Value_To_Array (Choices);
-                     begin
-                        if Array_Length (Choices_Arr) > 0 then
-                           declare
-                              First : constant JSON_Value_Type :=
-                                Array_Item (Choices_Arr, 1);
-                           begin
-                              if Has_Key (First, "delta") then
-                                 declare
-                                    Delta_Obj : constant JSON_Value_Type :=
-                                      Get_Object (First, "delta");
-                                    Content   : constant String :=
-                                      Get_String (Delta_Obj, "content");
-                                 begin
-                                    if Content'Length > 0 then
-                                       Ada.Text_IO.Put (Content);
-                                       Append (Accumulated, Content);
-                                    end if;
-                                 end;
-                              end if;
-                              declare
-                                 FR : constant String :=
-                                   Get_String (First, "finish_reason");
-                              begin
-                                 if FR'Length > 0 then
-                                    Set_Unbounded_String
-                                      (Result.Stop_Reason, FR);
-                                 end if;
-                              end;
-                           end;
-                        end if;
-                     end;
-                  end if;
-               end;
-            end;
-         end if;
-      exception
-         when others =>
-            Logging.Debug ("Malformed SSE chunk discarded");
-      end On_SSE_Line;
+      Result    : Provider_Response;
+      Http_Resp : HTTP.Client.Response;
    begin
+      --  Reset streaming accumulation state.
+      Set_Unbounded_String (Compat_Accumulated, "");
+      Set_Unbounded_String (Compat_Stop_Reason, "");
+
       Set_Field (Root, "model",
         (if Length (Provider.Deployment) > 0
          then To_String (Provider.Deployment)
@@ -352,7 +365,7 @@ is
         (URL        => URL,
          Headers    => Hdrs,
          Body_JSON  => To_JSON_String (Root),
-         On_Chunk   => On_SSE_Line'Access,
+         On_Chunk   => Compat_SSE_Parse'Access,
          Timeout_Ms => Provider.Timeout_Ms);
 
       if not HTTP.Client.Is_Success (Http_Resp) then
@@ -363,8 +376,9 @@ is
       end if;
 
       Ada.Text_IO.New_Line;
-      Result.Content := Accumulated;
-      Result.Success := True;
+      Result.Content     := Compat_Accumulated;
+      Result.Stop_Reason := Compat_Stop_Reason;
+      Result.Success     := True;
       return Result;
    end Chat_Streaming;
 

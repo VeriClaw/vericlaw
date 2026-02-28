@@ -289,26 +289,27 @@ is
               Value_To_Array (TC_Array);
          begin
             for I in 1 .. Array_Length (TC_Arr) loop
-            exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
-            declare
-               TC_Item  : constant JSON_Value_Type := Array_Item (TC_Arr, I);
-               Fn       : constant JSON_Value_Type :=
-                 Get_Object (TC_Item, "function");
-            begin
-               Result.Num_Tool_Calls := Result.Num_Tool_Calls + 1;
-               Set_Unbounded_String
-                 (Result.Tool_Calls (Result.Num_Tool_Calls).ID,
-                  Get_String (TC_Item, "id"));
-               Set_Unbounded_String
-                 (Result.Tool_Calls (Result.Num_Tool_Calls).Name,
-                  Get_String (Fn, "name"));
-               Set_Unbounded_String
-                 (Result.Tool_Calls (Result.Num_Tool_Calls).Arguments,
-                  Get_String (Fn, "arguments"));
-            end;
-         end loop;
+               exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
+               declare
+                  TC_Item  : constant JSON_Value_Type :=
+                    Array_Item (TC_Arr, I);
+                  Fn       : constant JSON_Value_Type :=
+                    Get_Object (TC_Item, "function");
+               begin
+                  Result.Num_Tool_Calls := Result.Num_Tool_Calls + 1;
+                  Set_Unbounded_String
+                    (Result.Tool_Calls (Result.Num_Tool_Calls).ID,
+                     Get_String (TC_Item, "id"));
+                  Set_Unbounded_String
+                    (Result.Tool_Calls (Result.Num_Tool_Calls).Name,
+                     Get_String (Fn, "name"));
+                  Set_Unbounded_String
+                    (Result.Tool_Calls (Result.Num_Tool_Calls).Arguments,
+                     Get_String (Fn, "arguments"));
+               end;
+            end loop;
+         end;
       end;
-   end;
    end Parse_Tool_Calls;
 
    function Chat
@@ -322,7 +323,7 @@ is
       Auth_Hdr : constant HTTP.Client.Header :=
         (Name  => To_Unbounded_String ("Authorization"),
          Value => To_Unbounded_String
-           ("Bearer " & To_String (Provider.API_Key))];
+           ("Bearer " & To_String (Provider.API_Key)));
       Hdrs     : constant HTTP.Client.Header_Array := [1 => Auth_Hdr];
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
@@ -400,7 +401,7 @@ is
       Auth_Hdr : constant HTTP.Client.Header :=
         (Name  => To_Unbounded_String ("Authorization"),
          Value => To_Unbounded_String
-           ("Bearer " & To_String (Provider.API_Key))];
+           ("Bearer " & To_String (Provider.API_Key)));
       Hdrs     : constant HTTP.Client.Header_Array := [1 => Auth_Hdr];
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools, Stream => True);

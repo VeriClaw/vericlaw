@@ -23,7 +23,7 @@ private
    type Seen_Array is array (Seen_Index) of Unbounded_String;
 
    type Dedup_Buffer is record
-      IDs  : Seen_Array := (others => Null_Unbounded_String);
+      IDs  : Seen_Array := [others => Null_Unbounded_String];
       Next : Seen_Index := 0;
    end record;
 

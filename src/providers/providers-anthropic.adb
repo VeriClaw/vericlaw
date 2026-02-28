@@ -333,7 +333,7 @@ is
                   end loop;
                end;
             end;
-            end if;
+          end if;
 
          Set_Unbounded_String
            (Result.Stop_Reason, Get_String (PR.Root, "stop_reason"));
