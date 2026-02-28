@@ -16,13 +16,22 @@ project Vericlaw is
    Build_Target : Target_Kind := external ("BUILD_TARGET", "native");
    type Binder_Mode_Kind is ("portable", "minimal");
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");
+   type Warn_Errors_Kind is ("on", "off");
+   Warn_Errors : Warn_Errors_Kind := external ("WARN_ERRORS", "on");
 
    package Compiler is
       case Build_Profile is
          when "dev" =>
-            for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwe",
-               "-gnatyaAbcefhiklmnprtM120", "-gnato");
+            case Warn_Errors is
+               when "on" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwe",
+                     "-gnatyaAbcefhiklmnprtM120", "-gnato");
+               when "off" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa",
+                     "-gnatyaAbcefhiklmnprtM120", "-gnato");
+            end case;
          when "release" =>
             for Default_Switches ("Ada") use
               ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",

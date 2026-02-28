@@ -1,8 +1,3 @@
-with Gateway.Auth;
-with Runtime.Executor;
-with Runtime.Memory;
-with Security.Secrets;
-
 package body Core.Agent with SPARK_Mode is
    function Config_Is_Safe_Default (Config : Agent_Config) return Boolean is
    begin
