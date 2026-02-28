@@ -282,36 +282,36 @@ is
                                 Value_To_Array (Updates);
                            begin
                               for I in 1 .. Array_Length (Upd_Arr) loop
-                              declare
-                                 Update    : constant JSON_Value_Type :=
-                                   Array_Item (Upd_Arr, I);
-                                 Update_ID : constant Integer :=
-                                   Get_Integer (Update, "update_id");
-                                 Reply_Text : constant String :=
-                                   Process_Update
-                                     (To_JSON_String (Update),
-                                      Current_Cfg, Mem);
-                              begin
-                                 if Reply_Text'Length > 0 then
-                                    declare
-                                       Msg     : constant JSON_Value_Type :=
-                                         Get_Object (Update, "message");
-                                       Chat    : constant JSON_Value_Type :=
-                                         Get_Object (Msg, "chat");
-                                       Chat_ID : constant String :=
-                                         Get_String (Chat, "id");
-                                    begin
-                                       if not Send_Message
-                                         (Token, Chat_ID, Reply_Text)
-                                       then
-                                          Logging.Error
-                                            ("Telegram: send failed for "
-                                             & Chat_ID);
-                                       end if;
-                                    end;
-                                 end if;
-                                 Offset := Update_ID + 1;
-                              end;
+                                 declare
+                                    Update    : constant JSON_Value_Type :=
+                                      Array_Item (Upd_Arr, I);
+                                    Update_ID : constant Integer :=
+                                      Get_Integer (Update, "update_id");
+                                    Reply_Text : constant String :=
+                                      Process_Update
+                                        (To_JSON_String (Update),
+                                         Current_Cfg, Mem);
+                                 begin
+                                    if Reply_Text'Length > 0 then
+                                       declare
+                                          Msg     : constant JSON_Value_Type :=
+                                            Get_Object (Update, "message");
+                                          Chat    : constant JSON_Value_Type :=
+                                            Get_Object (Msg, "chat");
+                                          Chat_ID : constant String :=
+                                            Get_String (Chat, "id");
+                                       begin
+                                          if not Send_Message
+                                            (Token, Chat_ID, Reply_Text)
+                                          then
+                                             Logging.Error
+                                               ("Telegram: send failed for "
+                                                & Chat_ID);
+                                          end if;
+                                       end;
+                                    end if;
+                                    Offset := Update_ID + 1;
+                                 end;
                               end loop;
                            end;
                         end;

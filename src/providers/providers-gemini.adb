@@ -205,37 +205,37 @@ is
                  (Result.Stop_Reason, Get_String (First, "finishReason"));
 
                for I in 1 .. Array_Length (Parts_Arr) loop
-                  declare
-                     Part : constant JSON_Value_Type :=
-                       Array_Item (Parts_Arr, I);
-                  begin
-                     if Has_Key (Part, "text") then
-                        Append (Result.Content, Get_String (Part, "text"));
-                     elsif Has_Key (Part, "functionCall") then
-                        exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
-                        declare
-                           FC : constant JSON_Value_Type :=
-                             Get_Object (Part, "functionCall");
-                           FN : constant String :=
-                             Get_String (FC, "name");
-                        begin
-                           Result.Num_Tool_Calls :=
-                             Result.Num_Tool_Calls + 1;
-                           --  Gemini uses function name as call ID.
-                           Set_Unbounded_String
-                             (Result.Tool_Calls
-                                (Result.Num_Tool_Calls).ID, FN);
-                           Set_Unbounded_String
-                             (Result.Tool_Calls
-                                (Result.Num_Tool_Calls).Name, FN);
-                           --  args is a JSON object; serialise to string.
-                           Set_Unbounded_String
-                             (Result.Tool_Calls
-                                (Result.Num_Tool_Calls).Arguments,
-                              To_JSON_String (Get_Object (FC, "args")));
-                        end;
-                     end if;
-                  end;
+                     declare
+                        Part : constant JSON_Value_Type :=
+                          Array_Item (Parts_Arr, I);
+                     begin
+                        if Has_Key (Part, "text") then
+                           Append (Result.Content, Get_String (Part, "text"));
+                        elsif Has_Key (Part, "functionCall") then
+                           exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
+                           declare
+                              FC : constant JSON_Value_Type :=
+                                Get_Object (Part, "functionCall");
+                              FN : constant String :=
+                                Get_String (FC, "name");
+                           begin
+                              Result.Num_Tool_Calls :=
+                                Result.Num_Tool_Calls + 1;
+                              --  Gemini uses function name as call ID.
+                              Set_Unbounded_String
+                                (Result.Tool_Calls
+                                   (Result.Num_Tool_Calls).ID, FN);
+                              Set_Unbounded_String
+                                (Result.Tool_Calls
+                                   (Result.Num_Tool_Calls).Name, FN);
+                              --  args is a JSON object; serialise to string.
+                              Set_Unbounded_String
+                                (Result.Tool_Calls
+                                   (Result.Num_Tool_Calls).Arguments,
+                                 To_JSON_String (Get_Object (FC, "args")));
+                           end;
+                        end if;
+                     end;
                end loop;
             end;
          end if;
@@ -309,43 +309,43 @@ is
                              Value_To_Array (Parts);
                         begin
                            for I in 1 .. Array_Length (Parts_Arr) loop
-                              declare
-                                 Part : constant JSON_Value_Type :=
-                                   Array_Item (Parts_Arr, I);
-                              begin
-                                 if Has_Key (Part, "text") then
-                                    declare
-                                       Chunk : constant String :=
-                                         Get_String (Part, "text");
-                                    begin
-                                       Ada.Text_IO.Put (Chunk);
-                                       Append (Accumulated, Chunk);
-                                    end;
-                                 elsif Has_Key (Part, "functionCall") then
-                                    if Result.Num_Tool_Calls < Max_Tool_Calls then
+                                 declare
+                                    Part : constant JSON_Value_Type :=
+                                      Array_Item (Parts_Arr, I);
+                                 begin
+                                    if Has_Key (Part, "text") then
                                        declare
-                                          FC : constant JSON_Value_Type :=
-                                            Get_Object (Part, "functionCall");
-                                          FN : constant String :=
-                                            Get_String (FC, "name");
+                                          Chunk : constant String :=
+                                            Get_String (Part, "text");
                                        begin
-                                          Result.Num_Tool_Calls :=
-                                            Result.Num_Tool_Calls + 1;
-                                          Set_Unbounded_String
-                                            (Result.Tool_Calls
-                                               (Result.Num_Tool_Calls).ID, FN);
-                                          Set_Unbounded_String
-                                            (Result.Tool_Calls
-                                               (Result.Num_Tool_Calls).Name, FN);
-                                          Set_Unbounded_String
-                                            (Result.Tool_Calls
-                                               (Result.Num_Tool_Calls).Arguments,
-                                             To_JSON_String
-                                               (Get_Object (FC, "args")));
+                                          Ada.Text_IO.Put (Chunk);
+                                          Append (Accumulated, Chunk);
                                        end;
+                                    elsif Has_Key (Part, "functionCall") then
+                                       if Result.Num_Tool_Calls < Max_Tool_Calls then
+                                          declare
+                                             FC : constant JSON_Value_Type :=
+                                               Get_Object (Part, "functionCall");
+                                             FN : constant String :=
+                                               Get_String (FC, "name");
+                                          begin
+                                             Result.Num_Tool_Calls :=
+                                               Result.Num_Tool_Calls + 1;
+                                             Set_Unbounded_String
+                                               (Result.Tool_Calls
+                                                  (Result.Num_Tool_Calls).ID, FN);
+                                             Set_Unbounded_String
+                                               (Result.Tool_Calls
+                                                  (Result.Num_Tool_Calls).Name, FN);
+                                             Set_Unbounded_String
+                                               (Result.Tool_Calls
+                                                  (Result.Num_Tool_Calls).Arguments,
+                                                To_JSON_String
+                                                  (Get_Object (FC, "args")));
+                                          end;
+                                       end if;
                                     end if;
-                                 end if;
-                              end;
+                                 end;
                            end loop;
 
                            if Has_Key (First, "finishReason") then

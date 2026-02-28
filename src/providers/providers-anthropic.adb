@@ -304,32 +304,32 @@ is
                     Value_To_Array (Blocks);
                begin
                   for I in 1 .. Array_Length (Blocks_Arr) loop
-                  declare
-                     Block : constant JSON_Value_Type := Array_Item (Blocks_Arr, I);
-                     BType : constant String :=
-                       Get_String (Block, "type");
-                  begin
-                     if BType = "text" then
-                        Append (Result.Content,
-                          Get_String (Block, "text"));
-                     elsif BType = "tool_use" then
-                        exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
-                        Result.Num_Tool_Calls :=
-                          Result.Num_Tool_Calls + 1;
-                        Set_Unbounded_String
-                          (Result.Tool_Calls
-                             (Result.Num_Tool_Calls).ID,
-                           Get_String (Block, "id"));
-                        Set_Unbounded_String
-                          (Result.Tool_Calls
-                             (Result.Num_Tool_Calls).Name,
-                           Get_String (Block, "name"));
-                        Set_Unbounded_String
-                          (Result.Tool_Calls
-                             (Result.Num_Tool_Calls).Arguments,
-                           To_JSON_String (Get_Object (Block, "input")));
-                     end if;
-                  end;
+                     declare
+                        Block : constant JSON_Value_Type := Array_Item (Blocks_Arr, I);
+                        BType : constant String :=
+                          Get_String (Block, "type");
+                     begin
+                        if BType = "text" then
+                           Append (Result.Content,
+                             Get_String (Block, "text"));
+                        elsif BType = "tool_use" then
+                           exit when Result.Num_Tool_Calls >= Max_Tool_Calls;
+                           Result.Num_Tool_Calls :=
+                             Result.Num_Tool_Calls + 1;
+                           Set_Unbounded_String
+                             (Result.Tool_Calls
+                                (Result.Num_Tool_Calls).ID,
+                              Get_String (Block, "id"));
+                           Set_Unbounded_String
+                             (Result.Tool_Calls
+                                (Result.Num_Tool_Calls).Name,
+                              Get_String (Block, "name"));
+                           Set_Unbounded_String
+                             (Result.Tool_Calls
+                                (Result.Num_Tool_Calls).Arguments,
+                              To_JSON_String (Get_Object (Block, "input")));
+                        end if;
+                     end;
                end loop;
             end;
          end;

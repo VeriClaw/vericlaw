@@ -195,27 +195,27 @@ is
                           Value_To_Array (PR.Root);
                      begin
                         for I in 1 .. Array_Length (Root_Arr) loop
-                        declare
-                           Item       : constant JSON_Value_Type :=
-                             Array_Item (Root_Arr, I);
-                           Reply_Text : constant String :=
-                             Process_Message_JSON
-                               (To_JSON_String (Item), Current_Cfg, Mem);
-                           Source     : constant String :=
-                             Get_String
-                               (Get_Object (Item, "envelope"), "source");
-                        begin
-                           if Reply_Text'Length > 0
-                             and then Source'Length > 0
-                           then
-                              if not Send_Message
-                                (BU, Num, Source, Reply_Text)
+                           declare
+                              Item       : constant JSON_Value_Type :=
+                                Array_Item (Root_Arr, I);
+                              Reply_Text : constant String :=
+                                Process_Message_JSON
+                                  (To_JSON_String (Item), Current_Cfg, Mem);
+                              Source     : constant String :=
+                                Get_String
+                                  (Get_Object (Item, "envelope"), "source");
+                           begin
+                              if Reply_Text'Length > 0
+                                and then Source'Length > 0
                               then
-                                 Logging.Error
-                                   ("Signal: send failed to " & Source);
+                                 if not Send_Message
+                                   (BU, Num, Source, Reply_Text)
+                                 then
+                                    Logging.Error
+                                      ("Signal: send failed to " & Source);
+                                 end if;
                               end if;
-                           end if;
-                        end;
+                           end;
                         end loop;
                      end;
                   end if;
