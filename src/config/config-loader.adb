@@ -157,7 +157,13 @@ is
                Idx    : Provider_Index := 1;
             begin
                for I in 1 .. Array_Length (PA) loop
+                  pragma Warnings
+                    (Off,
+                     "condition can only be True if invalid values present");
                   exit when Idx > Max_Providers;
+                  pragma Warnings
+                    (On,
+                     "condition can only be True if invalid values present");
                   Parse_Provider (Array_Item (PA, I), Result.Config.Providers (Idx));
                   Idx := Idx + 1;
                end loop;
@@ -175,7 +181,13 @@ is
                Idx    : Channel_Index := 1;
             begin
                for I in 1 .. Array_Length (CA) loop
+                  pragma Warnings
+                    (Off,
+                     "condition can only be True if invalid values present");
                   exit when Idx > Max_Channels;
+                  pragma Warnings
+                    (On,
+                     "condition can only be True if invalid values present");
                   Parse_Channel (Array_Item (CA, I), Result.Config.Channels (Idx));
                   Idx := Idx + 1;
                end loop;
@@ -447,10 +459,10 @@ is
          end if;
          Get_Line (Buf, L);
          if L = 0 and then Default'Length > 0 then
-            Result (1 .. Default'Length) := Default;
+            Result (Result'First .. Result'First + Default'Length - 1) := Default;
             Last_Out := Default'Length;
          else
-            Result (1 .. L) := Buf (1 .. L);
+            Result (Result'First .. Result'First + L - 1) := Buf (1 .. L);
             Last_Out := L;
          end if;
       end Prompt;
@@ -485,8 +497,7 @@ is
       elsif PL = 1 and then Provider_Buf (1) = '3' then
          Provider_Buf (1 .. 6) := "ollama"; PL := 6;
       elsif PL = 1 and then Provider_Buf (1) = '4' then
-         Provider_Buf (1 .. 18) := "openai_compatible "; PL := 17;
-         Provider_Buf (17) := 'e'; -- fix last char
+         Provider_Buf (1 .. 17) := "openai_compatible"; PL := 17;
       end if;
 
       Is_Ollama := PL >= 6 and then Provider_Buf (1 .. 6) = "ollama";
@@ -498,10 +509,12 @@ is
          if PL >= 9 and then Provider_Buf (1 .. 9) = "anthropic" then
             Prompt ("Anthropic API key", "", API_Key_Buf, KL);
             Prompt ("Model", "claude-3-5-sonnet-20241022", Model_Buf, ML);
-         elsif PL >= 18 and then Provider_Buf (1 .. 18) = "openai_compatible" then
+         elsif PL >= 17
+           and then Provider_Buf (1 .. 17) = "openai_compatible"
+         then
             Prompt ("API key (or leave blank)", "", API_Key_Buf, KL);
             Prompt ("Base URL", "http://localhost:8080", Model_Buf, ML);
-            -- Model_Buf is reused for base_url here; handled below
+            --  Model_Buf is reused for base_url here; handled below
          else
             Prompt ("OpenAI API key", "", API_Key_Buf, KL);
             Prompt ("Model", "gpt-4o", Model_Buf, ML);
@@ -548,7 +561,7 @@ is
       declare
          File : Ada.Text_IO.File_Type;
          function Q (S : String; L : Natural) return String is
-           ("""" & S (1 .. L) & """");
+           ("""" & S (S'First .. S'First + L - 1) & """");
       begin
          Ada.Text_IO.Create (File, Ada.Text_IO.Out_File, Path);
          Put_Line (File, "{");

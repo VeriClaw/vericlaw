@@ -174,14 +174,14 @@ is
               & ",""startTimeUnixNano"":" & Time_To_Nanos (S.Start_Time)
               & ",""endTimeUnixNano"":" & Time_To_Nanos (S.End_Time));
 
-            -- Status
+            --  Status
             if S.Has_Error then
                Append (Body_Str,
                  ",""status"":{""code"":2,""message"":"
                  & """" & Escape_JSON (To_String (S.Error_Msg)) & """}");
             end if;
 
-            -- Attributes
+            --  Attributes
             if S.Num_Attrs > 0 then
                Append (Body_Str, ",""attributes"":[");
                for A in 1 .. S.Num_Attrs loop
@@ -294,7 +294,7 @@ is
          Set_Unbounded_String (Inflight (Sl).Trace_Hex, To_Hex_32 (Natural (ID)));
          Set_Unbounded_String (Inflight (Sl).Parent_Hex, "");
       else
-         -- Inherit trace ID from parent, set parent span ID
+         --  Inherit trace ID from parent, set parent span ID
          declare
             P_Sl : constant Positive := Slot (Parent);
          begin

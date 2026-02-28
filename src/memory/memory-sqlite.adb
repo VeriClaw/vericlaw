@@ -799,7 +799,7 @@ is
       Rc   : int;
    begin
       Count    := 0;
-      Branches := (others => (others => <>));
+      Branches := [others => (others => <>)];
 
       Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
       Free (CS);

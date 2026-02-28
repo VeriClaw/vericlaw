@@ -13,7 +13,7 @@ package Plugins.Capabilities with SPARK_Mode is
       Manifest_Signed_Trusted_Key);
 
    type Capability_Manifest is record
-      Granted_Tools : Tool_Grant_Set := (others => False);
+      Granted_Tools : Tool_Grant_Set := [others => False];
       Signature     : Signature_Verification_State := Manifest_Unsigned;
    end record;
 
