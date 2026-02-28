@@ -1,2 +1,0 @@
-last_build_profile = "aws=RELEASE,gnat_native=RELEASE,gnatcoll=RELEASE,libgpr=RELEASE,make=RELEASE,openssl=RELEASE,vericlaw=DEVELOPMENT,xmlada=RELEASE"
-

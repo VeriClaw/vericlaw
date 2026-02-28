@@ -101,3 +101,6 @@ config/config.json
 COPILOT_SESSION_NOTES.md
 ci_pipeline_guide.txt
 cross_platform_strategy.txt
+# Alire build artifacts
+alire/
+config/vericlaw_config.*
