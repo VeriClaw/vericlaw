@@ -1,4 +1,5 @@
 with Ada.Calendar;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 
 package body Observability.Tracing
@@ -212,6 +213,7 @@ is
    task type Flush_Task is
       entry Start;
       entry Stop;
+      pragma Unreferenced (Stop);
    end Flush_Task;
 
    task body Flush_Task is
@@ -234,7 +236,7 @@ is
                URL   : constant String :=
                  To_String (Endpoint) & "/v1/traces";
                Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) :=
-                 (others => <>);
+                 [others => <>];
             begin
                Span_Buffer.Drain_All (Batch, Count);
                if Count > 0 then

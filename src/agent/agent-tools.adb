@@ -7,7 +7,6 @@ with Tools.Cron;
 with Tools.Spawn;
 with Tools.Browser;
 with Agent.Orchestrator;
-with Memory.SQLite;
 with Memory.Vector;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;

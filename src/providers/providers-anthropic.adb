@@ -330,10 +330,10 @@ is
                               To_JSON_String (Get_Object (Block, "input")));
                         end if;
                      end;
-               end loop;
+                  end loop;
+               end;
             end;
-         end;
-         end if;
+            end if;
 
          Set_Unbounded_String
            (Result.Stop_Reason, Get_String (PR.Root, "stop_reason"));

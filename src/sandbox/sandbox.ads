@@ -1,5 +1,4 @@
 pragma SPARK_Mode (Off);
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 package Sandbox is
 
    Max_Hosts : constant := 16;

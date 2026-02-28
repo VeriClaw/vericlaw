@@ -11,6 +11,114 @@ is
    Gemini_Base_URL : constant String :=
      "https://generativelanguage.googleapis.com/v1beta/models/";
 
+   --  Package-level state for streaming SSE parser (same pattern as OpenAI).
+   Gemini_Accumulated   : Unbounded_String;
+   Gemini_Result        : Provider_Response;
+
+   procedure Gemini_SSE_Parse (Line : String);
+
+   procedure Gemini_SSE_Parse (Line : String) is
+      Prefix : constant String := "data: ";
+   begin
+      if Line'Length > Prefix'Length
+        and then Line (Line'First .. Line'First + Prefix'Length - 1) = Prefix
+      then
+         declare
+            Payload : constant String :=
+              Line (Line'First + Prefix'Length .. Line'Last);
+            PR : constant Parse_Result := Parse (Payload);
+         begin
+            if PR.Valid and then Has_Key (PR.Root, "candidates") then
+               declare
+                  Cands     : constant JSON_Value_Type :=
+                    Get_Object (PR.Root, "candidates");
+                  Cands_Arr : constant JSON_Array_Type :=
+                    Value_To_Array (Cands);
+               begin
+                  if Array_Length (Cands_Arr) > 0 then
+                     declare
+                        First     : constant JSON_Value_Type :=
+                          Array_Item (Cands_Arr, 1);
+                        Content   : constant JSON_Value_Type :=
+                          Get_Object (First, "content");
+                        Parts     : constant JSON_Value_Type :=
+                          Get_Object (Content, "parts");
+                        Parts_Arr : constant JSON_Array_Type :=
+                          Value_To_Array (Parts);
+                     begin
+                        for I in 1 .. Array_Length (Parts_Arr) loop
+                           declare
+                              Part : constant JSON_Value_Type :=
+                                Array_Item (Parts_Arr, I);
+                           begin
+                              if Has_Key (Part, "text") then
+                                 declare
+                                    Chunk : constant String :=
+                                      Get_String (Part, "text");
+                                 begin
+                                    Ada.Text_IO.Put (Chunk);
+                                    Append (Gemini_Accumulated, Chunk);
+                                 end;
+                              elsif Has_Key (Part, "functionCall") then
+                                 if Gemini_Result.Num_Tool_Calls
+                                   < Max_Tool_Calls
+                                 then
+                                    declare
+                                       FC : constant JSON_Value_Type :=
+                                         Get_Object (Part, "functionCall");
+                                       FN : constant String :=
+                                         Get_String (FC, "name");
+                                    begin
+                                       Gemini_Result.Num_Tool_Calls :=
+                                         Gemini_Result.Num_Tool_Calls + 1;
+                                       Set_Unbounded_String
+                                         (Gemini_Result.Tool_Calls
+                                            (Gemini_Result.Num_Tool_Calls).ID,
+                                          FN);
+                                       Set_Unbounded_String
+                                         (Gemini_Result.Tool_Calls
+                                            (Gemini_Result.Num_Tool_Calls).Name,
+                                          FN);
+                                       Set_Unbounded_String
+                                         (Gemini_Result.Tool_Calls
+                                            (Gemini_Result.Num_Tool_Calls)
+                                            .Arguments,
+                                          To_JSON_String
+                                            (Get_Object (FC, "args")));
+                                    end;
+                                 end if;
+                              end if;
+                           end;
+                        end loop;
+
+                        if Has_Key (First, "finishReason") then
+                           Set_Unbounded_String
+                             (Gemini_Result.Stop_Reason,
+                              Get_String (First, "finishReason"));
+                        end if;
+                     end;
+                  end if;
+               end;
+            end if;
+
+            if PR.Valid and then Has_Key (PR.Root, "usageMetadata") then
+               declare
+                  U : constant JSON_Value_Type :=
+                    Get_Object (PR.Root, "usageMetadata");
+               begin
+                  Gemini_Result.Input_Tokens  :=
+                    Get_Integer (U, "promptTokenCount");
+                  Gemini_Result.Output_Tokens :=
+                    Get_Integer (U, "candidatesTokenCount");
+               end;
+            end if;
+         end;
+      end if;
+   exception
+      when others =>
+         Logging.Debug ("Malformed SSE chunk discarded");
+   end Gemini_SSE_Parse;
+
    function Create (Cfg : Provider_Config) return Gemini_Provider is
       P : Gemini_Provider;
    begin
@@ -264,7 +372,6 @@ is
       Tools     : Tool_Schema_Array;
       Num_Tools : Natural) return Provider_Response
    is
-      --  Gemini streaming endpoint uses streamGenerateContent with SSE.
       URL      : constant String :=
         Gemini_Base_URL
         & To_String (Provider.Model)
@@ -274,126 +381,29 @@ is
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
 
-      Result        : Provider_Response;
-      Accumulated   : Unbounded_String;
-      Http_Resp     : HTTP.Client.Response;
-
-      procedure On_SSE_Line (Line : String) is
-         --  Gemini SSE sends "data: {json}" lines.
-         Prefix : constant String := "data: ";
-      begin
-         if Line'Length > Prefix'Length
-           and then Line (Line'First .. Line'First + Prefix'Length - 1) = Prefix
-         then
-            declare
-               Payload : constant String :=
-                 Line (Line'First + Prefix'Length .. Line'Last);
-               PR : constant Parse_Result := Parse (Payload);
-            begin
-               if PR.Valid and then Has_Key (PR.Root, "candidates") then
-                  declare
-                     Cands     : constant JSON_Value_Type :=
-                       Get_Object (PR.Root, "candidates");
-                     Cands_Arr : constant JSON_Array_Type :=
-                       Value_To_Array (Cands);
-                  begin
-                     if Array_Length (Cands_Arr) > 0 then
-                        declare
-                           First     : constant JSON_Value_Type :=
-                             Array_Item (Cands_Arr, 1);
-                           Content   : constant JSON_Value_Type :=
-                             Get_Object (First, "content");
-                           Parts     : constant JSON_Value_Type :=
-                             Get_Object (Content, "parts");
-                           Parts_Arr : constant JSON_Array_Type :=
-                             Value_To_Array (Parts);
-                        begin
-                           for I in 1 .. Array_Length (Parts_Arr) loop
-                                 declare
-                                    Part : constant JSON_Value_Type :=
-                                      Array_Item (Parts_Arr, I);
-                                 begin
-                                    if Has_Key (Part, "text") then
-                                       declare
-                                          Chunk : constant String :=
-                                            Get_String (Part, "text");
-                                       begin
-                                          Ada.Text_IO.Put (Chunk);
-                                          Append (Accumulated, Chunk);
-                                       end;
-                                    elsif Has_Key (Part, "functionCall") then
-                                       if Result.Num_Tool_Calls < Max_Tool_Calls then
-                                          declare
-                                             FC : constant JSON_Value_Type :=
-                                               Get_Object (Part, "functionCall");
-                                             FN : constant String :=
-                                               Get_String (FC, "name");
-                                          begin
-                                             Result.Num_Tool_Calls :=
-                                               Result.Num_Tool_Calls + 1;
-                                             Set_Unbounded_String
-                                               (Result.Tool_Calls
-                                                  (Result.Num_Tool_Calls).ID, FN);
-                                             Set_Unbounded_String
-                                               (Result.Tool_Calls
-                                                  (Result.Num_Tool_Calls).Name, FN);
-                                             Set_Unbounded_String
-                                               (Result.Tool_Calls
-                                                  (Result.Num_Tool_Calls).Arguments,
-                                                To_JSON_String
-                                                  (Get_Object (FC, "args")));
-                                          end;
-                                       end if;
-                                    end if;
-                                 end;
-                           end loop;
-
-                           if Has_Key (First, "finishReason") then
-                              Set_Unbounded_String
-                                (Result.Stop_Reason,
-                                 Get_String (First, "finishReason"));
-                           end if;
-                        end;
-                     end if;
-                  end;
-               end if;
-
-               if PR.Valid and then Has_Key (PR.Root, "usageMetadata") then
-                  declare
-                     U : constant JSON_Value_Type :=
-                       Get_Object (PR.Root, "usageMetadata");
-                  begin
-                     Result.Input_Tokens  :=
-                       Get_Integer (U, "promptTokenCount");
-                     Result.Output_Tokens :=
-                       Get_Integer (U, "candidatesTokenCount");
-                  end;
-               end if;
-            end;
-         end if;
-      exception
-         when others =>
-            Logging.Debug ("Malformed SSE chunk discarded");
-      end On_SSE_Line;
+      Http_Resp : HTTP.Client.Response;
    begin
+      Gemini_Accumulated := Null_Unbounded_String;
+      Gemini_Result      := (others => <>);
+
       Http_Resp := HTTP.Client.Post_JSON_Streaming
         (URL        => URL,
          Headers    => No_Hdrs,
          Body_JSON  => Body_Str,
-         On_Chunk   => On_SSE_Line'Access,
+         On_Chunk   => Gemini_SSE_Parse'Access,
          Timeout_Ms => Provider.Timeout_Ms);
 
       if not HTTP.Client.Is_Success (Http_Resp) then
          Set_Unbounded_String
-           (Result.Error, "Gemini streaming HTTP error:"
+           (Gemini_Result.Error, "Gemini streaming HTTP error:"
             & Natural'Image (Http_Resp.Status_Code));
-         return Result;
+         return Gemini_Result;
       end if;
 
       Ada.Text_IO.New_Line;
-      Result.Content := Accumulated;
-      Result.Success := True;
-      return Result;
+      Gemini_Result.Content := Gemini_Accumulated;
+      Gemini_Result.Success := True;
+      return Gemini_Result;
    end Chat_Streaming;
 
 end Providers.Gemini;

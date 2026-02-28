@@ -1,5 +1,4 @@
 pragma SPARK_Mode (Off);
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 package Observability.Tracing is
    procedure Initialize (OTLP_Endpoint : String);
    --  Call once at startup; no-ops all tracing if empty string

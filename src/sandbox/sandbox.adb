@@ -1,7 +1,6 @@
 pragma SPARK_Mode (Off);
 with Ada.Text_IO;
 with Interfaces.C; use Interfaces.C;
-with System;
 
 package body Sandbox is
 
@@ -52,6 +51,7 @@ package body Sandbox is
       Mem_Limit  : aliased Rlimit;
       File_Limit : aliased Rlimit;
       Ret        : int;
+      pragma Unreferenced (Ret);
       Bytes      : constant unsigned_long := unsigned_long (Max_Memory_MB) * 1024 * 1024;
    begin
       case Detect_OS is
