@@ -59,7 +59,7 @@ is
 
    function To_Hex_32 (N : Natural) return String is
    begin
-      return "00000000000000000000000000000000" (1 .. 16) & To_Hex_16 (N);
+      return "0000000000000000" & To_Hex_16 (N);
    end To_Hex_32;
 
    --  -----------------------------------------------------------------------
@@ -74,7 +74,7 @@ is
       function Pending return Natural;
       entry Drain_All (Buf : out Span_Array; Count : out Natural);
    private
-      Store : array (1 .. Max_Buffer) of Span_Record;
+      Store : Span_Array;
       Num   : Natural := 0;
    end Span_Buffer;
 
