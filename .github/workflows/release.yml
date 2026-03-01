@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.1.0)'
+        required: true
+        default: 'v0.1.0'
 
 permissions:
   contents: write  # For creating releases
@@ -12,6 +18,7 @@ permissions:
 env:
   ALIRE_VERSION: '2.0.2'
   GNAT_VERSION: 'gnat_native=14.2.1'
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   # Reuse the cross-platform build matrix
@@ -34,7 +41,7 @@ jobs:
 
       - name: Package release artifacts
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           mkdir -p release/
           
           # Linux x86_64
@@ -105,10 +112,10 @@ jobs:
       - name: Extract changelog
         id: changelog
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           # Extract section for this version from CHANGELOG.md
           awk "/^## \[${VERSION}\]|^## \[v${VERSION}\]|^### Added.*${VERSION}|^### Fixed.*${VERSION}/{found=1} found && /^## \[/{if(++count>1)exit} found" \
-            CHANGELOG.md > release-notes.md 2>/dev/null || echo "Release ${GITHUB_REF_NAME}" > release-notes.md
+            CHANGELOG.md > release-notes.md 2>/dev/null || echo "Release ${RELEASE_TAG}" > release-notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -116,7 +123,7 @@ jobs:
           files: release/*
           body_path: release-notes.md
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}
+          prerelease: ${{ contains(env.RELEASE_TAG, 'rc') || contains(env.RELEASE_TAG, 'beta') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -150,7 +157,7 @@ jobs:
 
       - name: Build packages
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ env.RELEASE_TAG }}
           GOARCH: ${{ matrix.arch }}
         run: |
           VERSION="${VERSION#v}"
@@ -181,13 +188,13 @@ jobs:
   update-homebrew:
     needs: release
     runs-on: ubuntu-latest
-    if: "!contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta')"
+    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
     steps:
       - uses: actions/checkout@v4
 
       - name: Download checksums
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/checksums-sha256.txt" \
             -o checksums.txt
           cat checksums.txt
@@ -196,7 +203,7 @@ jobs:
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
 
           # Extract SHA-256 hashes from checksums file
           SHA_MACOS=$(grep 'macos-universal' checksums.txt | cut -d' ' -f1)
@@ -227,13 +234,13 @@ jobs:
   update-scoop:
     needs: release
     runs-on: ubuntu-latest
-    if: "!contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta')"
+    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
     steps:
       - uses: actions/checkout@v4
 
       - name: Download checksums
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/checksums-sha256.txt" \
             -o checksums.txt
 
@@ -241,7 +248,7 @@ jobs:
         env:
           BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           SHA_WIN=$(grep 'windows-x86_64' checksums.txt | cut -d' ' -f1)
 
           # Clone bucket repo
@@ -267,7 +274,7 @@ jobs:
   publish-docker:
     needs: release
     runs-on: ubuntu-latest
-    if: "!contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta')"
+    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
     steps:
       - uses: actions/checkout@v4
 
@@ -309,9 +316,9 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_REPO }}:latest
-            ${{ env.IMAGE_REPO }}:${{ github.ref_name }}
+            ${{ env.IMAGE_REPO }}:${{ env.RELEASE_TAG }}
           labels: |
-            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.version=${{ env.RELEASE_TAG }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.licenses=Apache-2.0
 
@@ -319,13 +326,13 @@ jobs:
   update-winget:
     needs: release
     runs-on: ubuntu-latest
-    if: "!contains(github.ref_name, 'rc') && !contains(github.ref_name, 'beta')"
+    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
     steps:
       - uses: actions/checkout@v4
 
       - name: Download checksums
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           curl -fsSL "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/checksums-sha256.txt" \
             -o checksums.txt
 
@@ -333,7 +340,7 @@ jobs:
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${RELEASE_TAG#v}"
           SHA_WIN=$(grep 'windows-x86_64' checksums.txt | cut -d' ' -f1)
           URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/vericlaw-v${VERSION}-windows-x86_64.zip"
 
