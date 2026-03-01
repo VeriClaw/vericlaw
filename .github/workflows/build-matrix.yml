@@ -125,6 +125,48 @@ jobs:
         run: |
           chmod +x scripts/embed_version.sh
           BUILD_TARGET=x86_64-w64-mingw32 ./scripts/embed_version.sh
+      - name: Patch aws index for Windows (mkdir common/src fix)
+        # aws 24.0.0 post-fetch fails on Windows because awsres tries to write to
+        # .build/<target>/common/src which gprbuild -p never creates on Windows.
+        # Insert a 'mkdir -p' action into the local Alire index before 'make all'.
+        shell: python
+        run: |
+          import os, sys
+          for env_var in ('LOCALAPPDATA', 'APPDATA'):
+              base = os.environ.get(env_var, '')
+              if not base:
+                  continue
+              search_root = os.path.join(base, 'alire')
+              if not os.path.exists(search_root):
+                  continue
+              for root, dirs, files in os.walk(search_root):
+                  if 'aws-24.0.0.toml' in files:
+                      path = os.path.join(root, 'aws-24.0.0.toml')
+                      print(f'Found: {path}')
+                      with open(path, 'rb') as f:
+                          data = f.read()
+                      nl = b'\r\n' if b'\r\n' in data else b'\n'
+                      old = nl.join([
+                          b'[[actions]]',
+                          b'type = "post-fetch"',
+                          b'command = ["make", "all", "ENABLE_SHARED=false"]',
+                      ])
+                      new = nl.join([
+                          b'[[actions]]',
+                          b'type = "post-fetch"',
+                          b'command = ["sh", "-c", "T=$(gcc -dumpmachine 2>/dev/null); T=${T:-x86_64-w64-mingw32}; mkdir -p .build/$T/common/src 2>/dev/null || true"]',
+                          b'[[actions]]',
+                          b'type = "post-fetch"',
+                          b'command = ["make", "all", "ENABLE_SHARED=false"]',
+                      ])
+                      if old not in data:
+                          print('Pattern not found; file may be in unexpected format')
+                          sys.exit(0)
+                      with open(path, 'wb') as f:
+                          f.write(data.replace(old, new, 1))
+                      print('Patched successfully')
+                      sys.exit(0)
+          print('aws-24.0.0.toml not found in LOCALAPPDATA/APPDATA alire dirs')
       - name: Build
         shell: bash
         env:
@@ -132,14 +174,7 @@ jobs:
           CPATH: C:/msys64/mingw64/include
         run: |
           alr toolchain --select gnat_native=14.2.1
-          if ! alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32; then
-            # aws 24.0.0 Windows: gprbuild -p doesn't create Source_Dirs on Windows,
-            # so awsres fails to write templates. Create common/src and retry.
-            find "$(cygpath "$LOCALAPPDATA")/alire/cache/builds" \
-              -path "*/aws_24.0.0_*/.build" -type d 2>/dev/null | \
-              while IFS= read -r d; do mkdir -p "$d/x86_64-w64-mingw32/common/src"; done
-            alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
-          fi
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
           strip vericlaw.exe 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
