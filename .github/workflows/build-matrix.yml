@@ -132,7 +132,14 @@ jobs:
           CPATH: C:/msys64/mingw64/include
         run: |
           alr toolchain --select gnat_native=14.2.1
-          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          if ! alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32; then
+            # aws 24.0.0 Windows: gprbuild -p doesn't create Source_Dirs on Windows,
+            # so awsres fails to write templates. Create common/src and retry.
+            find "$(cygpath "$LOCALAPPDATA")/alire/cache/builds" \
+              -path "*/aws_24.0.0_*/.build" -type d 2>/dev/null | \
+              while IFS= read -r d; do mkdir -p "$d/x86_64-w64-mingw32/common/src"; done
+            alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          fi
           strip vericlaw.exe 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
