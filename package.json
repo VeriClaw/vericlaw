@@ -1,6 +1,6 @@
 {
   "name": "vericlaw",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "> **Active development — `test` branch has all the latest features. `main` is an empty stub.**",
   "main": "index.js",
   "directories": {
