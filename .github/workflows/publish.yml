@@ -5,8 +5,23 @@ on:
     tags:
       - 'v*'
 
+env:
+  ALIRE_VERSION: '2.0.2'
+  GNAT_VERSION: 'gnat_native=14.2.1'
+
 jobs:
-  test:
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tag.outputs.release_tag }}
     steps:
-      - run: echo "tag=$GITHUB_REF_NAME"
+      - name: Set release tag
+        id: tag
+        run: |
+          echo "release_tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: setup
+    uses: ./.github/workflows/build-matrix.yml
+    with:
+      build_profile: release
