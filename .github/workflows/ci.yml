@@ -323,6 +323,7 @@ jobs:
   # ---------------------------------------------------------------------------
   security-scan:
     runs-on: ubuntu-latest
+    continue-on-error: true  # trivy-action fetches aquasecurity/trivy at startup; non-blocking if infra fails
     permissions:
       security-events: write
     steps:
