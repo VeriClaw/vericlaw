@@ -260,7 +260,7 @@ docker-dev-build: docker-dev-image
 	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  bash -c 'yes "" 2>/dev/null | alr build'
+	  bash -c 'yes "" 2>/dev/null | alr toolchain --select gnat_native=14.2.1 && alr build'
 
 ## Interactive shell inside the dev container with source mounted.
 ## Use this to run gnat, gprbuild, gnatprove manually or inspect errors.

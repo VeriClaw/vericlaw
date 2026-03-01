@@ -22,7 +22,10 @@ RUN apt-get update \
        python3 \
        ca-certificates \
        unzip \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && for t in gnatbind gnatlink gnatls; do \
+         [ -f "/usr/bin/${t}-14" ] && ln -sf "/usr/bin/${t}-14" "/usr/bin/x86_64-linux-gnu-${t}" || true; \
+       done
 
 # Install Alire (Ada package manager) — manages gnatcoll + aws dependencies.
 ARG ALIRE_VERSION=2.0.2
