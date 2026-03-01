@@ -183,7 +183,30 @@ jobs:
           CPATH: C:/msys64/mingw64/include
         run: |
           alr toolchain --select gnat_native=14.2.1
+
+          # aws 24.0.0 on Windows: awsres cannot create files in
+          # .build/<triple>/common/src because the directory does not exist yet.
+          # Allow the first attempt to fail, then create the missing directory
+          # and retry.  Alire re-runs the aws post-fetch from existing compiled
+          # objects, so make skips recompilation and only gen-templates executes.
+          set +e
           alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          _rc=$?
+          set -e
+
+          if [ $_rc -ne 0 ]; then
+            python3 << 'PYEOF'
+import os, glob
+lad = os.environ.get('LOCALAPPDATA', '')
+if lad:
+    for d in glob.glob(os.path.join(lad, 'alire', 'cache', 'builds', 'aws_24*', '*', '.build')):
+        t = os.path.join(d, 'x86_64-w64-mingw32', 'common', 'src')
+        os.makedirs(t, exist_ok=True)
+        print('aws workaround: created', t)
+PYEOF
+            alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          fi
+
           strip vericlaw.exe 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
