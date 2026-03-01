@@ -82,21 +82,23 @@ jobs:
           alr toolchain --select gnat_native=14.2.1
           alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=${{ matrix.gpr_target }}
           strip vericlaw 2>/dev/null || true
-          # Remove duplicate LC_RPATH entries — Alire toolchain and LIBRARY_PATH can both
-          # inject /opt/homebrew/lib, causing "duplicate LC_RPATH" dyld errors on macOS Ventura+
-          python3 - vericlaw <<'PYEOF'
-import subprocess, sys, re
-binary = sys.argv[1]
-out = subprocess.check_output(['otool', '-l', binary]).decode()
-seen = set()
-for m in re.finditer(r'LC_RPATH.*?\n.*?\n\s+path\s+(\S+)', out, re.DOTALL):
-    rpath = m.group(1)
-    if rpath in seen:
-        subprocess.run(['install_name_tool', '-delete_rpath', rpath, binary], check=True)
-        print(f'Removed duplicate RPATH: {rpath}')
-    else:
-        seen.add(rpath)
-PYEOF
+      - name: Deduplicate LC_RPATH entries
+        # Alire toolchain + LIBRARY_PATH both inject /opt/homebrew/lib, causing
+        # "duplicate LC_RPATH" dyld hard errors on macOS Ventura/Sonoma.
+        # Uses shell: python3 to avoid <<heredoc YAML parse conflicts.
+        shell: python3 {0}
+        run: |
+          import subprocess, re
+          binary = 'vericlaw'
+          out = subprocess.check_output(['otool', '-l', binary]).decode()
+          seen = set()
+          for m in re.finditer(r'LC_RPATH.*?\n.*?\n\s+path\s+(\S+)', out, re.DOTALL):
+              rpath = m.group(1)
+              if rpath in seen:
+                  subprocess.run(['install_name_tool', '-delete_rpath', rpath, binary], check=True)
+                  print(f'Removed duplicate RPATH: {rpath}')
+              else:
+                  seen.add(rpath)
       - uses: actions/upload-artifact@v4
         with:
           name: vericlaw-${{ matrix.target }}
