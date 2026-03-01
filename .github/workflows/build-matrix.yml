@@ -194,13 +194,14 @@ jobs:
           alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
           strip vericlaw.exe 2>/dev/null || true
       - name: Fix aws 24.0.0 gen-templates
-        # aws 24.0.0's tools/wsdl2aws-templates/Makefile has NO mkdir before
-        # the awsres call.  The parent Makefile does `mkdir -p $(BDIR)/../common/src`
-        # in build-awsres-tool-native, but the `..` path with a non-existent debug/
-        # dir fails silently on Windows (mkdir exits 0 but the dir isn't created).
-        # Fix: patch the sub-Makefile to add an explicit mkdir using the exact
-        # relative path that awsres uses.  This runs in the same shell/CWD as
-        # awsres so path resolution is guaranteed to match.
+        # Root cause: awsres is a Windows PE binary.  When make -C tools/wsdl2aws-templates
+        # runs it, MSYS2 updates its own POSIX CWD but the Windows CWD (inherited by PE
+        # child processes) stays at the aws root.  So the relative path
+        # "../../.build/$(TARGET)/common/src" resolves TWO LEVELS ABOVE the aws root
+        # for awsres — a path that doesn't exist.
+        # Fix: patch the sub-Makefile to replace the relative -o path with an absolute
+        # Windows path (forward slashes) so awsres works regardless of its CWD.
+        # We also create the directory explicitly from Python (absolute path, reliable).
         if: steps.build-attempt.outcome == 'failure'
         shell: python
         run: |
@@ -217,6 +218,15 @@ jobs:
           for aws_src_slash in aws_dirs:
               aws_src = aws_src_slash.rstrip('/').replace('/', os.sep)
               print('aws_src:', aws_src)
+
+              TARGET = 'x86_64-w64-mingw32'
+              common_src = os.path.join(aws_src, '.build', TARGET, 'common', 'src')
+              # Use forward slashes so Windows APIs and awsres both accept the path
+              common_src_fwd = common_src.replace('\\', '/')
+              print('Creating directory:', common_src)
+              os.makedirs(common_src, exist_ok=True)
+              print('Directory created:', os.path.isdir(common_src))
+
               mk = os.path.join(aws_src, 'tools', 'wsdl2aws-templates', 'Makefile')
               print('Makefile:', mk, '| exists:', os.path.exists(mk))
               if not os.path.exists(mk):
@@ -226,31 +236,29 @@ jobs:
               print('--- Current Makefile ---')
               print(content)
               print('--- End Makefile ---')
-              MARKER = 'mkdir -p ../../.build/$(TARGET)/common/src'
-              if MARKER in content:
+              # Check if already patched (absolute path present means already patched)
+              if common_src_fwd in content:
                   print('Makefile already patched')
                   continue
-              # Insert mkdir before the awsres invocation line
-              OLD = '\t../../$(BDIR)/static/tools/awsres \\\n'
-              NEW = '\t' + MARKER + '\n' + OLD
-              if OLD in content:
-                  patched = content.replace(OLD, NEW, 1)
-                  with open(mk, 'w') as f:
-                      f.write(patched)
-                  print('Makefile patched')
+              # Replace the relative -o argument with the absolute Windows path.
+              # Indentation in the sub-Makefile uses tab+2-spaces for continuation lines.
+              OLD_O = '\t  -o ../../.build/$(TARGET)/common/src \\\n'
+              NEW_O = '\t  -o ' + common_src_fwd + ' \\\n'
+              if OLD_O in content:
+                  patched = content.replace(OLD_O, NEW_O, 1)
               else:
-                  print('WARNING: awsres line not found; raw-patching gen-templates target')
-                  patched = content.replace(
-                      'gen-templates:\n\t',
-                      'gen-templates:\n\t' + MARKER + '\n\t',
-                      1)
-                  if patched != content:
-                      with open(mk, 'w') as f:
-                          f.write(patched)
-                      print('Raw patch applied')
+                  # Fallback: replace any occurrence of the relative output path
+                  OLD_O2 = '-o ../../.build/$(TARGET)/common/src'
+                  NEW_O2 = '-o ' + common_src_fwd
+                  if OLD_O2 in content:
+                      patched = content.replace(OLD_O2, NEW_O2, 1)
                   else:
-                      print('ERROR: could not patch Makefile')
+                      print('ERROR: could not find -o path to patch in Makefile')
+                      print('Content:', content)
                       sys.exit(1)
+              with open(mk, 'w') as f:
+                  f.write(patched)
+              print('Makefile patched')
               print('--- Patched Makefile ---')
               with open(mk, 'r') as f:
                   print(f.read())
