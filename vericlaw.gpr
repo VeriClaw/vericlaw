@@ -2,18 +2,6 @@ with "gnatcoll";
 with "aws";
 
 project Vericlaw is
-   case Build_Target is
-      when "x86_64-w64-mingw32" =>
-         --  SIGHUP doesn't exist on Windows; use the stub that omits the handler.
-         for Source_Dirs use ("src", "src/http", "src/config", "src/config_win",
-                              "src/agent", "src/providers", "src/tools", "src/memory",
-                              "src/channels", "src/sandbox", "src/observability");
-         for Excluded_Source_Files use ("config-reload.adb");
-      when others =>
-         for Source_Dirs use ("src", "src/http", "src/config", "src/agent",
-                              "src/providers", "src/tools", "src/memory",
-                              "src/channels", "src/sandbox", "src/observability");
-   end case;
    for Languages use ("Ada", "C");
    for Main use ("main.adb");
    for Exec_Dir use ".";
@@ -24,6 +12,18 @@ project Vericlaw is
                         "x86_64-w64-mingw32",
                         "x86_64-apple-darwin", "aarch64-apple-darwin");
    Build_Target : Target_Kind := external ("BUILD_TARGET", "native");
+   --  Source directories: Windows uses a stub for SIGHUP-free config-reload.
+   case Build_Target is
+      when "x86_64-w64-mingw32" =>
+         for Source_Dirs use ("src", "src/http", "src/config", "src/config_win",
+                              "src/agent", "src/providers", "src/tools", "src/memory",
+                              "src/channels", "src/sandbox", "src/observability");
+         for Excluded_Source_Files use ("config-reload.adb");
+      when others =>
+         for Source_Dirs use ("src", "src/http", "src/config", "src/agent",
+                              "src/providers", "src/tools", "src/memory",
+                              "src/channels", "src/sandbox", "src/observability");
+   end case;
    type Binder_Mode_Kind is ("portable", "minimal");
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");
    type Warn_Errors_Kind is ("on", "off");
