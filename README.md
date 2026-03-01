@@ -1,22 +1,22 @@
 # VeriClaw
 
-> [!IMPORTANT]
-> ## 🚀 Final Stages of Development
+> [!WARNING]
+> ## 🚧 Work in Progress — Final Stages of Development
 >
-> VeriClaw **v0.1.0** has been released and the project is in its **final stages of development** — the multi-platform release pipeline is fully operational. Binaries, packages, and images are being published across all distribution channels:
+> **VeriClaw is not yet production-ready.** The project is actively under development and in its final stages before a stable public release. Expect breaking changes, incomplete features, and rough edges.
 >
-> - ✅ **Native binaries** — Linux (amd64/arm64/armv7), macOS (amd64/arm64), Windows (x64) via GitHub Releases
-> - ✅ **Homebrew** — `brew install vericlaw/tap/vericlaw`
-> - ✅ **Scoop** — `scoop install vericlaw` (Windows)
-> - ✅ **DEB / RPM packages** — Debian, Ubuntu, RHEL, Fedora
-> - ✅ **Docker** — multi-arch image on GHCR (`ghcr.io/vericlaw/vericlaw`)
-> - 🔜 **Winget** — Windows Package Manager (submission in progress)
-> - 🔜 **`get.vericlaw.dev`** — one-line installer (coming soon)
+> **Current status (v0.1.1):**
+> - ✅ Core runtime, CLI, and multi-platform builds are functional
+> - ✅ Release pipeline is operational (Linux, macOS, Windows binaries + DEB/RPM packages)
+> - ⚠️ **Docker image** — GHCR publish not yet active (TBC)
+> - ⚠️ **Winget** — Windows Package Manager submission not yet submitted (TBC)
+> - ⚠️ **`get.vericlaw.dev`** — one-line installer not yet live (TBC)
+> - ⚠️ **Homebrew / Scoop** — tap/bucket infrastructure in place but not publicly verified (TBC)
 >
-> `main` is the stable release branch. All CI gates are passing. See [CHANGELOG.md](CHANGELOG.md) for what shipped in v0.1.0.
+> **Do not use in production.** APIs and configuration formats may change without notice.
 
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml)
-[![Release](https://github.com/VeriClaw/vericlaw/actions/workflows/release.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/release.yml)
+[![Release](https://github.com/VeriClaw/vericlaw/actions/workflows/publish.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/publish.yml)
 
 VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
 
