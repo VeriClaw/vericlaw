@@ -12,7 +12,9 @@ project Vericlaw is
    for Object_Dir use "obj";
    type Build_Profile_Kind is ("dev", "release", "small", "edge-size", "edge-speed", "coverage");
    Build_Profile : Build_Profile_Kind := external ("BUILD_PROFILE", "dev");
-   type Target_Kind is ("native", "x86_64-linux-gnu", "aarch64-linux-gnu", "arm-linux-gnueabihf", "x86_64-w64-mingw32");
+   type Target_Kind is ("native", "x86_64-linux-gnu", "aarch64-linux-gnu", "arm-linux-gnueabihf",
+                        "x86_64-w64-mingw32",
+                        "x86_64-apple-darwin", "aarch64-apple-darwin");
    Build_Target : Target_Kind := external ("BUILD_TARGET", "native");
    type Binder_Mode_Kind is ("portable", "minimal");
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");
@@ -35,7 +37,7 @@ project Vericlaw is
          when "release" =>
             for Default_Switches ("Ada") use
               ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
-               "-O2", "-flto", "-fPIE",
+               "-O2", "-flto",
                "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
          when "small" =>
             for Default_Switches ("Ada") use
@@ -77,11 +79,28 @@ project Vericlaw is
          when "dev" =>
             for Default_Switches ("Ada") use ("-lcurl", "-lsqlite3");
          when "release" =>
-            for Default_Switches ("Ada") use
-              ("-lcurl", "-lsqlite3", "-pie",
-               "-Wl,-z,relro,-z,now", "-Wl,-z,noexecstack",
-               "-Wl,--gc-sections", "-s", "-flto",
-               "-fstack-protector-strong");
+            case Build_Target is
+               when "x86_64-w64-mingw32" =>
+                  --  Windows: no Linux/ELF-specific linker flags
+                  for Default_Switches ("Ada") use
+                    ("-lcurl", "-lsqlite3",
+                     "-Wl,--gc-sections", "-s", "-flto",
+                     "-fstack-protector-strong");
+               when "x86_64-apple-darwin" | "aarch64-apple-darwin" =>
+                  --  macOS: use dead_strip instead of gc-sections
+                  for Default_Switches ("Ada") use
+                    ("-lcurl", "-lsqlite3",
+                     "-Wl,-dead_strip", "-s", "-flto",
+                     "-fstack-protector-strong");
+               when others =>
+                  --  Linux: -no-pie required (aws 24.0.0 static lib lacks fPIC)
+                  for Default_Switches ("Ada") use
+                    ("-lcurl", "-lsqlite3",
+                     "-no-pie",
+                     "-Wl,-z,relro,-z,now", "-Wl,-z,noexecstack",
+                     "-Wl,--gc-sections", "-s", "-flto",
+                     "-fstack-protector-strong");
+            end case;
          when "coverage" =>
             for Default_Switches ("Ada") use
               ("-lcurl", "-lsqlite3", "--coverage");

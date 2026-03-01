@@ -62,9 +62,11 @@ jobs:
           - runner: macos-14
             target: macos-aarch64
             arch: arm64
+            gpr_target: aarch64-apple-darwin
           - runner: macos-13
             target: macos-x86_64
             arch: x86_64
+            gpr_target: x86_64-apple-darwin
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -75,11 +77,11 @@ jobs:
       - name: Generate build info
         run: |
           chmod +x scripts/embed_version.sh
-          BUILD_TARGET=${{ matrix.arch }}-apple-darwin ./scripts/embed_version.sh
+          BUILD_TARGET=${{ matrix.gpr_target }} ./scripts/embed_version.sh
       - name: Build
         run: |
           alr toolchain --select gnat_native=14.2.1
-          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }}
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=${{ matrix.gpr_target }}
           strip vericlaw 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
@@ -105,29 +107,30 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: msys2/setup-msys2@v2
+      - name: Install system dependencies (curl, sqlite)
+        uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           install: >-
-            mingw-w64-x86_64-gcc-ada
-            mingw-w64-x86_64-gprbuild
             mingw-w64-x86_64-sqlite3
             mingw-w64-x86_64-curl
-            make
+      - uses: alire-project/setup-alire@v4
+        with: { version: '2.0.2' }
       - name: Generate build info
+        shell: bash
         run: |
           chmod +x scripts/embed_version.sh
           BUILD_TARGET=x86_64-w64-mingw32 ./scripts/embed_version.sh
       - name: Build
+        shell: bash
+        env:
+          LIBRARY_PATH: C:/msys64/mingw64/lib
+          CPATH: C:/msys64/mingw64/include
         run: |
-          gprbuild -P vericlaw.gpr -p \
-            -XBUILD_PROFILE=${{ inputs.build_profile }} \
-            -XBUILD_TARGET=x86_64-w64-mingw32
+          alr toolchain --select gnat_native=14.2.1
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
           strip vericlaw.exe 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:

@@ -11,7 +11,7 @@ aws = "^24.0.0"
 
 [gpr-externals]
 BUILD_PROFILE = ["dev", "release", "small", "edge-size", "edge-speed", "coverage"]
-BUILD_TARGET = ["native", "x86_64-linux-gnu", "aarch64-linux-gnu", "arm-linux-gnueabihf", "x86_64-w64-mingw32"]
+BUILD_TARGET = ["native", "x86_64-linux-gnu", "aarch64-linux-gnu", "arm-linux-gnueabihf", "x86_64-w64-mingw32", "x86_64-apple-darwin", "aarch64-apple-darwin"]
 BINDER_MODE = ["portable", "minimal"]
 WARN_ERRORS = ["on", "off"]
 

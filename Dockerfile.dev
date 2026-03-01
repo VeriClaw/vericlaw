@@ -1,29 +1,47 @@
 # syntax=docker/dockerfile:1.7
 # Development build environment for VeriClaw.
-# Based on the same image used in CI (alire/gnat:community-latest).
+# Matches the CI toolchain: Ubuntu 24.04 + GNAT 14 + Alire.
 # Build the image once: make docker-dev-image
 # Then compile with source volume-mounted: make docker-dev-build
 #
-# Note: alire/gnat:community-latest is x86_64 only. On Apple Silicon
-# Docker runs it via QEMU emulation -- builds work, just ~2x slower.
-FROM alire/gnat:community-latest
+# Note: this image is linux/amd64. On Apple Silicon Docker runs it
+# via QEMU emulation -- builds work, just ~2x slower.
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Add C dev headers/symlinks needed for thin Ada->C linker bindings.
-# libsqlite3-dev: installs libsqlite3.so symlink for -lsqlite3
-# libcurl4-openssl-dev is 404 on this Debian Bullseye snapshot, so create
-# the libcurl.so symlink manually from the already-installed libcurl.so.4.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
+       gnat-14 \
+       gprbuild \
        libsqlite3-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 \
-              /usr/lib/x86_64-linux-gnu/libcurl.so
+       libcurl4-openssl-dev \
+       curl \
+       git \
+       make \
+       python3 \
+       ca-certificates \
+       unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# GNAT Community 2021 ships gnatcoll.gpr and aws.gpr here.
-# gprbuild finds them automatically via this path.
-ENV GPR_PROJECT_PATH=/opt/gnat/share/gpr
-ENV PATH=/opt/gnat/bin:${PATH}
+# Install Alire (Ada package manager) — manages gnatcoll + aws dependencies.
+ARG ALIRE_VERSION=2.0.2
+RUN curl -fsSL \
+      "https://github.com/alire-project/alire/releases/download/v${ALIRE_VERSION}/alr-${ALIRE_VERSION}-bin-x86_64-linux.zip" \
+      -o /tmp/alire.zip \
+    && unzip -q /tmp/alire.zip -d /tmp/alire-extract/ \
+    && find /tmp/alire-extract/ -name "alr" -type f -exec mv {} /usr/local/bin/alr \; \
+    && rm -rf /tmp/alire.zip /tmp/alire-extract/ \
+    && chmod +x /usr/local/bin/alr
+
+# Pre-configure Alire so it doesn't prompt for user info on first run.
+RUN alr settings --global --set user.email="dev@vericlaw.dev" \
+    && alr settings --global --set user.name="VeriClaw Dev" \
+    && alr settings --global --set distribution.unknown_os=false 2>/dev/null || true
+
+# Disable the toolchain assistant so `alr build` doesn't prompt to download GNAT.
+# The apt-installed gnat-14 and gprbuild are available in PATH and will be used.
+ENV ALIRE_NONINTERACTIVE=true
+RUN alr toolchain --disable-assistant 2>/dev/null || true
 
 WORKDIR /workspace

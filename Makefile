@@ -250,21 +250,24 @@ docker-dev-image:
 	  --file "$(DOCKERFILE_DEV)" \
 	  --tag "$(DEV_IMAGE_NAME):latest" .
 
-## Compile the full project inside the dev container.
+## Compile the full project inside the dev container using Alire.
+## Alire downloads gnatcoll + aws deps on first run (cached in vericlaw-alire-cache volume).
 ## The source is volume-mounted, so edits are picked up without rebuilding the image.
-## On success the binary lands at ./main (x86_64 ELF, runnable inside Docker).
+## On success the binary lands at ./vericlaw (x86_64 ELF, runnable inside Docker).
 docker-dev-build: docker-dev-image
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
+	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  gprbuild -P vericlaw.gpr -p -j0
+	  bash -c 'yes "" 2>/dev/null | alr build'
 
 ## Interactive shell inside the dev container with source mounted.
 ## Use this to run gnat, gprbuild, gnatprove manually or inspect errors.
 docker-dev-shell: docker-dev-image
 	docker run --rm -it --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
+	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  bash
@@ -273,9 +276,10 @@ docker-dev-shell: docker-dev-image
 docker-dev-prove: docker-dev-image
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
+	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  gnatprove -P vericlaw.gpr --level=2 -j0
+	  bash -c 'yes "" 2>/dev/null | alr exec -- gnatprove -P vericlaw.gpr --level=2 -j0'
 
 ## Build and smoke-test: vericlaw version + vericlaw doctor.
 ## Run with: make docker-dev-test
@@ -283,6 +287,7 @@ docker-dev-test: docker-dev-build
 	@echo "=== vericlaw version ===" && \
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
+	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  ./vericlaw version
@@ -290,6 +295,7 @@ docker-dev-test: docker-dev-build
 	docker run --rm --platform linux/amd64 \
 	  -e HOME=/tmp \
 	  -v "$(PWD):/workspace" \
+	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  ./vericlaw doctor || true
@@ -303,6 +309,7 @@ docker-dev-integration-test: docker-dev-build
 	docker run --rm --platform linux/amd64 \
 	  -e HOME=/tmp \
 	  -v "$(PWD):/workspace" \
+	  -v vericlaw-alire-cache:/root \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  bash -c '\
@@ -324,30 +331,30 @@ REGISTRY ?= ghcr.io/yourorg
 VERSION  ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
 
 docker-push: ## Build and push multi-arch image to registry
-@echo "=== Building and pushing vericlaw:$(VERSION) to $(REGISTRY) ==="
-IMAGE_NAME="$(REGISTRY)/vericlaw" \
-IMAGE_TAG="$(VERSION)" \
-IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
-PUSH_IMAGE=true \
-ATTEST_PROVENANCE=true \
-ATTEST_SBOM=true \
-./scripts/build_multiarch_image.sh
-@echo "Also tagging as latest..."
-docker buildx imagetools create \
-  -t "$(REGISTRY)/vericlaw:latest" \
-  "$(REGISTRY)/vericlaw:$(VERSION)" 2>/dev/null || \
-  docker tag "$(REGISTRY)/vericlaw:$(VERSION)" "$(REGISTRY)/vericlaw:latest" && \
-  docker push "$(REGISTRY)/vericlaw:latest"
-@echo "=== Pushed $(REGISTRY)/vericlaw:$(VERSION) and :latest ==="
+	@echo "=== Building and pushing vericlaw:$(VERSION) to $(REGISTRY) ==="
+	IMAGE_NAME="$(REGISTRY)/vericlaw" \
+	IMAGE_TAG="$(VERSION)" \
+	IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
+	PUSH_IMAGE=true \
+	ATTEST_PROVENANCE=true \
+	ATTEST_SBOM=true \
+	./scripts/build_multiarch_image.sh
+	@echo "Also tagging as latest..."
+	docker buildx imagetools create \
+	  -t "$(REGISTRY)/vericlaw:latest" \
+	  "$(REGISTRY)/vericlaw:$(VERSION)" 2>/dev/null || \
+	  docker tag "$(REGISTRY)/vericlaw:$(VERSION)" "$(REGISTRY)/vericlaw:latest" && \
+	  docker push "$(REGISTRY)/vericlaw:latest"
+	@echo "=== Pushed $(REGISTRY)/vericlaw:$(VERSION) and :latest ==="
 
 docker-push-dry-run: ## Verify multi-arch build without pushing
-@echo "=== Dry-run multi-arch build (no push) ==="
-IMAGE_NAME="$(REGISTRY)/vericlaw" \
-IMAGE_TAG="$(VERSION)" \
-IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
-PUSH_IMAGE=false \
-LOAD_IMAGE=false \
-./scripts/build_multiarch_image.sh
+	@echo "=== Dry-run multi-arch build (no push) ==="
+	IMAGE_NAME="$(REGISTRY)/vericlaw" \
+	IMAGE_TAG="$(VERSION)" \
+	IMAGE_PLATFORMS="$(IMAGE_PLATFORMS)" \
+	PUSH_IMAGE=false \
+	LOAD_IMAGE=false \
+	./scripts/build_multiarch_image.sh
 
 ci-image:
 	docker build -f Dockerfile.ci -t ghcr.io/vericlaw/ci:$(shell gnat --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+\.\d+' || echo '14.2.1') .
