@@ -253,7 +253,7 @@ jobs:
 
           # Replace version and hash
           sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" vericlaw.json
-          sed -i "s|v1.0.0|v${VERSION}|g" vericlaw.json
+          sed -i "s|v0.1.0|v${VERSION}|g" vericlaw.json
           sed -i "s/PLACEHOLDER_SHA256/${SHA_WIN}/" vericlaw.json
 
           cd ..

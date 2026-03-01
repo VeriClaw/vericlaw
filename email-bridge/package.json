@@ -1,6 +1,6 @@
 {
   "name": "vericlaw-email-bridge",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "IMAP/SMTP email bridge for VeriClaw",
   "main": "index.js",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "vericlaw-discord-bridge",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "discord.js Gateway bridge for VeriClaw",
   "main": "index.js",
   "scripts": {

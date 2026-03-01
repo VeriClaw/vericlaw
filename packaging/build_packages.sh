@@ -2,7 +2,7 @@
 # Build .deb and .rpm packages using nfpm
 set -euo pipefail
 
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-0.1.0}"
 ARCH="${ARCH:-amd64}"
 
 # Check nfpm is installed

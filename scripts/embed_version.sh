@@ -2,7 +2,7 @@
 # Generates src/build_info.ads with compile-time metadata
 set -euo pipefail
 
-VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo '1.0.0-dev')}"
+VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo '0.1.0-dev')}"
 COMMIT="${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}"
 BUILD_DATE="$(date -u +%Y-%m-%d)"
 TARGET="${BUILD_TARGET:-native}"

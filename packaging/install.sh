@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # VeriClaw Universal Installer
 # Usage: curl -fsSL https://get.vericlaw.dev | sh
-#    or: sh install.sh [--version 1.0.0] [--dir ~/.local/bin]
+#    or: sh install.sh [--version 0.1.0] [--dir ~/.local/bin]
 set -eu
 
 REPO="vericlaw/vericlaw"

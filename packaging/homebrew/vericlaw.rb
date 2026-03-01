@@ -4,7 +4,7 @@
 class Vericlaw < Formula
   desc "Formally verified AI agent runtime built with Ada/SPARK"
   homepage "https://github.com/vericlaw/vericlaw"
-  version "1.0.0"
+  version "0.1.0"
   license "Apache-2.0"
   # Pre-built binaries — no source compilation required
   bottle :unneeded

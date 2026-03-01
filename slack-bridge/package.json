@@ -1,6 +1,6 @@
 {
   "name": "vericlaw-slack-bridge",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Slack Socket Mode bridge for VeriClaw",
   "main": "index.js",
   "scripts": {

@@ -6,7 +6,7 @@
 --  Plugin manifest format (manifest.json):
 --    {
 --      "name": "my-plugin",
---      "version": "1.0.0",
+--      "version": "0.1.0",
 --      "entry": "plugin.sh",
 --      "tools": ["file_read", "network_fetch"],
 --      "signed": false

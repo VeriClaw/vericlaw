@@ -2,7 +2,7 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.0.0-rc4] — 2026-02-27
+## [0.1.0-rc4] — 2026-02-27
 
 ### Added
 - ARMv7 (32-bit ARM) cross-compilation for Raspberry Pi 2/3/4 (32-bit OS)
@@ -23,7 +23,7 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-03-01
+## [0.1.0] - 2026-03-01
 
 ### Added
 - Browser/screenshot tool via Puppeteer bridge (port 3007): `browser_browse`, `browser_screenshot`

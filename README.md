@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > ## 🚀 Final Stages of Development
 >
-> VeriClaw **v1.0.0** has been released and the project is in its **final stages of development** — the multi-platform release pipeline is fully operational. Binaries, packages, and images are being published across all distribution channels:
+> VeriClaw **v0.1.0** has been released and the project is in its **final stages of development** — the multi-platform release pipeline is fully operational. Binaries, packages, and images are being published across all distribution channels:
 >
 > - ✅ **Native binaries** — Linux (amd64/arm64/armv7), macOS (amd64/arm64), Windows (x64) via GitHub Releases
 > - ✅ **Homebrew** — `brew install vericlaw/tap/vericlaw`
@@ -13,7 +13,7 @@
 > - 🔜 **Winget** — Windows Package Manager (submission in progress)
 > - 🔜 **`get.vericlaw.dev`** — one-line installer (coming soon)
 >
-> `main` is the stable release branch. All CI gates are passing. See [CHANGELOG.md](CHANGELOG.md) for what shipped in v1.0.0.
+> `main` is the stable release branch. All CI gates are passing. See [CHANGELOG.md](CHANGELOG.md) for what shipped in v0.1.0.
 
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml)
 [![Release](https://github.com/VeriClaw/vericlaw/actions/workflows/release.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/release.yml)
@@ -149,7 +149,7 @@ docker pull ghcr.io/vericlaw/vericlaw:latest
 docker run --rm -it ghcr.io/vericlaw/vericlaw
 
 # Specific version
-docker pull ghcr.io/vericlaw/vericlaw:v1.0.0
+docker pull ghcr.io/vericlaw/vericlaw:v0.1.0
 ```
 
 ### Raspberry Pi

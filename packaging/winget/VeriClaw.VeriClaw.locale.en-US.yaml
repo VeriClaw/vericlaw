@@ -1,5 +1,5 @@
 PackageIdentifier: VeriClaw.VeriClaw
-PackageVersion: 1.0.0
+PackageVersion: 0.1.0
 PackageLocale: en-US
 Publisher: VeriClaw
 PublisherUrl: https://github.com/VeriClaw
@@ -20,6 +20,6 @@ Tags:
   - spark
   - formal-verification
   - llm
-ReleaseNotesUrl: https://github.com/VeriClaw/vericlaw/releases/tag/v1.0.0
+ReleaseNotesUrl: https://github.com/VeriClaw/vericlaw/releases/tag/v0.1.0
 ManifestType: defaultLocale
 ManifestVersion: 1.6.0
