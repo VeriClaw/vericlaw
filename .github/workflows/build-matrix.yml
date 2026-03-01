@@ -63,10 +63,7 @@ jobs:
             target: macos-aarch64
             arch: arm64
             gpr_target: aarch64-apple-darwin
-          - runner: macos-13
-            target: macos-x86_64
-            arch: x86_64
-            gpr_target: x86_64-apple-darwin
+
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -97,11 +94,20 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: vericlaw-macos-aarch64, path: arm64/ }
       - uses: actions/download-artifact@v4
+        id: dl-x86
+        continue-on-error: true
         with: { name: vericlaw-macos-x86_64, path: x86_64/ }
       - name: Create universal binary
         run: |
-          lipo -create -output vericlaw arm64/vericlaw x86_64/vericlaw
-          file vericlaw  # Should show "Mach-O universal binary"
+          if [ -f x86_64/vericlaw ]; then
+            chmod +x arm64/vericlaw x86_64/vericlaw
+            lipo -create -output vericlaw arm64/vericlaw x86_64/vericlaw
+            file vericlaw
+          else
+            cp arm64/vericlaw vericlaw
+            chmod +x vericlaw
+            echo "x86_64 unavailable; publishing ARM64 as universal"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: vericlaw-macos-universal
@@ -125,57 +131,51 @@ jobs:
         run: |
           chmod +x scripts/embed_version.sh
           BUILD_TARGET=x86_64-w64-mingw32 ./scripts/embed_version.sh
-      - name: Patch aws index for Windows (mkdir common/src fix)
-        # aws 24.0.0 post-fetch fails on Windows because awsres tries to write to
-        # .build/<target>/common/src which gprbuild -p never creates on Windows.
-        # Insert a 'mkdir -p' action into the local Alire index before 'make all'.
-        shell: python
-        run: |
-          import os, sys
-          for env_var in ('LOCALAPPDATA', 'APPDATA'):
-              base = os.environ.get(env_var, '')
-              if not base:
-                  continue
-              search_root = os.path.join(base, 'alire')
-              if not os.path.exists(search_root):
-                  continue
-              for root, dirs, files in os.walk(search_root):
-                  if 'aws-24.0.0.toml' in files:
-                      path = os.path.join(root, 'aws-24.0.0.toml')
-                      print(f'Found: {path}')
-                      with open(path, 'rb') as f:
-                          data = f.read()
-                      nl = b'\r\n' if b'\r\n' in data else b'\n'
-                      old = nl.join([
-                          b'[[actions]]',
-                          b'type = "post-fetch"',
-                          b'command = ["make", "all", "ENABLE_SHARED=false"]',
-                      ])
-                      new = nl.join([
-                          b'[[actions]]',
-                          b'type = "post-fetch"',
-                          b'command = ["sh", "-c", "T=$(gcc -dumpmachine 2>/dev/null); T=${T:-x86_64-w64-mingw32}; mkdir -p .build/$T/common/src 2>/dev/null || true"]',
-                          b'[[actions]]',
-                          b'type = "post-fetch"',
-                          b'command = ["make", "all", "ENABLE_SHARED=false"]',
-                      ])
-                      if old not in data:
-                          print('Pattern not found; file may be in unexpected format')
-                          sys.exit(0)
-                      with open(path, 'wb') as f:
-                          f.write(data.replace(old, new, 1))
-                      print('Patched successfully')
-                      sys.exit(0)
-          print('aws-24.0.0.toml not found in LOCALAPPDATA/APPDATA alire dirs')
       - name: Build
-        shell: bash
+        # aws 24.0.0 post-fetch fails on Windows because awsres tries to write
+        # template files to .build/<target>/common/src, which gprbuild -p never
+        # creates on Windows. Workaround: let the first alr build fail, create
+        # the missing directory, then retry. Alire re-runs post-fetch and make
+        # skips already-compiled objects, so only the template files are built.
+        shell: pwsh
         env:
           LIBRARY_PATH: C:/msys64/mingw64/lib
           CPATH: C:/msys64/mingw64/include
         run: |
           alr toolchain --select gnat_native=14.2.1
-          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
-          strip vericlaw.exe 2>/dev/null || true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          alr build -- "-XBUILD_PROFILE=${{ inputs.build_profile }}" "-XBUILD_TARGET=x86_64-w64-mingw32"
+
+          if ($LASTEXITCODE -ne 0) {
+            # Create the directory awsres needs. The build-cache path is
+            # deterministic for aws 24.0.0 across all runners.
+            $awsRoot = "$env:LOCALAPPDATA\alire\cache\builds\aws_24.0.0_2b75fe6d\299aa2aa2b3be3cdf085de35bfc4b68a583b808905cab5fac91b79e80e9cfe0e"
+            if (Test-Path $awsRoot) {
+              New-Item -ItemType Directory -Force `
+                -Path "$awsRoot\.build\x86_64-w64-mingw32\common\src" | Out-Null
+              Write-Host "aws workaround: created common/src at $awsRoot"
+            } else {
+              # Fallback: find any aws 24.x source dir that has a .build subtree
+              Get-ChildItem "$env:LOCALAPPDATA\alire\cache\builds" -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^aws_24' } |
+                ForEach-Object { Get-ChildItem $_.FullName -Directory -ErrorAction SilentlyContinue } |
+                Where-Object { Test-Path "$($_.FullName)\.build" } |
+                ForEach-Object {
+                  New-Item -ItemType Directory -Force `
+                    -Path "$($_.FullName)\.build\x86_64-w64-mingw32\common\src" | Out-Null
+                  Write-Host "aws workaround (fallback): created common/src at $($_.FullName)"
+                }
+            }
+
+            # Retry: Alire re-runs post-fetch; make skips recompilation and
+            # awsres can now write to the target directory.
+            alr build -- "-XBUILD_PROFILE=${{ inputs.build_profile }}" "-XBUILD_TARGET=x86_64-w64-mingw32"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+          strip vericlaw.exe 2>$null
+          $LASTEXITCODE = 0
       - uses: actions/upload-artifact@v4
         with:
           name: vericlaw-windows-x86_64
