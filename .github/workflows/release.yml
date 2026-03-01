@@ -18,19 +18,33 @@ permissions:
 env:
   ALIRE_VERSION: '2.0.2'
   GNAT_VERSION: 'gnat_native=14.2.1'
-  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
+  # Determine the release tag (supports both tag push and workflow_dispatch)
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tag.outputs.release_tag }}
+    steps:
+      - name: Set release tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "release_tag=${TAG}" >> "$GITHUB_OUTPUT"
+
   # Reuse the cross-platform build matrix
   build:
+    needs: setup
     uses: ./.github/workflows/build-matrix.yml
     with:
       build_profile: release
 
   # Package and publish
   release:
-    needs: build
+    needs: [setup, build]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -129,8 +143,10 @@ jobs:
 
   # Build .deb and .rpm packages
   build-packages:
-    needs: release
+    needs: [setup, release]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
     strategy:
       matrix:
         include:
@@ -186,9 +202,11 @@ jobs:
 
   # Update Homebrew tap
   update-homebrew:
-    needs: release
+    needs: [setup, release]
     runs-on: ubuntu-latest
-    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
+    if: "!contains(needs.setup.outputs.release_tag, 'rc') && !contains(needs.setup.outputs.release_tag, 'beta')"
+    env:
+      RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -232,9 +250,11 @@ jobs:
 
   # Update Scoop bucket
   update-scoop:
-    needs: release
+    needs: [setup, release]
     runs-on: ubuntu-latest
-    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
+    if: "!contains(needs.setup.outputs.release_tag, 'rc') && !contains(needs.setup.outputs.release_tag, 'beta')"
+    env:
+      RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -272,9 +292,11 @@ jobs:
 
   # Build and push multi-arch Docker image to GHCR
   publish-docker:
-    needs: release
+    needs: [setup, release]
     runs-on: ubuntu-latest
-    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
+    if: "!contains(needs.setup.outputs.release_tag, 'rc') && !contains(needs.setup.outputs.release_tag, 'beta')"
+    env:
+      RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -324,9 +346,11 @@ jobs:
 
   # Submit updated winget manifest to microsoft/winget-pkgs
   update-winget:
-    needs: release
+    needs: [setup, release]
     runs-on: ubuntu-latest
-    if: "!contains(env.RELEASE_TAG, 'rc') && !contains(env.RELEASE_TAG, 'beta')"
+    if: "!contains(needs.setup.outputs.release_tag, 'rc') && !contains(needs.setup.outputs.release_tag, 'beta')"
+    env:
+      RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
 
