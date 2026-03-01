@@ -87,10 +87,10 @@ project Vericlaw is
                      "-Wl,--gc-sections", "-s", "-flto",
                      "-fstack-protector-strong");
                when "x86_64-apple-darwin" | "aarch64-apple-darwin" =>
-                  --  macOS: use dead_strip instead of gc-sections
+                  --  macOS: use dead_strip instead of gc-sections; no -s (obsolete)
                   for Default_Switches ("Ada") use
                     ("-lcurl", "-lsqlite3",
-                     "-Wl,-dead_strip", "-s", "-flto",
+                     "-Wl,-dead_strip", "-flto",
                      "-fstack-protector-strong");
                when others =>
                   --  Linux: -no-pie required (aws 24.0.0 static lib lacks fPIC)

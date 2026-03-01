@@ -79,6 +79,8 @@ jobs:
           chmod +x scripts/embed_version.sh
           BUILD_TARGET=${{ matrix.gpr_target }} ./scripts/embed_version.sh
       - name: Build
+        env:
+          LIBRARY_PATH: /opt/homebrew/opt/sqlite/lib:/opt/homebrew/opt/curl/lib
         run: |
           alr toolchain --select gnat_native=14.2.1
           alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=${{ matrix.gpr_target }}
