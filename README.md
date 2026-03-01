@@ -103,7 +103,8 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 
 ## Installation
 
-### Quick Install (recommended)
+### Quick Install ⚠️ Coming Soon
+> **This installer URL is not yet live.** Use one of the platform-specific methods below instead.
 ```bash
 curl -fsSL https://get.vericlaw.dev | sh
 ```
@@ -119,7 +120,8 @@ scoop bucket add vericlaw https://github.com/vericlaw/scoop-vericlaw
 scoop install vericlaw
 ```
 
-### APT (Debian/Ubuntu)
+### APT (Debian/Ubuntu) ⚠️ Coming Soon
+> **The `apt.vericlaw.dev` repository is not yet live.** Install via direct `.deb` download instead (see Raspberry Pi section for example, or the [Releases page](https://github.com/VeriClaw/vericlaw/releases)).
 ```bash
 # Add repository (one-time)
 curl -fsSL https://apt.vericlaw.dev/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/vericlaw.gpg
@@ -127,11 +129,11 @@ echo "deb [signed-by=/usr/share/keyrings/vericlaw.gpg] https://apt.vericlaw.dev 
 sudo apt update && sudo apt install vericlaw
 ```
 
-### Winget (Windows Package Manager)
+### Winget (Windows Package Manager) ⚠️ Coming Soon
+> **Winget submission is in progress — not yet available in the public registry.** Use Scoop or download the binary directly from [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases) in the meantime.
 ```powershell
 winget install VeriClaw.VeriClaw
 ```
-> Winget submission is in progress. Until available in the public registry, install via Scoop or download the binary from [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases).
 
 ### From Source
 ```bash
@@ -158,12 +160,13 @@ VeriClaw ships native ARM binaries for Raspberry Pi:
 
 | Model | OS | Binary | Install Method |
 |-------|-----|--------|---------------|
-| RPi 5 / RPi 4 | Raspberry Pi OS (64-bit) | `linux-aarch64` | install.sh, apt, Homebrew |
-| RPi 4 / RPi 3 | Raspberry Pi OS (32-bit) | `linux-armv7` | install.sh, apt |
-| RPi 2 | Raspberry Pi OS (32-bit) | `linux-armv7` | install.sh, apt |
-| RPi Zero 2 W | Raspberry Pi OS (64-bit) | `linux-aarch64` | install.sh, apt |
+| RPi 5 / RPi 4 | Raspberry Pi OS (64-bit) | `linux-aarch64` | `.deb`, apt (TBC), Homebrew |
+| RPi 4 / RPi 3 | Raspberry Pi OS (32-bit) | `linux-armv7` | `.deb`, apt (TBC) |
+| RPi 2 | Raspberry Pi OS (32-bit) | `linux-armv7` | `.deb`, apt (TBC) |
+| RPi Zero 2 W | Raspberry Pi OS (64-bit) | `linux-aarch64` | `.deb`, apt (TBC) |
 
 **Quick install on Raspberry Pi:**
+> ⚠️ `get.vericlaw.dev` is not yet live — use the `.deb` method below instead.
 ```bash
 curl -fsSL https://get.vericlaw.dev | sh
 ```
@@ -171,11 +174,11 @@ curl -fsSL https://get.vericlaw.dev | sh
 The installer auto-detects your architecture. For `.deb` package:
 ```bash
 # 64-bit (aarch64)
-curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_1.0.0_arm64.deb
+curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_0.1.0_arm64.deb
 sudo dpkg -i vericlaw_*.deb
 
 # 32-bit (armv7)
-curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_1.0.0_armhf.deb
+curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_0.1.0_armhf.deb
 sudo dpkg -i vericlaw_*.deb
 ```
 
@@ -197,12 +200,12 @@ vericlaw update-check
 
 | OS | Architecture | Binary | Homebrew | Scoop | APT (.deb) | RPM | install.sh |
 |----|-------------|--------|----------|-------|------------|-----|------------|
-| Linux | x86_64 | ✅ | ✅ | — | ✅ | ✅ | ✅ |
-| Linux | aarch64 (ARM64) | ✅ | ✅ | — | ✅ | ✅ | ✅ |
-| Linux | armv7 (RPi) | ✅ | — | — | ✅ | ✅ | ✅ |
-| macOS | Apple Silicon | ✅ (universal) | ✅ | — | — | — | ✅ |
-| macOS | Intel | ✅ (universal) | ✅ | — | — | — | ✅ |
-| Windows | x86_64 | ✅ | — | ✅ | — | — | ✅ |
+| Linux | x86_64 | ✅ | ✅ | — | ✅ | ✅ | 🔜 TBC |
+| Linux | aarch64 (ARM64) | ✅ | ✅ | — | ✅ | ✅ | 🔜 TBC |
+| Linux | armv7 (RPi) | ✅ | — | — | ✅ | ✅ | 🔜 TBC |
+| macOS | Apple Silicon | ✅ (universal) | ✅ | — | — | — | 🔜 TBC |
+| macOS | Intel | ✅ (universal) | ✅ | — | — | — | 🔜 TBC |
+| Windows | x86_64 | ✅ | — | ✅ | — | — | 🔜 TBC |
 
 ## Project Structure
 
