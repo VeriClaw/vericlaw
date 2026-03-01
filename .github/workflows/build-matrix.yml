@@ -126,6 +126,14 @@ jobs:
             mingw-w64-x86_64-curl
       - uses: alire-project/setup-alire@v4
         with: { version: '2.0.2' }
+      - name: Install link libraries into Alire MSYS2 toolchain
+        # Alire installs its own MSYS2 at %LOCALAPPDATA%\alire\cache\msys64,
+        # separate from C:\msys64. The GNAT MinGW linker uses the Alire MSYS2
+        # lib path, so packages must be installed there (not just in C:\msys64).
+        shell: pwsh
+        run: |
+          $pacman = "$env:LOCALAPPDATA\alire\cache\msys64\usr\bin\pacman.exe"
+          & $pacman -S --noconfirm --needed mingw-w64-x86_64-curl mingw-w64-x86_64-sqlite3
       - name: Generate build info
         shell: bash
         run: |
