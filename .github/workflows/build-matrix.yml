@@ -193,23 +193,47 @@ jobs:
           alr toolchain --select gnat_native=14.2.1
           alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
           strip vericlaw.exe 2>/dev/null || true
-      - name: Fix aws 24.0.0 missing directory
+      - name: Fix aws 24.0.0 gen-templates
         # aws 24.0.0: awsres writes template files to .build/<target>/common/src
-        # but gprbuild -p never creates that directory on Windows.  Create it
-        # here so Alire can succeed when alr build is retried in the next step.
-        # This step runs in a separate process group, immune to the Windows
-        # runner's kill that terminates the previous step's group on failure.
+        # but gprbuild -p never creates that directory on Windows.  Create it,
+        # then run awsres directly to pre-populate the .ads files so that when
+        # alr build retries and make re-runs gen-templates, awsres succeeds
+        # (either skipped because outputs exist, or the directory is now there).
         if: steps.build-attempt.outcome == 'failure'
         shell: python
         run: |
-          import os, glob
+          import os, glob, subprocess, sys
           la = os.environ.get('LOCALAPPDATA', '')
-          dirs = glob.glob(la.replace('\\', '/') + '/alire/cache/builds/aws_24*/*/.build')
-          print('Found aws .build dirs:', dirs)
-          for d in dirs:
-              target = d + '/x86_64-w64-mingw32/common/src'
-              os.makedirs(target, exist_ok=True)
-              print('Created:', target)
+          print('LOCALAPPDATA:', la)
+          aws_dirs = glob.glob(la.replace('\\', '/') + '/alire/cache/builds/aws_24.0.0_2b75fe6d/*/')
+          if not aws_dirs:
+              aws_dirs = glob.glob(la.replace('\\', '/') + '/alire/cache/builds/aws_*/*/')
+          print('aws dirs found:', aws_dirs)
+          if not aws_dirs:
+              print('ERROR: no aws build directory found')
+              sys.exit(1)
+          for aws_src_slash in aws_dirs:
+              aws_src = aws_src_slash.rstrip('/').replace('/', os.sep)
+              print('aws_src:', aws_src)
+              common_src = os.path.join(aws_src, '.build', 'x86_64-w64-mingw32', 'common', 'src')
+              os.makedirs(common_src, exist_ok=True)
+              print('Created:', common_src, '| isdir:', os.path.isdir(common_src))
+              awsres = os.path.join(aws_src, '.build', 'x86_64-w64-mingw32', 'debug', 'static', 'tools', 'awsres.exe')
+              print('awsres:', awsres, '| exists:', os.path.exists(awsres))
+              if not os.path.exists(awsres):
+                  continue
+              templates_dir = os.path.join(aws_src, 'tools', 'wsdl2aws-templates')
+              inputs = (glob.glob(os.path.join(templates_dir, '*.tads')) +
+                        glob.glob(os.path.join(templates_dir, '*.tadb')) +
+                        glob.glob(os.path.join(templates_dir, '*.macros')))
+              print('template files:', len(inputs))
+              r = subprocess.call([awsres, '-r', 'wsdl2aws_templates', '-o', common_src] + inputs,
+                                  cwd=templates_dir)
+              print('awsres exit code:', r)
+              if r != 0:
+                  sys.exit(r)
+              ads = glob.glob(os.path.join(common_src, '*.ads'))
+              print('Generated .ads files:', len(ads))
       - name: Build (retry after aws directory fix)
         if: steps.build-attempt.outcome == 'failure'
         shell: bash
