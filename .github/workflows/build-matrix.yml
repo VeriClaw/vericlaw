@@ -132,48 +132,50 @@ jobs:
           chmod +x scripts/embed_version.sh
           BUILD_TARGET=x86_64-w64-mingw32 ./scripts/embed_version.sh
       - name: Install make shim (aws 24.0.0 Windows workaround)
-        # aws 24.0.0 post-fetch: awsres writes to .build/<target>/common/src but
-        # gprbuild -p never creates that directory on Windows.  Fix: compile a
-        # tiny make.exe wrapper that pre-creates the directory before every make
-        # invocation, then place it first in PATH so Alire finds it instead of
-        # the real MSYS2 make.exe.
-        shell: pwsh
+        # aws 24.0.0: awsres writes template files to .build/<target>/common/src
+        # but gprbuild -p never creates that directory on Windows.  Compile a
+        # tiny make.exe wrapper that pre-creates the path before delegating to
+        # the real MSYS2 make.exe; prepend its directory to PATH for the build.
+        shell: python
         run: |
-          $shimDir = "$env:TEMP\make-shim"
-          New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
-          @'
-#include <windows.h>
-#include <string.h>
-static void mkdirp(const char *p) {
-    char b[MAX_PATH]; DWORD i, n = (DWORD)strlen(p);
-    for (i = 1; i <= n; i++) {
-        if (p[i]=='\\' || p[i]=='/' || i==n) {
-            strncpy(b,p,i); b[i]='\0'; CreateDirectoryA(b,NULL);
-        }
-    }
-}
-int main(int argc, char **argv) {
-    int i; char cmd[32768];
-    mkdirp(".build\\x86_64-w64-mingw32\\common\\src");
-    strcpy(cmd, "C:\\msys64\\usr\\bin\\make.exe");
-    for (i=1;i<argc;i++){strcat(cmd," ");strcat(cmd,argv[i]);}
-    STARTUPINFOA si; ZeroMemory(&si,sizeof(si)); si.cb=sizeof(si);
-    PROCESS_INFORMATION pi;
-    if (!CreateProcessA(NULL,cmd,NULL,NULL,TRUE,0,NULL,NULL,&si,&pi)) return 1;
-    WaitForSingleObject(pi.hProcess,INFINITE);
-    DWORD ec; GetExitCodeProcess(pi.hProcess,&ec);
-    CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
-    return (int)ec;
-}
-'@ | Set-Content "$shimDir\shim.c" -Encoding Ascii
-          gcc -o "$shimDir/make.exe" "$shimDir/shim.c" -static-libgcc
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "##[warning]make shim compile failed; build may still work without it"
-          } else {
-            # Prepend shim directory to PATH for subsequent steps
-            Add-Content -Path $env:GITHUB_PATH -Value $shimDir
-            Write-Host "make shim installed at $shimDir"
+          import os, subprocess
+          sd = os.path.join(os.environ.get('TEMP', 'C:\\Temp'), 'make-shim')
+          os.makedirs(sd, exist_ok=True)
+          # Write C source for the shim (raw string avoids Python escape confusion)
+          c = r"""
+          #include <windows.h>
+          #include <string.h>
+          static void md(const char *p) {
+            char b[MAX_PATH]; DWORD i, n = (DWORD)strlen(p);
+            for (i = 1; i <= n; i++)
+              if (p[i]=='\\' || p[i]=='/' || i==n) {
+                strncpy(b, p, i); b[i] = '\0'; CreateDirectoryA(b, NULL);
+              }
           }
+          int main(int argc, char **argv) {
+            int i; char cmd[32768];
+            md(".build\\x86_64-w64-mingw32\\common\\src");
+            strcpy(cmd, "C:\\msys64\\usr\\bin\\make.exe");
+            for (i = 1; i < argc; i++) { strcat(cmd, " "); strcat(cmd, argv[i]); }
+            STARTUPINFOA si; ZeroMemory(&si, sizeof(si)); si.cb = sizeof(si);
+            PROCESS_INFORMATION pi;
+            if (!CreateProcessA(NULL,cmd,NULL,NULL,TRUE,0,NULL,NULL,&si,&pi)) return 1;
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            DWORD ec; GetExitCodeProcess(pi.hProcess, &ec);
+            CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
+            return (int)ec;
+          }
+          """
+          src = os.path.join(sd, 'shim.c')
+          with open(src, 'w') as f:
+              f.write(c)
+          exe = os.path.join(sd, 'make.exe')
+          if subprocess.call(['gcc', '-o', exe, src, '-static-libgcc']) == 0:
+              with open(os.environ['GITHUB_PATH'], 'a') as f:
+                  f.write(sd + '\n')
+              print('make shim installed at', sd)
+          else:
+              print('Warning: make shim compile failed; proceeding without it')
       - name: Build
         shell: bash
         env:
