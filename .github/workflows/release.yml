@@ -8,8 +8,8 @@ on:
     inputs:
       tag:
         description: 'Tag to release (e.g. v0.1.0)'
-        required: true
-        default: 'v0.1.0'
+        required: false
+        default: ''
 
 permissions:
   contents: write  # For creating releases
@@ -35,7 +35,7 @@ jobs:
   # Reuse the cross-platform build matrix
   build:
     needs: setup
-    uses: ./.github/workflows/build-matrix.yml
+    uses: VeriClaw/vericlaw/.github/workflows/build-matrix.yml@main
     with:
       build_profile: release
 
