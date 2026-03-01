@@ -131,51 +131,58 @@ jobs:
         run: |
           chmod +x scripts/embed_version.sh
           BUILD_TARGET=x86_64-w64-mingw32 ./scripts/embed_version.sh
-      - name: Build
-        # aws 24.0.0 post-fetch fails on Windows because awsres tries to write
-        # template files to .build/<target>/common/src, which gprbuild -p never
-        # creates on Windows. Workaround: let the first alr build fail, create
-        # the missing directory, then retry. Alire re-runs post-fetch and make
-        # skips already-compiled objects, so only the template files are built.
+      - name: Install make shim (aws 24.0.0 Windows workaround)
+        # aws 24.0.0 post-fetch: awsres writes to .build/<target>/common/src but
+        # gprbuild -p never creates that directory on Windows.  Fix: compile a
+        # tiny make.exe wrapper that pre-creates the directory before every make
+        # invocation, then place it first in PATH so Alire finds it instead of
+        # the real MSYS2 make.exe.
         shell: pwsh
+        run: |
+          $shimDir = "$env:TEMP\make-shim"
+          New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
+          @'
+#include <windows.h>
+#include <string.h>
+static void mkdirp(const char *p) {
+    char b[MAX_PATH]; DWORD i, n = (DWORD)strlen(p);
+    for (i = 1; i <= n; i++) {
+        if (p[i]=='\\' || p[i]=='/' || i==n) {
+            strncpy(b,p,i); b[i]='\0'; CreateDirectoryA(b,NULL);
+        }
+    }
+}
+int main(int argc, char **argv) {
+    int i; char cmd[32768];
+    mkdirp(".build\\x86_64-w64-mingw32\\common\\src");
+    strcpy(cmd, "C:\\msys64\\usr\\bin\\make.exe");
+    for (i=1;i<argc;i++){strcat(cmd," ");strcat(cmd,argv[i]);}
+    STARTUPINFOA si; ZeroMemory(&si,sizeof(si)); si.cb=sizeof(si);
+    PROCESS_INFORMATION pi;
+    if (!CreateProcessA(NULL,cmd,NULL,NULL,TRUE,0,NULL,NULL,&si,&pi)) return 1;
+    WaitForSingleObject(pi.hProcess,INFINITE);
+    DWORD ec; GetExitCodeProcess(pi.hProcess,&ec);
+    CloseHandle(pi.hProcess); CloseHandle(pi.hThread);
+    return (int)ec;
+}
+'@ | Set-Content "$shimDir\shim.c" -Encoding Ascii
+          gcc -o "$shimDir/make.exe" "$shimDir/shim.c" -static-libgcc
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "##[warning]make shim compile failed; build may still work without it"
+          } else {
+            # Prepend shim directory to PATH for subsequent steps
+            Add-Content -Path $env:GITHUB_PATH -Value $shimDir
+            Write-Host "make shim installed at $shimDir"
+          }
+      - name: Build
+        shell: bash
         env:
           LIBRARY_PATH: C:/msys64/mingw64/lib
           CPATH: C:/msys64/mingw64/include
         run: |
           alr toolchain --select gnat_native=14.2.1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-          alr build -- "-XBUILD_PROFILE=${{ inputs.build_profile }}" "-XBUILD_TARGET=x86_64-w64-mingw32"
-
-          if ($LASTEXITCODE -ne 0) {
-            # Create the directory awsres needs. The build-cache path is
-            # deterministic for aws 24.0.0 across all runners.
-            $awsRoot = "$env:LOCALAPPDATA\alire\cache\builds\aws_24.0.0_2b75fe6d\299aa2aa2b3be3cdf085de35bfc4b68a583b808905cab5fac91b79e80e9cfe0e"
-            if (Test-Path $awsRoot) {
-              New-Item -ItemType Directory -Force `
-                -Path "$awsRoot\.build\x86_64-w64-mingw32\common\src" | Out-Null
-              Write-Host "aws workaround: created common/src at $awsRoot"
-            } else {
-              # Fallback: find any aws 24.x source dir that has a .build subtree
-              Get-ChildItem "$env:LOCALAPPDATA\alire\cache\builds" -Directory -ErrorAction SilentlyContinue |
-                Where-Object { $_.Name -match '^aws_24' } |
-                ForEach-Object { Get-ChildItem $_.FullName -Directory -ErrorAction SilentlyContinue } |
-                Where-Object { Test-Path "$($_.FullName)\.build" } |
-                ForEach-Object {
-                  New-Item -ItemType Directory -Force `
-                    -Path "$($_.FullName)\.build\x86_64-w64-mingw32\common\src" | Out-Null
-                  Write-Host "aws workaround (fallback): created common/src at $($_.FullName)"
-                }
-            }
-
-            # Retry: Alire re-runs post-fetch; make skips recompilation and
-            # awsres can now write to the target directory.
-            alr build -- "-XBUILD_PROFILE=${{ inputs.build_profile }}" "-XBUILD_TARGET=x86_64-w64-mingw32"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-
-          strip vericlaw.exe 2>$null
-          $LASTEXITCODE = 0
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          strip vericlaw.exe 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: vericlaw-windows-x86_64
