@@ -19,8 +19,14 @@ contents:
     file_info:
       mode: 0644
 
-  - src: ./config/
+  - src: ./config/*.example.json
     dst: /etc/vericlaw/
+    type: config
+    file_info:
+      mode: 0640
+
+  - src: ./config/bootstrap_secure_defaults.env
+    dst: /etc/vericlaw/bootstrap_secure_defaults.env
     type: config
     file_info:
       mode: 0640

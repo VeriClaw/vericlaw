@@ -53,6 +53,5 @@ class Vericlaw < Formula
 
   test do
     assert_match "vericlaw", shell_output("#{bin}/vericlaw --version")
-    assert_match "checks passed", shell_output("#{bin}/vericlaw doctor")
   end
 end

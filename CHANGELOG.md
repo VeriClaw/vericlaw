@@ -22,6 +22,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - vericlaw.gpr: added `arm-linux-gnueabihf` to Target_Kind
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-03-01
+
 ### Added
 - Browser/screenshot tool via Puppeteer bridge (port 3007): `browser_browse`, `browser_screenshot`
 - Vector RAG memory via sqlite-vec + OpenAI embeddings: `memory_search` tool
@@ -32,8 +35,6 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Warnings-as-errors CI gate (`warnings-gate` job, currently `continue-on-error: true`)
 - Supply chain CI job (SBOM + provenance generation and verification)
 - `make docker-push` and `make docker-push-dry-run` targets
-
-### Added (v1.0.0-rc1 hardening)
 - Gateway chat API: `POST /api/chat` (non-streaming) and `POST /api/chat/stream` (SSE)
 - Streaming SSE output for Gemini and OpenAI-compatible providers
 - `vericlaw status` command (runtime status summary)
@@ -42,8 +43,6 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - `make fuzz-suite` target for security regression fuzz suite
 - Log level filtering via `VERICLAW_LOG_LEVEL` env var (debug/info/warning/error)
 - Request ID correlation (`req_id`) in structured log output
-
-### Added (v1.0.0-rc3 production hardening)
 - LLM cost tracking per provider with token budget enforcement (`Metrics.Cost`)
 - OpenTelemetry OTLP tracing: optional HTTP/JSON exporter, zero overhead when off
 - Multi-agent orchestration: role-based delegation (Researcher/Coder/Reviewer/General)
@@ -57,16 +56,6 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - `make coverage` target for gcov reporting
 - `make gateway-integration-test` target (10 assertions, security headers, rate limiting)
 - `vericlaw doctor` now performs real health checks (DB, bridges, workspace)
-- Version constant consolidated to `1.0.0-rc3`
-
-### Fixed (v1.0.0-rc3)
-- SQL parameterisation: memory retention DELETE now uses `Bind_Int` (was string concat)
-- Log swallowed exceptions: plugins-loader, SSE providers, memory-vector now log errors
-- HTTP timeout: distinct `CURLE_OPERATION_TIMEDOUT` error message for smart retry
-- Worker task leak: exception handler aborts orphaned tasks during result collection
-- launchd plist: `KeepAlive=true`, user-writable log paths in `~/Library/Logs/`
-
-### Added (v1.0.0-rc2 features)
 - `--json` flag for machine-readable output on `agent` and `status` commands
 - `--no-color` flag with auto-detection for pipes; respects `NO_COLOR` env var
 - `vericlaw export --session <id> --format md|json` conversation export command
@@ -83,13 +72,16 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Bridge test suites for all 8 Node.js sidecars (health, validation, error handling)
 - CI: SPARK proof job, fuzz suite job, integration test job, bridge npm audit + test job
 - Package lockfiles for all 8 bridge sidecars
+- ARMv7 (32-bit ARM) cross-compilation for Raspberry Pi 2/3/4 (32-bit OS)
+- Automated Homebrew tap, Scoop bucket, and Docker GHCR image publish on stable release
+- nfpm `.deb` and `.rpm` packages for amd64, arm64, armhf
 
-### Security (v1.0.0-rc2)
-- WhatsApp example config: changed `bind_host` from `0.0.0.0` to `127.0.0.1`
-- docker-compose.yml: secret env vars now use `:?` (fail-fast) instead of `:-` (empty default)
-- Gateway HTTP responses include security headers (nosniff, DENY, no-store)
-- SECURITY.md updated with all hardening measures
-- ARCHITECTURE.md updated with browser-bridge, /api/chat, config validation
+### Fixed
+- SQL parameterisation: memory retention DELETE now uses `Bind_Int` (was string concat)
+- Log swallowed exceptions: plugins-loader, SSE providers, memory-vector now log errors
+- HTTP timeout: distinct `CURLE_OPERATION_TIMEDOUT` error message for smart retry
+- Worker task leak: exception handler aborts orphaned tasks during result collection
+- launchd plist: `KeepAlive=true`, user-writable log paths in `~/Library/Logs/`
 
 ### Security
 - MCP bridge: bearer token auth, rate limiting (100 req/min), tool allowlist validation
@@ -98,6 +90,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Channels: all 5 bridge-polling channels now use SPARK-proved `Channels.Security.Allowlist_Allows`
 - SPARK proofs upgraded from flow analysis (level 1) to Silver (level 2) for runtime error proofs
 - Fixed silent exception swallowing in main.adb — now uses structured logging
+- WhatsApp example config: changed `bind_host` from `0.0.0.0` to `127.0.0.1`
+- docker-compose.yml: secret env vars now use `:?` (fail-fast) instead of `:-` (empty default)
+- Gateway HTTP responses include security headers (nosniff, DENY, no-store)
 
 ## [0.2.0] - 2026-02-27
 ### Added

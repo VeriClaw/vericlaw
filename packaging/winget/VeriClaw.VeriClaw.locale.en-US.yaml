@@ -1,0 +1,25 @@
+PackageIdentifier: VeriClaw.VeriClaw
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: VeriClaw
+PublisherUrl: https://github.com/VeriClaw
+PackageName: VeriClaw
+PackageUrl: https://github.com/VeriClaw/vericlaw
+License: Apache-2.0
+LicenseUrl: https://github.com/VeriClaw/vericlaw/blob/main/LICENSE
+ShortDescription: Formally verified AI agent runtime built with Ada/SPARK
+Description: |-
+  VeriClaw is a formally verified AI agent runtime built with Ada/SPARK.
+  Supports multiple LLM providers (OpenAI, Anthropic, Gemini, Ollama) and
+  channels (Telegram, WhatsApp, Slack, Discord, Email, IRC, Matrix).
+  SPARK formal verification provides machine-checked safety and security guarantees.
+Tags:
+  - ai
+  - agent
+  - ada
+  - spark
+  - formal-verification
+  - llm
+ReleaseNotesUrl: https://github.com/VeriClaw/vericlaw/releases/tag/v1.0.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

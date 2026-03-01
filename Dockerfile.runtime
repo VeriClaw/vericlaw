@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1.7
+# Minimal runtime image built from pre-compiled binaries.
+# Used by the release pipeline — does not compile from source.
+#
+# Build context must contain:
+#   bin/amd64/vericlaw   (linux/amd64)
+#   bin/arm64/vericlaw   (linux/arm64)
+#   bin/armv7/vericlaw   (linux/arm/v7)
+#
+# Built by .github/workflows/release.yml publish-docker job.
+FROM debian:bookworm-slim
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       libcurl4 \
+       libsqlite3-0 \
+       ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# TARGETARCH + TARGETVARIANT gives us: amd64 | arm64 | armv7
+COPY --chmod=0755 bin/${TARGETARCH}${TARGETVARIANT}/vericlaw /usr/local/bin/vericlaw
+
+# Default config and data directories
+RUN mkdir -p /etc/vericlaw /var/lib/vericlaw
+
+VOLUME ["/etc/vericlaw", "/var/lib/vericlaw"]
+
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/vericlaw"]
+CMD ["agent"]

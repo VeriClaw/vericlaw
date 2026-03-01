@@ -1,0 +1,16 @@
+PackageIdentifier: VeriClaw.VeriClaw
+PackageVersion: 1.0.0
+Platform:
+  - Windows.Desktop
+MinimumOSVersion: 10.0.0.0
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: vericlaw.exe
+    PortableCommandAlias: vericlaw
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/VeriClaw/vericlaw/releases/download/v1.0.0/vericlaw-v1.0.0-windows-x86_64.zip
+    InstallerSha256: PLACEHOLDER_SHA256
+ManifestType: installer
+ManifestVersion: 1.6.0
