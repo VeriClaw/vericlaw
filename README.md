@@ -1,8 +1,22 @@
 # VeriClaw
 
-> **Active development — `test` branch has all the latest features. `main` is an empty stub.**
+> [!IMPORTANT]
+> ## 🚀 Final Stages of Development
+>
+> VeriClaw **v1.0.0** has been released and the project is in its **final stages of development** — the multi-platform release pipeline is fully operational. Binaries, packages, and images are being published across all distribution channels:
+>
+> - ✅ **Native binaries** — Linux (amd64/arm64/armv7), macOS (amd64/arm64), Windows (x64) via GitHub Releases
+> - ✅ **Homebrew** — `brew install vericlaw/tap/vericlaw`
+> - ✅ **Scoop** — `scoop install vericlaw` (Windows)
+> - ✅ **DEB / RPM packages** — Debian, Ubuntu, RHEL, Fedora
+> - ✅ **Docker** — multi-arch image on GHCR (`ghcr.io/vericlaw/vericlaw`)
+> - 🔜 **Winget** — Windows Package Manager (submission in progress)
+> - 🔜 **`get.vericlaw.dev`** — one-line installer (coming soon)
+>
+> `main` is the stable release branch. All CI gates are passing. See [CHANGELOG.md](CHANGELOG.md) for what shipped in v1.0.0.
 
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml)
+[![Release](https://github.com/VeriClaw/vericlaw/actions/workflows/release.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/release.yml)
 
 VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent in its class with **formally-verified security policies**. It competes with NullClaw (Zig), ZeroClaw (Rust), OpenClaw (TypeScript), IronClaw (Rust), TinyClaw (TS/Bun), PicoClaw (Go), and NanoBot (Python), while delivering provably correct auth, secrets, audit, and sandbox policy.
 
@@ -113,6 +127,12 @@ echo "deb [signed-by=/usr/share/keyrings/vericlaw.gpg] https://apt.vericlaw.dev 
 sudo apt update && sudo apt install vericlaw
 ```
 
+### Winget (Windows Package Manager)
+```powershell
+winget install VeriClaw.VeriClaw
+```
+> Winget submission is in progress. Until available in the public registry, install via Scoop or download the binary from [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases).
+
 ### From Source
 ```bash
 # Requires Alire (Ada package manager)
@@ -124,8 +144,12 @@ alr build -- -XBUILD_PROFILE=release
 
 ### Docker
 ```bash
+# Multi-arch image (linux/amd64, linux/arm64, linux/arm/v7)
 docker pull ghcr.io/vericlaw/vericlaw:latest
 docker run --rm -it ghcr.io/vericlaw/vericlaw
+
+# Specific version
+docker pull ghcr.io/vericlaw/vericlaw:v1.0.0
 ```
 
 ### Raspberry Pi
@@ -975,5 +999,6 @@ The `make competitive-regression-gate` gate **fails** if any VeriClaw metric reg
 - Browser/screenshot tool (Puppeteer headless Chromium)
 - SPARK Silver proofs on security core
 - SQLite WAL mode for safe concurrent channel writes
-- Multi-arch Docker images (amd64 / arm64 / arm/v7)
+- Multi-arch Docker images on GHCR (`ghcr.io/vericlaw/vericlaw`) — linux/amd64, linux/arm64, linux/arm/v7
+- Winget manifest templates published (registry submission in progress)
 - Systemd / launchd / Windows service packaging
