@@ -183,41 +183,42 @@ jobs:
           else:
               print('Warning: make shim compile failed; proceeding without it')
       - name: Build
-        # Use shell: python so subprocess.call never exits on non-zero return
-        # codes (unlike bash -e which kills the script before the retry runs).
-        shell: python
+        id: build-attempt
+        continue-on-error: true
+        shell: bash
         env:
           LIBRARY_PATH: C:/msys64/mingw64/lib
           CPATH: C:/msys64/mingw64/include
         run: |
-          import os, subprocess, sys, glob
-          r = subprocess.call(['alr', 'toolchain', '--select', 'gnat_native=14.2.1'])
-          if r != 0:
-              sys.exit(r)
-          # aws 24.0.0 on Windows: awsres cannot create files in
-          # .build/<triple>/common/src because the directory does not exist.
-          # Run build once; on failure create the missing directory and retry
-          # (Alire re-runs post-fetch from the already-compiled state, so only
-          # gen-templates re-runs on the second attempt ~30s, not ~4.5 min).
-          r = subprocess.call(['alr', 'build', '--',
-              '-XBUILD_PROFILE=${{ inputs.build_profile }}',
-              '-XBUILD_TARGET=x86_64-w64-mingw32'])
-          if r != 0:
-              print('First build attempt failed (exit %d). Creating missing aws 24.0.0 directory...' % r)
-              la = os.environ.get('LOCALAPPDATA', '')
-              dirs = glob.glob(la.replace('\\', '/') + '/alire/cache/builds/aws_24*/*/.build')
-              print('Found aws .build dirs:', dirs)
-              for d in dirs:
-                  target = d + '/x86_64-w64-mingw32/common/src'
-                  os.makedirs(target, exist_ok=True)
-                  print('Created:', target)
-              print('Retrying build...')
-              r = subprocess.call(['alr', 'build', '--',
-                  '-XBUILD_PROFILE=${{ inputs.build_profile }}',
-                  '-XBUILD_TARGET=x86_64-w64-mingw32'])
-              if r != 0:
-                  sys.exit(r)
-          subprocess.call(['strip', 'vericlaw.exe'])
+          alr toolchain --select gnat_native=14.2.1
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          strip vericlaw.exe 2>/dev/null || true
+      - name: Fix aws 24.0.0 missing directory
+        # aws 24.0.0: awsres writes template files to .build/<target>/common/src
+        # but gprbuild -p never creates that directory on Windows.  Create it
+        # here so Alire can succeed when alr build is retried in the next step.
+        # This step runs in a separate process group, immune to the Windows
+        # runner's kill that terminates the previous step's group on failure.
+        if: steps.build-attempt.outcome == 'failure'
+        shell: python
+        run: |
+          import os, glob
+          la = os.environ.get('LOCALAPPDATA', '')
+          dirs = glob.glob(la.replace('\\', '/') + '/alire/cache/builds/aws_24*/*/.build')
+          print('Found aws .build dirs:', dirs)
+          for d in dirs:
+              target = d + '/x86_64-w64-mingw32/common/src'
+              os.makedirs(target, exist_ok=True)
+              print('Created:', target)
+      - name: Build (retry after aws directory fix)
+        if: steps.build-attempt.outcome == 'failure'
+        shell: bash
+        env:
+          LIBRARY_PATH: C:/msys64/mingw64/lib
+          CPATH: C:/msys64/mingw64/include
+        run: |
+          alr build -- -XBUILD_PROFILE=${{ inputs.build_profile }} -XBUILD_TARGET=x86_64-w64-mingw32
+          strip vericlaw.exe 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: vericlaw-windows-x86_64
