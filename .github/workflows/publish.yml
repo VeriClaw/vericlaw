@@ -6,16 +6,6 @@ on:
       - 'v*'
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      release_tag: ${{ steps.tag.outputs.release_tag }}
-    steps:
-      - name: Set release tag
-        id: tag
-        run: |
-          echo "release_tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-
   build:
     uses: ./.github/workflows/build-matrix.yml
     with:
