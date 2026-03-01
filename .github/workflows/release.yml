@@ -28,7 +28,7 @@ jobs:
   # Reuse the cross-platform build matrix
   build:
     needs: setup
-    uses: VeriClaw/vericlaw/.github/workflows/build-matrix.yml@main
+    uses: ./.github/workflows/build-matrix.yml
     with:
       build_profile: release
 
