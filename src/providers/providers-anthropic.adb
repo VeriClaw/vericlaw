@@ -265,10 +265,10 @@ is
    is
       URL       : constant String := Anthropic_API_URL & "/v1/messages";
       Hdrs      : constant HTTP.Client.Header_Array :=
-        [1 => (Name  => To_Unbounded_String ("x-api-key"),
+        (1 => (Name  => To_Unbounded_String ("x-api-key"),
                Value => Provider.API_Key),
          2 => (Name  => To_Unbounded_String ("anthropic-version"),
-               Value => To_Unbounded_String (Anthropic_Version))];
+               Value => To_Unbounded_String (Anthropic_Version)));
       Body_Str  : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
       Http_Resp : constant HTTP.Client.Response :=
@@ -367,10 +367,10 @@ is
    is
       URL      : constant String := Anthropic_API_URL & "/v1/messages";
       Hdrs     : constant HTTP.Client.Header_Array :=
-        [1 => (Name  => To_Unbounded_String ("x-api-key"),
+        (1 => (Name  => To_Unbounded_String ("x-api-key"),
                Value => Provider.API_Key),
          2 => (Name  => To_Unbounded_String ("anthropic-version"),
-               Value => To_Unbounded_String (Anthropic_Version))];
+               Value => To_Unbounded_String (Anthropic_Version)));
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools, Stream => True);
 

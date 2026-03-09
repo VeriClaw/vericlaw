@@ -314,7 +314,7 @@ is
            ("browser_screenshot",
             "Take a screenshot of a web page",
             Browser_Screenshot_Params);
-      end if;
+       end if;
       --  memory_search (vector RAG)
       if Cfg.RAG_Enabled then
          Num := Num + 1;
@@ -537,7 +537,7 @@ is
             Set_Unbounded_String (Result.Output, SResp);
          end;
 
-       elsif Name = "delegate" then
+      elsif Name = "delegate" then
           Metrics.Increment ("tool_calls_total", "delegate");
           declare
              use Agent.Orchestrator;
@@ -547,7 +547,7 @@ is
             Role     : Agent_Role := General;
             Req      : Delegation_Request;
             Del_Res  : Delegation_Result;
-         begin
+          begin
             --  Parse role string.
             if Role_Str = "researcher" then
                Role := Researcher;
@@ -579,10 +579,10 @@ is
             else
                Set_Unbounded_String
                  (Result.Error, To_String (Del_Res.Error));
-             end if;
+            end if;
           end;
 
-       elsif Name = "plugin_registry" then
+      elsif Name = "plugin_registry" then
           Metrics.Increment ("tool_calls_total", "plugin_registry");
           Result.Success := True;
           Set_Unbounded_String
@@ -599,7 +599,7 @@ is
              & Plugins.Loader.Runtime_Registry_JSON
              & "}");
 
-       elsif Name = "browser_browse" then
+      elsif Name = "browser_browse" then
           Metrics.Increment ("tool_calls_total", "browser_browse");
          if Length (Cfg.Tools.Browser_Bridge_URL) = 0 then
             Set_Unbounded_String

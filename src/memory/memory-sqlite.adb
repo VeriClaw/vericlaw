@@ -480,7 +480,8 @@ is
       (Handle     : Memory_Handle;
        Session_ID : String;
        Conv       : out Agent.Context.Conversation;
-       Max_Msgs   : Config.Schema.History_Limit)
+       Max_Msgs   : Config.Schema.History_Limit :=
+         Config.Schema.History_Limit'Last)
    is
    begin
       Load_History (Handle, Session_ID, Max_Msgs, Conv);
@@ -787,7 +788,7 @@ is
       Rc   : int;
    begin
       Count    := 0;
-      Branches := [others => (others => <>)];
+      Branches := (others => (others => <>));
 
       Rc := c_prepare_v2 (Handle.DB, CS, -1, Stmt, System.Null_Address);
       Free (CS);

@@ -377,11 +377,11 @@ is
        if Length (Result.Config.Observability.OTLP_Endpoint) > 0
          and then not Is_Safe_URL
            (To_String (Result.Config.Observability.OTLP_Endpoint))
-      then
+       then
          Set_Unbounded_String
            (Result.Error, "Observability otlp_endpoint is invalid");
          return Result;
-      end if;
+       end if;
 
        if Length (Result.Config.Tools.Plugin_Directory) > 0
          and then not Is_Safe_String

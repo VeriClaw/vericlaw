@@ -108,21 +108,25 @@ is
       Info.Manifest.Granted_Tools := (others => False);
       if Has_Key (PR.Root, "tools") then
          declare
-            Tools_Arr : constant JSON_Value_Type :=
-              Get_Object (PR.Root, "tools");
+            Tools_Arr : constant JSON_Array_Type :=
+              Value_To_Array (Get_Object (PR.Root, "tools"));
             Len       : constant Natural := Array_Length (Tools_Arr);
          begin
-            for I in 0 .. Len - 1 loop
+            for I in 1 .. Len loop
+               declare
+                  Tool_Name : constant String :=
+                    Array_Item (Tools_Arr, I).Get;
                begin
                   declare
                      TK : constant Capabilities.Tool_Kind :=
-                       Parse_Tool_Kind (Get_Array_String (Tools_Arr, I));
+                       Parse_Tool_Kind (Tool_Name);
                   begin
                      Info.Manifest.Granted_Tools (TK) := True;
                   end;
                exception
                   when Constraint_Error =>
-                     Logging.Warning ("Unknown plugin tool: " & Get_Array_String (Tools_Arr, I));
+                     Logging.Warning
+                       ("Unknown plugin tool: " & Tool_Name);
                end;
             end loop;
          end;

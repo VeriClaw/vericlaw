@@ -44,7 +44,7 @@ package body Metrics.Cost is
          --  New provider entry.
          if Size < Max_Providers then
             Size := Size + 1;
-            Entries (Size).Label     := [others => ' '];
+            Entries (Size).Label     := (others => ' ');
             declare
                Len : constant Natural :=
                  Natural'Min (Provider_Label'Length, 32);

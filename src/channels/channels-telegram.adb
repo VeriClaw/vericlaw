@@ -41,8 +41,8 @@ is
 
             Body_Obj  : JSON_Value_Type := Build_Object;
             Hdrs      : constant HTTP.Client.Header_Array :=
-              [1 => (Name  => To_Unbounded_String ("Content-Type"),
-                     Value => To_Unbounded_String ("application/json"))];
+              (1 => (Name  => To_Unbounded_String ("Content-Type"),
+                     Value => To_Unbounded_String ("application/json")));
             Resp      : HTTP.Client.Response;
          begin
             Set_Field (Body_Obj, "chat_id", Chat_ID);
@@ -262,7 +262,7 @@ is
                Resp  : constant HTTP.Client.Response :=
                  HTTP.Client.Get
                    (URL        => URL,
-                    Headers    => [1 .. 0 => <>],
+                    Headers    => (1 .. 0 => <>),
                     Timeout_Ms => 35_000);
             begin
                if HTTP.Client.Is_Success (Resp) then

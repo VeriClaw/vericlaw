@@ -328,7 +328,7 @@ is
         (Name  => To_Unbounded_String ("Authorization"),
          Value => To_Unbounded_String
            ("Bearer " & To_String (Provider.API_Key)));
-      Hdrs     : constant HTTP.Client.Header_Array := [1 => Auth_Hdr];
+      Hdrs     : constant HTTP.Client.Header_Array := (1 => Auth_Hdr);
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
 
@@ -406,7 +406,7 @@ is
         (Name  => To_Unbounded_String ("Authorization"),
          Value => To_Unbounded_String
            ("Bearer " & To_String (Provider.API_Key)));
-      Hdrs     : constant HTTP.Client.Header_Array := [1 => Auth_Hdr];
+      Hdrs     : constant HTTP.Client.Header_Array := (1 => Auth_Hdr);
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools, Stream => True);
 

@@ -76,7 +76,7 @@ package body Gateway.Provider.Routing with SPARK_Mode is
       (Config : Gateway.Provider.Registry.Registry_Config) return Route_Result is
        Primary_Result : constant Route_Result := Primary_Decision (Config);
        Failover_Result : constant Route_Result := Failover_Decision (Config);
-    begin
+   begin
        if Primary_Result.Allowed then
           return Primary_Result;
        elsif Failover_Result.Allowed then
@@ -111,12 +111,12 @@ package body Gateway.Provider.Routing with SPARK_Mode is
          Gateway.Provider.Registry.Provider_Enabled
            (Config   => Config,
             Provider => Gateway.Provider.Registry.Long_Tail_Provider);
-    begin
+   begin
        if Primary_Weight > 100 or else Deterministic_Slot > 99 then
           return (Allowed  => False,
                   Provider => Gateway.Provider.Registry.Primary_Provider,
                   Decision => Route_Error_Invalid_Weight);
-      elsif Deterministic_Slot < Primary_Weight then
+       elsif Deterministic_Slot < Primary_Weight then
           if Primary_Enabled then
              return (Allowed  => True,
                      Provider => Gateway.Provider.Registry.Primary_Provider,

@@ -149,15 +149,15 @@ package body Memory.Vector is
       API_Key  : String;
       Base_URL : String := "https://api.openai.com/v1") return Embedding
    is
-      Zero_Vec  : constant Embedding := [others => 0.0];
+      Zero_Vec  : constant Embedding := (others => 0.0);
       Body_JSON : constant String :=
         "{""model"":""text-embedding-3-small"","
         & """input"":""" & JSON_Escape (Text) & """}";
       Auth_Hdr  : constant HTTP.Client.Header_Array :=
-        [1 => (Name  => Ada.Strings.Unbounded.To_Unbounded_String
+        (1 => (Name  => Ada.Strings.Unbounded.To_Unbounded_String
                           ("Authorization"),
                Value => Ada.Strings.Unbounded.To_Unbounded_String
-                          ("Bearer " & API_Key))];
+                          ("Bearer " & API_Key)));
       Resp : constant HTTP.Client.Response :=
         HTTP.Client.Post_JSON
           (URL        => Base_URL & "/embeddings",
@@ -174,7 +174,7 @@ package body Memory.Vector is
            Ada.Strings.Unbounded.To_String (Resp.Body_Text);
          Marker   : constant String := """embedding"":[";
          Start    : Natural := 0;
-         Result   : Embedding := [others => 0.0];
+         Result   : Embedding := (others => 0.0);
          Idx      : Natural := 0;
          Pos      : Natural;
       begin
@@ -309,9 +309,9 @@ package body Memory.Vector is
       Rc   : Interfaces.C.int;
    begin
       Num := 0;
-      Results := [others => (Content    => Ada.Strings.Unbounded.Null_Unbounded_String,
+      Results := (others => (Content    => Ada.Strings.Unbounded.Null_Unbounded_String,
                              Session_ID => Ada.Strings.Unbounded.Null_Unbounded_String,
-                             Score      => 0.0)];
+                             Score      => 0.0));
 
       if DB = System.Null_Address then return; end if;
 

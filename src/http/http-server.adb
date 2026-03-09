@@ -21,6 +21,7 @@ package body HTTP.Server
   with SPARK_Mode => Off
 is
    use Config.Schema;
+   use type Agent.Context.Role;
 
    WS : AWS.Server.HTTP;
 
@@ -89,7 +90,7 @@ is
       procedure Check (IP : String; Allowed : out Boolean) is
          use type Ada.Calendar.Time;
          Now       : constant Ada.Calendar.Time := Ada.Calendar.Clock;
-         IP_Padded : String (1 .. 45) := [others => ' '];
+         IP_Padded : String (1 .. 45) := (others => ' ');
          Len       : constant Natural :=
            Natural'Min (IP'Length, 45);
       begin
@@ -226,7 +227,7 @@ is
                 end if;
              end loop;
           end;
-       end Restore_Conversation;
+      end Restore_Conversation;
 
       function Raw_Dispatch return AWS.Response.Data is
       begin
@@ -418,7 +419,7 @@ is
                ("application/json",
                "{""error"":""forbidden""}",
                AWS.Messages.S403);
-         end if;
+          end if;
 
          --  GET /api/status
          if URI = "/api/status" and then Method = "GET" then
@@ -435,7 +436,7 @@ is
                   if Shared_Cfg.Channels (I).Enabled then
                      Active := Active + 1;
                   end if;
-                end loop;
+               end loop;
                 return AWS.Response.Build
                   ("application/json",
                    "{""status"":""running"",""version"":"""
@@ -460,8 +461,8 @@ is
                        Img (Plugins.Loader.Error_Plugin_Count (Registry))
                      & "}",
                      AWS.Messages.S200);
-             end;
-          end if;
+            end;
+         end if;
 
          --  GET /api/channels
           if URI = "/api/channels" and then Method = "GET" then
@@ -523,7 +524,7 @@ is
                   & """tool_calls_total"":" & Img (Tool_C) & "}",
                   AWS.Messages.S200);
             end;
-         end if;
+          end if;
 
           --  POST /api/chat — non-streaming chat completion
          if URI = "/api/chat" and then Method = "POST" then
@@ -567,14 +568,14 @@ is
                         "{""content"":" & Config.JSON_Parser.Escape_JSON_String
                           (To_String (Reply.Content)) & "}",
                         AWS.Messages.S200);
-                  else
+                   else
                      return AWS.Response.Build
                        ("application/json",
                         "{""error"":" & Config.JSON_Parser.Escape_JSON_String
                           (To_String (Reply.Error)) & "}",
                         AWS.Messages.S500);
-                  end if;
-               end;
+                   end if;
+                end;
             end;
          end if;
 
@@ -627,12 +628,12 @@ is
                         (To_String (Reply.Content)));
                       Append (SSE, "}" & ASCII.LF & ASCII.LF);
                      Append (SSE, "data: [DONE]" & ASCII.LF & ASCII.LF);
-                  else
+                   else
                      Append (SSE, "data: {""error"":");
                      Append (SSE, Config.JSON_Parser.Escape_JSON_String
                        (To_String (Reply.Error)));
                      Append (SSE, "}" & ASCII.LF & ASCII.LF);
-                  end if;
+                   end if;
 
                    declare
                       R : AWS.Response.Data :=
@@ -646,8 +647,8 @@ is
                       return R;
                    end;
                 end;
-             end;
-          end if;
+            end;
+         end if;
 
          --  404 for everything else
          return AWS.Response.Build
@@ -657,7 +658,7 @@ is
       end Raw_Dispatch;
 
       R : AWS.Response.Data := Raw_Dispatch;
-    begin
+   begin
        AWS.Response.Set.Add_Header (R, "X-Content-Type-Options", "nosniff");
        AWS.Response.Set.Add_Header (R, "X-Frame-Options", "DENY");
        AWS.Response.Set.Add_Header (R, "Cache-Control", "no-store");
@@ -669,7 +670,7 @@ is
             (R, "Access-Control-Expose-Headers", "X-VeriClaw-Stream-Mode");
        end if;
        return R;
-    end Dispatch;
+   end Dispatch;
 
    procedure Run
      (Cfg : Config.Schema.Agent_Config;

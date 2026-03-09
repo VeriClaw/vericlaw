@@ -33,7 +33,7 @@ is
 
       Resp := HTTP.Client.Post_JSON
         (URL       => Bridge_URL & "/sessions/slack/messages",
-         Headers   => [1 .. 0 => <>],
+         Headers   => (1 .. 0 => <>),
          Body_JSON => To_JSON_String (Body_Obj));
 
       return HTTP.Client.Is_Success (Resp);
@@ -66,7 +66,7 @@ is
                Resp : constant HTTP.Client.Response :=
                  HTTP.Client.Get
                    (URL        => Bridge_URL & "/sessions/slack/messages?limit=10",
-                    Headers    => [1 .. 0 => <>],
+                    Headers    => (1 .. 0 => <>),
                     Timeout_Ms => 10_000);
             begin
                if HTTP.Client.Is_Success (Resp) then

@@ -265,7 +265,7 @@ is
         & To_String (Provider.Model)
         & ":generateContent?key="
         & To_String (Provider.API_Key);
-      No_Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) := [others => <>];
+      No_Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) := (others => <>);
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
 
@@ -379,7 +379,7 @@ is
         & To_String (Provider.Model)
         & ":streamGenerateContent?alt=sse&key="
         & To_String (Provider.API_Key);
-      No_Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) := [others => <>];
+      No_Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) := (others => <>);
       Body_Str : constant String :=
         Build_Request_Body (Provider, Conv, Tools, Num_Tools);
 

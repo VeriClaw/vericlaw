@@ -85,7 +85,7 @@ is
       Resp : HTTP.Client.Response;
       API_URL : constant String := "https://api.github.com/repos/vericlaw/vericlaw/releases/latest";
       No_Headers : constant HTTP.Client.Header_Array (1 .. 0) :=
-        [others => <>];
+        (others => <>);
    begin
       Put_Line ("Checking for updates...");
       Resp := HTTP.Client.Get (API_URL, No_Headers, Timeout_Ms => 5000);
@@ -300,7 +300,7 @@ is
                  To_String (Cfg.Channels (I).Bridge_URL) & "/health";
                Resp : constant HTTP.Client.Response :=
                  HTTP.Client.Get
-                   (URL, HTTP.Client.Header_Array'[1 .. 0 => <>],
+                   (URL, HTTP.Client.Header_Array'(1 .. 0 => <>),
                     Timeout_Ms => 5000);
             begin
                if HTTP.Client.Is_Success (Resp) then
@@ -553,7 +553,7 @@ begin
                Pair_Resp : constant HTTP.Client.Response :=
                  HTTP.Client.Post_JSON
                    (URL       => Bridge & "/sessions/vericlaw/pair",
-                    Headers   => [1 .. 0 => <>],
+                    Headers   => (1 .. 0 => <>),
                     Body_JSON => Body_JSON);
             begin
                if HTTP.Client.Is_Success (Pair_Resp) then
@@ -586,7 +586,7 @@ begin
                               St_Resp : constant HTTP.Client.Response :=
                                 HTTP.Client.Get
                                   (URL        => Bridge & "/sessions/vericlaw/status",
-                                   Headers    => [1 .. 0 => <>],
+                                   Headers    => (1 .. 0 => <>),
                                    Timeout_Ms => 5_000);
                               St_PR   : constant Parse_Result :=
                                 Parse (Ada.Strings.Unbounded.To_String

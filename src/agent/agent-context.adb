@@ -35,7 +35,7 @@ is
         (Role       => Role,
          Content    => To_Unbounded_String (Content),
          Name       => To_Unbounded_String (Name),
-         Images     => [others => (others => Null_Unbounded_String)],
+         Images     => (others => (others => Null_Unbounded_String)),
          Num_Images => 0);
    begin
       if Conv.Msg_Count > Natural (History_Cap) then
@@ -155,7 +155,7 @@ is
               (Role       => User,
                Content    => To_Unbounded_String (Summary),
                Name       => Null_Unbounded_String,
-               Images     => [others => (others => Null_Unbounded_String)],
+               Images     => (others => (others => Null_Unbounded_String)),
                Num_Images => 0);
             --  Remove the assistant message at Start+1 by left-shifting.
             for I in Start + 1 .. Conv.Msg_Count - 1 loop
@@ -254,7 +254,7 @@ is
       Start  : Positive := Input'First;
    begin
       Text_Out := Null_Unbounded_String;
-      Images   := [others => (others => Null_Unbounded_String)];
+      Images   := (others => (others => Null_Unbounded_String));
       Num_Imgs := 0;
 
       loop

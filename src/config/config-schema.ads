@@ -144,13 +144,13 @@ is
       --  Providers (first entry = primary)
       Num_Providers   : Provider_Index := 1;
       Providers       : Provider_Array (1 .. Max_Providers) :=
-        [others => <>];
+        (others => <>);
 
       --  Channels
       Num_Channels    : Channel_Index := 1;
       Channels        : Channel_Array (1 .. Max_Channels) :=
-        [1 => (Kind => CLI, Enabled => True, others => <>),
-         others => <>];
+        (1 => (Kind => CLI, Enabled => True, others => <>),
+         others => <>);
 
       --  Subsystems
       Tools         : Tool_Config;

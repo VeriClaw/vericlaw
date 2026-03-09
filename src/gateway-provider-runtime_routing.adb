@@ -24,9 +24,8 @@ is
         Next_Long_Tail_Index (Cfg, State);
    begin
       return
-        (Primary_Configured   => Natural (Cfg.Num_Providers) >= 1,
-         Primary_Enabled      =>
-           Natural (Cfg.Num_Providers) >= 1 and then not State.Primary_Failed,
+        (Primary_Configured   => True,
+         Primary_Enabled      => not State.Primary_Failed,
          Failover_Configured  => Natural (Cfg.Num_Providers) >= 2,
          Failover_Enabled     =>
            Natural (Cfg.Num_Providers) >= 2 and then not State.Failover_Failed,

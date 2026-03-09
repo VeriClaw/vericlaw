@@ -237,7 +237,7 @@ is
                URL   : constant String :=
                  To_String (Endpoint) & "/v1/traces";
                Hdrs  : constant HTTP.Client.Header_Array (1 .. 0) :=
-                 [others => <>];
+                 (others => <>);
             begin
                Span_Buffer.Drain_All (Batch, Count);
                if Count > 0 then
