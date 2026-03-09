@@ -20,6 +20,7 @@ profile="${BUILD_PROFILE:-edge-speed}"
 binder_mode="${BINDER_MODE:-}"
 target_platform="${TARGET_PLATFORM:-${ADA_CONTAINER_PLATFORM:-}}"
 force_container="${COMPETITIVE_FORCE_CONTAINER:-0}"
+style_checks="${ADA_BENCH_STYLE_CHECKS:-on}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -169,7 +170,7 @@ fi
 
 collect_host_metrics() {
   local measure_output rss_kb rss_trace rss_supported rss_collector pid max_rss current_rss
-  measure_output="$("${project_root}/scripts/measure_small_infra.sh" --runs "${runs}" --profile "${profile}" --binder-mode "${binder_mode}")"
+  measure_output="$(ADA_BENCH_STYLE_CHECKS="${style_checks}" "${project_root}/scripts/measure_small_infra.sh" --runs "${runs}" --profile "${profile}" --binder-mode "${binder_mode}")"
   rss_kb=""
   rss_supported=0
   rss_collector="unsupported_host_rss_telemetry"
@@ -234,7 +235,7 @@ run_container_measurement() {
   local image install_toolchain
   image="$1"
   install_toolchain="$2"
-  docker run --rm --platform "${container_platform}" -e RUNS="${runs}" -e INSTALL_TOOLCHAIN="${install_toolchain}" -v "${project_root}:/workspace" -w /workspace "${image}" \
+  docker run --rm --platform "${container_platform}" -e RUNS="${runs}" -e INSTALL_TOOLCHAIN="${install_toolchain}" -e ADA_BENCH_STYLE_CHECKS="${style_checks}" -v "${project_root}:/workspace" -w /workspace "${image}" \
     bash -lc '
       set -euo pipefail
       if [ -d /opt/gnat/bin ]; then

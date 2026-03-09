@@ -16,6 +16,8 @@ runs=50
 profile="${BUILD_PROFILE:-small}"
 binder_mode="${BINDER_MODE:-}"
 json_output=""
+skip_build=0
+style_checks="${ADA_BENCH_STYLE_CHECKS:-on}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --runs)
@@ -49,6 +51,10 @@ while [[ $# -gt 0 ]]; do
       fi
       json_output="$2"
       shift 2
+      ;;
+    --skip-build)
+      skip_build=1
+      shift
       ;;
     --help|-h)
       usage
@@ -99,7 +105,9 @@ project_file="${project_root}/vericlaw.gpr"
 binary_path="${project_root}/vericlaw"
 
 "${project_root}/scripts/check_toolchain.sh" --quiet >/dev/null
-gprbuild -q -P "${project_file}" -XBUILD_PROFILE="${profile}" -XBINDER_MODE="${binder_mode}"
+if [[ "${skip_build}" == "0" ]]; then
+  gprbuild -q -P "${project_file}" -XBUILD_PROFILE="${profile}" -XBINDER_MODE="${binder_mode}" -XSTYLE_CHECKS="${style_checks}"
+fi
 
 if [[ ! -x "${binary_path}" ]]; then
   echo "Expected executable not found: ${binary_path}" >&2

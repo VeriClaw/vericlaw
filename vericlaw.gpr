@@ -28,6 +28,8 @@ project Vericlaw is
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");
    type Warn_Errors_Kind is ("on", "off");
    Warn_Errors : Warn_Errors_Kind := external ("WARN_ERRORS", "on");
+   type Style_Checks_Kind is ("on", "off");
+   Style_Checks : Style_Checks_Kind := external ("STYLE_CHECKS", "on");
 
    package Compiler is
       case Build_Profile is
@@ -43,21 +45,49 @@ project Vericlaw is
                      "-gnatyaAbcefhiklmnprtM120", "-gnato");
             end case;
          when "release" =>
-            for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
-               "-O2", "-flto",
-               "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
+            case Style_Checks is
+               when "on" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+                     "-O2", "-flto",
+                     "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
+               when "off" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+                     "-O2", "-flto",
+                     "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
+            end case;
          when "small" =>
-            for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
-               "-Os", "-ffunction-sections", "-fdata-sections");
+            case Style_Checks is
+               when "on" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+                     "-Os", "-ffunction-sections", "-fdata-sections");
+               when "off" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+                     "-Os", "-ffunction-sections", "-fdata-sections");
+            end case;
          when "edge-size" =>
-            for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
-               "-Os", "-ffunction-sections", "-fdata-sections");
+            case Style_Checks is
+               when "on" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+                     "-Os", "-ffunction-sections", "-fdata-sections");
+               when "off" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+                     "-Os", "-ffunction-sections", "-fdata-sections");
+            end case;
          when "edge-speed" =>
-            for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato", "-O2");
+            case Style_Checks is
+               when "on" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato", "-O2");
+               when "off" =>
+                  for Default_Switches ("Ada") use
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato", "-O2");
+            end case;
          when "coverage" =>
             --  Debug build with GCOV instrumentation for LCOV reporting.
             for Default_Switches ("Ada") use
