@@ -48,18 +48,21 @@ Standard Ada code that implements the agent logic. It calls into Layer 1 for all
 
 | Subdirectory / Package | Role |
 |---|---|
-| `agent/` | Reasoning loop, conversation context, tool dispatch |
+| `agent/` | Reasoning loop, runtime provider routing, context compaction, tool dispatch |
 | `channels/` | CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix |
 | `providers/` | OpenAI, Anthropic, Azure, Gemini, OpenAI-compatible |
 | `memory/` | SQLite FTS5 memory, facts store, session expiry |
-| `tools/` | file, shell, web_fetch, brave_search, git_operations, cron, spawn |
+| `tools/` | file, shell, web_fetch, brave_search, git_operations, cron, spawn/delegate, browser, plugin registry, MCP |
 | `config/` | JSON config parsing, precedence resolution, hot reload |
-| `http/` | libcurl TLS wrapper |
+| `http/` | libcurl TLS wrapper + localhost gateway/status/chat API |
+| `observability/` | tracing spans, OTLP export, metrics support |
 | `metrics` | Prometheus counters (per-channel, per-provider, per-tool) |
 
 ### Layer 3: Node.js Bridge Sidecars
 
-Eight lightweight Node.js services handle protocol-specific connectivity. Each sidecar exposes a local HTTP REST API consumed by the Ada runtime.
+Eight lightweight Node.js services handle protocol-specific connectivity. Each
+sidecar exposes a local HTTP REST API, including `/health` and `/ready`
+endpoints, consumed by the Ada runtime, Docker Compose, and local operators.
 
 | Sidecar | Protocol | Default Port |
 |---|---|---|
@@ -117,8 +120,9 @@ User input
 ## Concurrency Model
 
 - **Gateway mode** spawns one Ada task per active channel. Tasks communicate via protected objects. The gateway HTTP server also exposes:
+  - `GET /api/status`, `/api/channels`, `/api/plugins`, `/api/metrics/summary`
   - `POST /api/chat` — non-streaming chat (localhost-only, JSON request/response)
-  - `POST /api/chat/stream` — SSE streaming chat (localhost-only, server-sent events)
+  - `POST /api/chat/stream` — localhost SSE chat; the current runtime advertises `X-VeriClaw-Stream-Mode: buffered-sse` while the gateway still flushes full replies at completion
 - **Parallel tool execution**: multiple tool calls from a single LLM response run concurrently via an Ada task pool in `agent-loop_pkg`.
 - **SQLite WAL mode** allows concurrent reads from multiple channel tasks with a single writer at a time.
 - All Ada tasks share the same security core via re-entrant SPARK packages (no shared mutable state in Layer 1).

@@ -8,6 +8,7 @@ with System;                   use System;
 with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
+with Config.Schema;
 with Observability.Tracing;
 
 package body Memory.SQLite
@@ -423,7 +424,7 @@ is
    procedure Load_History
      (Handle     : Memory_Handle;
       Session_ID : String;
-      Max_Msgs   : Positive;
+      Max_Msgs   : Config.Schema.History_Limit;
       Conv       : out Agent.Context.Conversation)
    is
       Mem_Span : constant Observability.Tracing.Span_ID :=
@@ -452,7 +453,7 @@ is
       if Rc /= SQLITE_OK then return; end if;
 
       Bind_Text (Stmt, 1, Session_ID);
-      Bind_Int  (Stmt, 2, Max_Msgs);
+      Bind_Int  (Stmt, 2, Integer (Max_Msgs));
 
       while c_step (Stmt) = SQLITE_ROW and Count < Max_Buf loop
          Count            := Count + 1;
@@ -469,19 +470,21 @@ is
            (Conv,
             Roles (I),
             To_String (Contents (I)),
-            To_String (Names (I)));
+            Name  => To_String (Names (I)),
+            Limit => Max_Msgs);
       end loop;
       Observability.Tracing.Set_Attribute (Mem_Span, "operation", "load_history");
       Observability.Tracing.End_Span (Mem_Span);
    end Load_History;
 
    procedure Export_Session
-     (Handle     : Memory_Handle;
-      Session_ID : String;
-      Conv       : out Agent.Context.Conversation)
+      (Handle     : Memory_Handle;
+       Session_ID : String;
+       Conv       : out Agent.Context.Conversation;
+       Max_Msgs   : Config.Schema.History_Limit)
    is
    begin
-      Load_History (Handle, Session_ID, Agent.Context.Max_History, Conv);
+      Load_History (Handle, Session_ID, Max_Msgs, Conv);
    end Export_Session;
 
    procedure Upsert_Fact

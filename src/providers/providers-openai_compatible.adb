@@ -1,3 +1,4 @@
+with Ada.Exceptions;     use Ada.Exceptions;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
@@ -72,8 +73,9 @@ is
          end;
       end if;
    exception
-      when others =>
-         Logging.Debug ("Malformed SSE chunk discarded");
+      when E : others =>
+         Logging.Warning ("openai-compatible: SSE parse error ("
+           & Exception_Name (E) & "): " & Exception_Message (E));
    end Compat_SSE_Parse;
 
    function Create (Cfg : Provider_Config) return OpenAI_Compat_Provider is
@@ -370,7 +372,7 @@ is
 
       if not HTTP.Client.Is_Success (Http_Resp) then
          Set_Unbounded_String
-           (Result.Error, "OpenAI-compatible streaming HTTP error:"
+           (Result.Error, "OpenAI-compatible streaming HTTP error: "
             & Natural'Image (Http_Resp.Status_Code));
          return Result;
       end if;

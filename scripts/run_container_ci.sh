@@ -3,9 +3,9 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/run_container_ci.sh [build|prove|check|measure-small|secrets-test|conformance-suite]
+Usage: ./scripts/run_container_ci.sh [build|prove|test|validate|check|measure-small|secrets-test|conformance-suite]
 
-Runs build/proof commands in a GNAT/SPARK container image.
+Runs blessed build/test/proof commands in a GNAT/SPARK container image.
 EOF
 }
 
@@ -16,7 +16,7 @@ if [[ $# -gt 1 ]]; then
 fi
 
 case "$action" in
-  build|prove|check|measure-small|secrets-test|conformance-suite) ;;
+  build|prove|test|validate|check|measure-small|secrets-test|conformance-suite) ;;
   --help|-h)
     usage
     exit 0
@@ -41,25 +41,30 @@ fi
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 image="${ADA_CONTAINER_IMAGE:-alire/gnat:community-latest}"
 platform="${ADA_CONTAINER_PLATFORM:-linux/amd64}"
+make_env=""
 
 case "$action" in
   build)
-    inner_cmd="gprbuild -P vericlaw.gpr"
+    make_target="build-host"
     ;;
   prove)
-    inner_cmd="gnatprove -P vericlaw.gpr --mode=flow --level=1"
+    make_target="prove-host"
     ;;
-  check)
-    inner_cmd="gprbuild -P vericlaw.gpr && gnatprove -P vericlaw.gpr --mode=flow --level=1 && ./scripts/check_audit_event_log.sh && ./scripts/check_service_supervisors.sh"
+  test)
+    make_target="test-host"
+    ;;
+  validate|check)
+    make_target="validate-host"
     ;;
   measure-small)
-    inner_cmd="./scripts/measure_small_infra.sh"
+    make_target="measure-small"
     ;;
   secrets-test)
-    inner_cmd="gprbuild -P tests/security_secrets_tests.gpr && ./tests/security_secrets_tests && ./scripts/check_audit_event_log.sh"
+    make_target="secrets-test"
     ;;
   conformance-suite)
-    inner_cmd="CONFORMANCE_FORCE_LOCAL=1 ./scripts/run_cross_repo_conformance_suite.sh"
+    make_target="conformance-suite"
+    make_env="CONFORMANCE_FORCE_LOCAL=1"
     ;;
 esac
 
@@ -68,6 +73,5 @@ docker run --rm --platform "${platform}" -e CONFORMANCE_REPORT_PATH="${CONFORMAN
   bash -lc "
     if [ -d /opt/gnat/bin ]; then export PATH=/opt/gnat/bin:\$PATH; fi
     export GPR_PROJECT_PATH=/opt/gnat/share/gpr
-    apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev >/dev/null 2>&1
-    ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so 2>/dev/null || true
-    ${inner_cmd}"
+    apt-get update -qq && apt-get install -y --no-install-recommends libsqlite3-dev libcurl4-openssl-dev >/dev/null 2>&1
+    ${make_env} make -C /workspace ${make_target}"

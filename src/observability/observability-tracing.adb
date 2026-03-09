@@ -1,6 +1,7 @@
 with Ada.Calendar;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
+with Logging;
 
 package body Observability.Tracing
   with SPARK_Mode => Off
@@ -247,7 +248,12 @@ is
                        HTTP.Client.Post_JSON (URL, Hdrs, JSON,
                                               Timeout_Ms => 5_000);
                   begin
-                     pragma Unreferenced (Resp);
+                     if not HTTP.Client.Is_Success (Resp) then
+                        Logging.Warning ("tracing: OTLP flush failed: HTTP "
+                          & Resp.Status_Code'Image
+                          & (if Length (Resp.Error) > 0
+                             then " — " & To_String (Resp.Error) else ""));
+                     end if;
                   end;
                end if;
             end;

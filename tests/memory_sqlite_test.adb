@@ -76,6 +76,17 @@ procedure Memory_Sqlite_Test is
       Assert (To_String (Conv.Session_ID) = "sess-test-01",
               "Loaded conversation has correct session ID");
 
+      Load_History (H,
+        Session_ID => "sess-test-01",
+        Max_Msgs   => 1,
+        Conv       => Conv);
+
+      Assert (Conv.Msg_Count = 1,
+              "Load_History respects requested history limit");
+      Assert (To_String (Conv.Messages (1).Content) =
+                "Hello back from VeriClaw.",
+              "Load_History keeps the newest message within the limit");
+
       Close (H);
    end Test_Message_Round_Trip;
 

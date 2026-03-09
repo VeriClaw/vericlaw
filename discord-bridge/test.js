@@ -6,9 +6,12 @@ const { createQueue, createBridgeApp } = require('../bridge-common');
 
 const CHANNEL = 'discord';
 const q = createQueue();
+let ready = true;
 const app = createBridgeApp(CHANNEL, q, async (body) => {
   if (!body.channel_id || !body.content)
     throw new Error('channel_id and content required');
+}, {
+  readiness: () => ({ ready, reason: ready ? undefined : 'discord gateway not ready' }),
 });
 
 let server, base;
@@ -31,6 +34,26 @@ describe('discord-bridge', () => {
     assert.strictEqual(res.status, 200);
     const body = await res.json();
     assert.strictEqual(body.ok, true);
+  });
+
+  it('GET /ready reflects readiness state', async () => {
+    let res = await fetch(`${base}/ready`);
+    assert.strictEqual(res.status, 200);
+
+    ready = false;
+    res = await fetch(`${base}/ready`);
+    assert.strictEqual(res.status, 503);
+    const body = await res.json();
+    assert.strictEqual(body.ready, false);
+
+    ready = true;
+  });
+
+  it('GET /sessions route returns 503 when bridge is not ready', async () => {
+    ready = false;
+    const res = await fetch(`${base}/sessions/${CHANNEL}/messages`);
+    assert.strictEqual(res.status, 503);
+    ready = true;
   });
 
   it('POST with missing fields returns 500', async () => {

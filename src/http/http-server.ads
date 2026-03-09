@@ -5,6 +5,7 @@
 --    POST /webhook/telegram   -- receives Telegram webhook updates
 --    POST /webhook/signal     -- receives signal-cli push notifications
 --    POST /webhook/whatsapp   -- receives WA-Bridge push notifications
+--    GET  /api/plugins        -- localhost-only extensibility and plugin discovery status
 --    POST /api/chat           -- non-streaming chat (localhost only)
 --    POST /api/chat/stream    -- SSE streaming chat (localhost only)
 

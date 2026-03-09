@@ -1,5 +1,6 @@
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
+with Logging;
 
 package body Tools.MCP
   with SPARK_Mode => Off
@@ -33,6 +34,8 @@ is
       end loop;
 
       if not HTTP.Client.Is_Success (Resp) then
+         Logging.Warning ("MCP Fetch_Tools failed: HTTP "
+           & Resp.Status_Code'Image & " from " & URL);
          return;
       end if;
 
@@ -41,6 +44,7 @@ is
            Parse (To_String (Resp.Body_Text));
       begin
          if not PR.Valid then
+            Logging.Warning ("MCP Fetch_Tools: invalid JSON from " & URL);
             return;
          end if;
 
@@ -92,7 +96,9 @@ is
         HTTP.Client.Post_JSON (URL, JSON_Hdrs, Body_Str, Timeout_Ms => 30_000);
    begin
       if not HTTP.Client.Is_Success (Resp) then
-         return "";
+         Logging.Warning ("MCP Execute failed for tool """ & Name
+           & """: HTTP " & Resp.Status_Code'Image);
+         return "MCP error: HTTP " & Resp.Status_Code'Image;
       end if;
 
       declare
@@ -100,7 +106,9 @@ is
            Parse (To_String (Resp.Body_Text));
       begin
          if not PR.Valid then
-            return "";
+            Logging.Warning ("MCP Execute: invalid JSON response for tool """
+              & Name & """");
+            return "MCP error: invalid JSON response";
          end if;
          return Get_String (PR.Root, "result");
       end;

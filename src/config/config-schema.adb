@@ -14,7 +14,7 @@ package body Config.Schema is
       C.Gateway.Bind_Port := 8787;
 
       --  Memory defaults.
-      C.Memory.Max_History := 50;
+      C.Memory.Max_History := Default_Max_History;
       C.Memory.Facts_Enabled := True;
 
       return C;

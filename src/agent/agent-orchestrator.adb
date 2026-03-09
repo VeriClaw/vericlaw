@@ -1,5 +1,7 @@
+with Ada.Exceptions;     use Ada.Exceptions;
 with Agent.Context;
 with Agent.Loop_Pkg;
+with Logging;
 with Memory.SQLite;
 
 package body Agent.Orchestrator
@@ -110,9 +112,12 @@ is
       return Result;
 
    exception
-      when others =>
+      when E : others =>
          Active_Counter.Decrement;
-         Set_Unbounded_String (Result.Error, "Delegation failed unexpectedly");
+         Logging.Warning ("orchestrator: delegation error ("
+           & Exception_Name (E) & "): " & Exception_Message (E));
+         Set_Unbounded_String (Result.Error,
+           "Delegation failed: " & Exception_Name (E));
          return Result;
    end Delegate;
 

@@ -105,7 +105,7 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - docker-compose.yml: secret env vars now use `:?` (fail-fast) instead of `:-` (empty default)
 - Gateway HTTP responses include security headers (nosniff, DENY, no-store)
 
-## [0.2.0] - 2026-02-27
+## [0.1.1] - 2026-02-27
 ### Added
 - Slack channel via Socket Mode bridge
 - Discord channel via Gateway bridge

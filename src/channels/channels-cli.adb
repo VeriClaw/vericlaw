@@ -122,7 +122,8 @@ is
                            Agent.Context.Append_Message
                              (New_Conv,
                               Conv.Messages (N).Role,
-                              Edit_Buf (1 .. Edit_Last));
+                              Edit_Buf (1 .. Edit_Last),
+                              Limit => Cfg.Memory.Max_History);
 
                            --  Save the replacement to DB.
                            Memory.SQLite.Save_Message
@@ -223,7 +224,7 @@ is
                      Memory.SQLite.Load_History
                        (Handle     => Mem,
                         Session_ID => Target,
-                        Max_Msgs   => Agent.Context.Max_History,
+                        Max_Msgs   => Cfg.Memory.Max_History,
                         Conv       => New_Conv);
                      if New_Conv.Msg_Count = 0 then
                         Put_Line ("No messages found for session "

@@ -1,11 +1,15 @@
 with Gateway.Provider.Credentials;
 with Gateway.Provider.Registry;
 with Gateway.Provider.Routing;
+with Gateway.Provider.Runtime_Routing;
+with Config.Schema;
 
 procedure Provider_Routing_Fallback_Policy is
+   use Config.Schema;
    use Gateway.Provider.Credentials;
    use Gateway.Provider.Registry;
    use Gateway.Provider.Routing;
+   use Gateway.Provider.Runtime_Routing;
 
    Fully_Enabled : constant Registry_Config :=
      (Primary_Configured  => True,
@@ -300,13 +304,83 @@ begin
    pragma Assert (not Request_Authorized (Request));
    pragma Assert (Request.Decision = Provider_Request_Deny_No_Provider);
 
-   Request :=
-     Weighted_Request_Decision
-       (Config             => Fully_Enabled,
-        Token              => Bind_Token
-          (Provider => Primary_Provider, Token_Present => True),
-        Primary_Weight     => 101,
-        Deterministic_Slot => 0);
-   pragma Assert (not Request_Authorized (Request));
-   pragma Assert (Request.Decision = Provider_Request_Deny_Invalid_Weight);
+    Request :=
+      Weighted_Request_Decision
+        (Config             => Fully_Enabled,
+         Token              => Bind_Token
+           (Provider => Primary_Provider, Token_Present => True),
+         Primary_Weight     => 101,
+         Deterministic_Slot => 0);
+    pragma Assert (not Request_Authorized (Request));
+    pragma Assert (Request.Decision = Provider_Request_Deny_Invalid_Weight);
+
+    declare
+       One_Provider  : Agent_Config := Default_Config;
+       Two_Providers : Agent_Config := Default_Config;
+       Four_Providers : Agent_Config := Default_Config;
+       State         : Attempt_State;
+       Attempt       : Provider_Attempt;
+    begin
+       One_Provider.Num_Providers := 1;
+
+       Attempt := Next_Attempt (One_Provider, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 1);
+       pragma Assert (Attempt.Route.Decision = Route_Allow_Primary);
+
+       Mark_Failed (State, Attempt);
+       Attempt := Next_Attempt (One_Provider, State);
+       pragma Assert (not Attempt.Allowed);
+       pragma Assert (Attempt.Route.Decision = Route_Deny_No_Provider);
+
+       Two_Providers.Num_Providers := 2;
+       State := (others => <>);
+
+       Attempt := Next_Attempt (Two_Providers, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 1);
+       Mark_Failed (State, Attempt);
+
+       Attempt := Next_Attempt (Two_Providers, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 2);
+       pragma Assert (Attempt.Route.Decision = Route_Allow_Failover);
+       pragma Assert (Route_Uses_Fallback (Attempt.Route));
+
+       Mark_Failed (State, Attempt);
+       Attempt := Next_Attempt (Two_Providers, State);
+       pragma Assert (not Attempt.Allowed);
+       pragma Assert (Attempt.Route.Decision = Route_Deny_No_Provider);
+
+       Four_Providers.Num_Providers := 4;
+       State := (others => <>);
+
+       Attempt := Next_Attempt (Four_Providers, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 1);
+       Mark_Failed (State, Attempt);
+
+       Attempt := Next_Attempt (Four_Providers, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 2);
+       Mark_Failed (State, Attempt);
+
+       Attempt := Next_Attempt (Four_Providers, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 3);
+       pragma Assert (Attempt.Route.Decision = Route_Allow_Long_Tail);
+       pragma Assert (Route_Uses_Fallback (Attempt.Route));
+       Mark_Failed (State, Attempt);
+
+       Attempt := Next_Attempt (Four_Providers, State);
+       pragma Assert (Attempt.Allowed);
+       pragma Assert (Attempt.Config_Index = 4);
+       pragma Assert (Attempt.Route.Decision = Route_Allow_Long_Tail);
+       pragma Assert (Route_Uses_Fallback (Attempt.Route));
+       Mark_Failed (State, Attempt);
+
+       Attempt := Next_Attempt (Four_Providers, State);
+       pragma Assert (not Attempt.Allowed);
+       pragma Assert (Attempt.Route.Decision = Route_Deny_No_Provider);
+    end;
 end Provider_Routing_Fallback_Policy;

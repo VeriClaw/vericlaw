@@ -18,7 +18,12 @@
 const imaps = require('imap-simple');
 const nodemailer = require('nodemailer');
 const { simpleParser } = require('mailparser');
-const { createQueue, createBridgeApp, listen } = require('../bridge-common');
+const {
+  createBackoff,
+  createQueue,
+  createBridgeApp,
+  listen,
+} = require('../bridge-common');
 
 const IMAP_CONFIG = {
   imap: {
@@ -39,10 +44,44 @@ const transporter = nodemailer.createTransport({
 });
 
 const q = createQueue();
+const POLL_INTERVAL_MS = 30_000;
+const POLL_STALE_AFTER_MS = POLL_INTERVAL_MS * 4;
+const pollBackoff = createBackoff({
+  initialMs: POLL_INTERVAL_MS,
+  maxMs: POLL_INTERVAL_MS * 8,
+  factor: 2,
+  jitterMs: 1_000,
+});
+
+let pollTimer;
+let shuttingDown = false;
+let lastSuccessAt = 0;
+let lastError = 'awaiting first successful inbox poll';
+
+function schedulePoll(delayMs) {
+  if (shuttingDown) return;
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(() => {
+    pollTimer = undefined;
+    void pollInbox();
+  }, delayMs);
+  pollTimer.unref?.();
+}
+
+function readiness() {
+  const ready = lastSuccessAt > 0 && (Date.now() - lastSuccessAt) <= POLL_STALE_AFTER_MS;
+  return {
+    ready,
+    status: ready ? 'connected' : 'degraded',
+    reason: ready ? undefined : lastError,
+  };
+}
 
 async function pollInbox() {
+  let conn;
+
   try {
-    const conn = await imaps.connect(IMAP_CONFIG);
+    conn = await imaps.connect(IMAP_CONFIG);
     await conn.openBox('INBOX');
     const msgs = await conn.search(['UNSEEN'], { bodies: [''], markSeen: true });
     for (const msg of msgs) {
@@ -57,18 +96,36 @@ async function pollInbox() {
         text:    parsed.text || '',
       });
     }
-    conn.end();
+
+    lastSuccessAt = Date.now();
+    lastError = null;
+    pollBackoff.reset();
+    schedulePoll(POLL_INTERVAL_MS);
   } catch (e) {
-    console.error('IMAP poll error:', e.message);
+    lastError = `imap poll error: ${e?.message || String(e)}`;
+    const delayMs = pollBackoff.fail();
+    console.error(`IMAP poll error (retrying in ${delayMs}ms):`, e?.message || String(e));
+    schedulePoll(delayMs);
+  } finally {
+    if (conn) {
+      try {
+        conn.end();
+      } catch {}
+    }
   }
 }
 
-setInterval(pollInbox, 30000);
-pollInbox();
+schedulePoll(0);
 
 const app = createBridgeApp('email', q, async ({ to, subject, text }) => {
   await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text });
+}, {
+  readiness,
 });
 
-listen(app, 3003, 'Email');
-
+listen(app, 3003, 'Email', {
+  onShutdown: async () => {
+    shuttingDown = true;
+    clearTimeout(pollTimer);
+  },
+});

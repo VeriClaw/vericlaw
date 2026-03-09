@@ -14,7 +14,7 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Stage 1: Strict Compilation
+  # Stage 1: Build Gate
   # ---------------------------------------------------------------------------
   compile:
     runs-on: ubuntu-latest
@@ -30,31 +30,13 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libsqlite3-dev
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev libcurl4-openssl-dev
 
-      - name: Build with strict flags
+      - name: Build with blessed target
         run: |
-          set -o pipefail
-          echo "=== Pass 1: Collect ALL warnings (non-fatal) ==="
-          alr build -- -XBUILD_PROFILE=dev -XWARN_ERRORS=off 2>&1 | tee warnings-report.txt
-          ALL_COUNT=$(grep -c ": warning:\|: (style)" warnings-report.txt || true)
-          echo "--- Total warning/style count (incl. deps): $ALL_COUNT ---"
-          if [ "$ALL_COUNT" -gt 0 ]; then
-            echo ""
-            echo "=== ALL warnings/style issues ==="
-            grep ": warning:\|: (style)" warnings-report.txt || true
-            echo ""
-            echo "::warning::$ALL_COUNT warning(s)/style issue(s) found (non-blocking)."
-          fi
-          echo "=== Pass 1 complete — warnings are non-blocking ==="
-
-      - name: Upload warnings report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: warnings-report
-          path: warnings-report.txt
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
+          ./scripts/check_toolchain.sh --mode build
+          make build
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
@@ -68,7 +50,6 @@ jobs:
   spark-prove:
     runs-on: ubuntu-latest
     needs: compile
-    continue-on-error: true  # SPARK tools may not be available in community toolchain
     steps:
       - uses: actions/checkout@v4
 
@@ -81,49 +62,50 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libsqlite3-dev
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev libcurl4-openssl-dev
 
-      - name: Install SPARK tools
-        id: spark-install
+      - name: Ensure proof toolchain is available
         run: |
-          if command -v gnatprove &>/dev/null; then
-            echo "available=true" >> $GITHUB_OUTPUT
-          elif alr get spark2014 2>/dev/null; then
-            eval "$(alr printenv 2>/dev/null | grep '^export ')"
-            if command -v gnatprove &>/dev/null; then
-              echo "available=true" >> $GITHUB_OUTPUT
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
+          if ./scripts/check_toolchain.sh --mode full --quiet; then
+            exit 0
+          fi
+          proof_package="none"
+          if apt-cache show gnatprove >/dev/null 2>&1; then
+            if sudo apt-get install -y --no-install-recommends gnatprove; then
+              proof_package="gnatprove"
             else
-              echo "::warning::gnatprove not found after alr get spark2014"
-              echo "available=false" >> $GITHUB_OUTPUT
+              echo "::error::gnatprove package was found, but installation failed."
+              exit 1
+            fi
+          elif apt-cache show spark2014 >/dev/null 2>&1; then
+            if sudo apt-get install -y --no-install-recommends spark2014; then
+              proof_package="spark2014"
+            else
+              echo "::error::spark2014 package was found, but installation failed."
+              exit 1
             fi
           else
-            echo "::warning::SPARK tools not available — skipping formal verification"
-            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::error::No gnatprove/spark2014 package is available on this runner."
+            exit 1
+          fi
+          eval "$(alr printenv 2>/dev/null | grep '^export ')"
+          if ! ./scripts/check_toolchain.sh --mode full; then
+            echo "::error::Proof gate is required, but the installed ${proof_package} toolchain is still unavailable."
+            exit 1
           fi
 
-      - uses: actions/cache@v4
-        if: steps.spark-install.outputs.available == 'true'
-        with:
-          path: gnatprove/
-          key: spark-proof-${{ hashFiles('src/**/*.ads', 'src/**/*.adb') }}
-
       - name: SPARK level 2 proofs (push/PR)
-        if: github.event_name != 'schedule' && steps.spark-install.outputs.available == 'true'
+        if: github.event_name != 'schedule'
         run: |
           eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          gnatprove -P vericlaw.gpr \
-            --level=2 \
-            --prover=all \
-            --timeout=120 \
-            --checks-as-errors \
-            --warnings=error \
-            -j0
+          make prove
 
       - name: SPARK level 4 proofs (weekly)
-        if: github.event_name == 'schedule' && steps.spark-install.outputs.available == 'true'
+        if: github.event_name == 'schedule'
         run: |
           eval "$(alr printenv 2>/dev/null | grep '^export ')"
+          ./scripts/check_toolchain.sh --mode full
           gnatprove -P vericlaw.gpr \
             --level=4 \
             --prover=all \
@@ -165,7 +147,7 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------------
-  # Stage 4: Unit Tests (AUnit + GNATcov placeholder)
+  # Stage 4: Unit Tests
   # ---------------------------------------------------------------------------
   unit-tests:
     runs-on: ubuntu-latest
@@ -182,45 +164,13 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libsqlite3-dev
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /usr/lib/x86_64-linux-gnu/libcurl.so || true
+          sudo apt-get install -y --no-install-recommends libsqlite3-dev libcurl4-openssl-dev
 
-      - name: Run tests with GNATcov
+      - name: Run blessed test target
         run: |
-          alr toolchain --select ${{ env.GNAT_VERSION }}
           eval "$(alr printenv 2>/dev/null | grep '^export ')"
-
-          # Try to install GNATcov
-          alr get gnatcov 2>/dev/null || true
-
-          # Build the project first (needed for any test)
-          alr build -- -XBUILD_PROFILE=dev -XWARN_ERRORS=off 2>/dev/null || true
-
-          # Run test suite if Makefile targets exist
-          if [ -f Makefile ] && grep -q 'check\|test' Makefile 2>/dev/null; then
-            make check 2>/dev/null || make test 2>/dev/null || true
-          fi
-
-          # Attempt coverage instrumentation (gnatcov may not be available)
-          if command -v gnatcov &>/dev/null; then
-            cd tests/ 2>/dev/null || true
-            gnatcov instrument -P ../vericlaw.gpr --level=branch \
-              --dump-trigger=atexit 2>/dev/null || true
-            gprbuild -P ../vericlaw.gpr -p --src-subdirs=gnatcov-instr \
-              --implicit-with=gnatcov_rts_full 2>/dev/null || true
-            gnatcov coverage --level=branch --annotate=cobertura \
-              -P ../vericlaw.gpr -o coverage.xml 2>/dev/null || true
-          else
-            echo "::warning::gnatcov not available — coverage report skipped"
-          fi
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        if: always()
-        with:
-          files: tests/coverage.xml,coverage.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
+          ./scripts/check_toolchain.sh --mode build
+          make test
 
       - name: Upload test results
         if: always()

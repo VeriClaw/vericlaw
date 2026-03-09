@@ -18,6 +18,9 @@ const irc = require('irc-framework');
 const { createQueue, createBridgeApp, listen } = require('../bridge-common');
 
 const client = new irc.Client();
+let ready = false;
+let lastError = null;
+
 client.connect({
   host:     process.env.IRC_HOST || 'irc.libera.chat',
   port:     parseInt(process.env.IRC_PORT || '6697'),
@@ -30,9 +33,25 @@ client.connect({
 const q = createQueue();
 
 client.on('registered', () => {
+  ready = true;
+  lastError = null;
   const channels = (process.env.IRC_CHANNELS || '#general').split(',');
   channels.forEach(ch => client.join(ch.trim()));
   console.log('Connected to IRC');
+});
+
+for (const eventName of ['close', 'disconnected']) {
+  client.on(eventName, () => {
+    ready = false;
+    lastError = `irc event: ${eventName}`;
+    console.warn(`IRC bridge connection event: ${eventName}`);
+  });
+}
+
+client.on('error', (err) => {
+  ready = false;
+  lastError = err?.message || String(err);
+  console.error('IRC client error:', lastError);
 });
 
 client.on('privmsg', (event) => {
@@ -42,7 +61,19 @@ client.on('privmsg', (event) => {
 
 const app = createBridgeApp('irc', q, async ({ target, text }) => {
   client.say(target, text);
+}, {
+  readiness: () => ({
+    ready,
+    status: ready ? 'connected' : 'connecting',
+    reason: ready ? undefined : (lastError || 'irc connection not ready'),
+  }),
 });
 
-listen(app, 3005, 'IRC');
-
+listen(app, 3005, 'IRC', {
+  onShutdown: async () => {
+    ready = false;
+    if (typeof client.quit === 'function') {
+      client.quit('VeriClaw bridge shutting down');
+    }
+  },
+});

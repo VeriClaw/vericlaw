@@ -34,9 +34,15 @@ VeriClaw follows the conventions in [`ada-coding-practices.md`](ada-coding-pract
 
 - **New security-critical code** (auth, policy, allowlist, secrets, audit) must be in a package with `pragma SPARK_Mode (On)` and must have `Pre` / `Post` contracts on all public subprograms.
 - **Runtime / I/O code** (HTTP calls, SQLite bindings, channel polling) must have `pragma SPARK_Mode (Off)` stated explicitly — do not leave it implicit.
-- Before submitting, run:
+- Before submitting, run the blessed validation flow:
   ```sh
-  gnatprove -P vericlaw.gpr --level=2
+  make validate
+  ```
+  This prefers the local GNAT/SPARK toolchain and falls back to the container
+  runner when Docker is available. If you are changing security-critical code and
+  have a full host proof toolchain installed, also run:
+  ```sh
+  make prove-host
   ```
   No new unresolved proof obligations are permitted.
 
@@ -46,8 +52,8 @@ VeriClaw follows the conventions in [`ada-coding-practices.md`](ada-coding-pract
 
 1. Fork the repository and branch from `test` (not `main`).
 2. Make your changes following the standards above.
-3. Run `make check` — this must pass with no errors.
-4. Run `make runtime-tests` — all tests must pass.
+3. Run `make validate` — this is the preferred build + proof + test entrypoint (`make check` remains an alias).
+4. Run the smallest relevant targeted suites for your change, for example `make runtime-tests`, `make secrets-test`, `make operator-console-check`, or the affected bridge `node --test` command.
 5. Verify your diff does not contain:
    - `when others => null` exception handlers
    - Hardcoded secrets, API keys, or tokens
@@ -85,7 +91,9 @@ Use `src/providers/providers-openai.adb` as your template:
 VeriClaw uses a custom test harness (no AUnit dependency). Add tests to the relevant file in `tests/`:
 
 - Unit tests for a new package go in `tests/<package-name>_test.adb`.
-- Run tests with `make runtime-tests`.
+- Run the full Ada runtime suite with `make runtime-tests`.
+- Use `make config-test`, `make context-test`, `make memory-test`, or `make tools-test` for faster targeted loops.
+- If you touch the operator console or a Node.js sidecar, also run `make operator-console-check` or the relevant bridge `node --test` command.
 - Do not call live AI APIs in tests — mock all provider HTTP responses.
 
 ---

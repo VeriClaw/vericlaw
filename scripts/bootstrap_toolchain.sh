@@ -12,17 +12,41 @@ Usage: ./scripts/bootstrap_toolchain.sh [--install] [--validate]
 
 Checks for local Ada/SPARK prerequisites and prints platform-specific guidance.
 Use --install to attempt package-manager installs where supported.
-Use --validate for lightweight syntax + secure-default checks only.
+Use --validate for lightweight syntax + secure-default checks only (not host toolchain readiness).
 EOF
 }
 
-collect_missing_tools() {
-  missing_tools=()
-  for tool in gprbuild gnatprove; do
-    if ! command -v "$tool" >/dev/null 2>&1; then
-      missing_tools+=("$tool")
+collect_toolchain_state() {
+  missing_build_tools=()
+  missing_proof_tools=()
+
+  if ! command -v gprbuild >/dev/null 2>&1; then
+    missing_build_tools+=("gprbuild")
+  fi
+
+  if ! command -v gnatprove >/dev/null 2>&1; then
+    missing_proof_tools+=("gnatprove")
+  fi
+}
+
+evaluate_toolchain_state() {
+  toolchain_build_ready=0
+  toolchain_proof_ready=0
+
+  if [[ ${#missing_build_tools[@]} -eq 0 ]]; then
+    toolchain_build_ready=1
+    if [[ ${#missing_proof_tools[@]} -eq 0 ]]; then
+      toolchain_proof_ready=1
     fi
-  done
+  fi
+}
+
+format_tool_list() {
+  if [[ $# -eq 0 ]]; then
+    echo "none"
+  else
+    printf '%s' "$*"
+  fi
 }
 
 detect_os() {
@@ -136,7 +160,8 @@ print_guidance() {
 
   echo "Detected OS: $os"
   echo "Detected package manager: $manager"
-  echo "Missing tools: ${missing_tools[*]}"
+  echo "Missing build tools: $(format_tool_list "${missing_build_tools[@]}")"
+  echo "Missing proof tools: $(format_tool_list "${missing_proof_tools[@]}")"
   echo
   echo "Host setup guidance:"
 
@@ -178,7 +203,7 @@ EOF
 
   echo
   echo "Container fallback (no host toolchain required):"
-  echo "  ./scripts/run_container_ci.sh check"
+  echo "  make validate VALIDATION_BACKEND=container"
 }
 
 run_syntax_checks() {
@@ -247,15 +272,20 @@ print_security_posture() {
 }
 
 print_next_steps() {
-  local toolchain_ready="$1"
+  local build_ready="$1"
+  local proof_ready="$2"
 
   echo
   echo "Next steps:"
   echo "  1) Review ${secure_defaults_local} (loopback-first + deny-by-default defaults)."
-  if [[ "$toolchain_ready" -eq 1 ]]; then
-    echo "  2) Run make check for build/proof validation."
+  if [[ "$proof_ready" -eq 1 ]]; then
+    echo "  2) Run make validate for the blessed build/test/proof gate."
+  elif [[ "$build_ready" -eq 1 ]]; then
+    echo "  2) Run make build && make test locally."
+    echo "     Install gnatprove (or use make validate VALIDATION_BACKEND=container) for full proof validation."
   else
-    echo "  2) Install missing tools (or use ./scripts/run_container_ci.sh check)."
+    echo "  2) Install missing host tools."
+    echo "     When Docker is available, use make validate VALIDATION_BACKEND=container."
   fi
   echo "  3) Keep local serving loopback-first: ./scripts/serve_operator_console.sh --host 127.0.0.1"
 }
@@ -289,17 +319,18 @@ validate_security_policy_defaults
 validate_secure_defaults_file "$secure_defaults_template"
 
 if [[ "$validate_mode" -eq 1 ]]; then
-  echo "Bootstrap validation checks passed."
+  echo "Bootstrap validation checks passed (syntax + secure defaults only)."
   exit 0
 fi
 
 print_security_posture
 initialize_secure_defaults
 
-collect_missing_tools
-if [[ ${#missing_tools[@]} -eq 0 ]]; then
+collect_toolchain_state
+evaluate_toolchain_state
+if [[ "$toolchain_proof_ready" -eq 1 ]]; then
   echo "Ada/SPARK toolchain already available."
-  print_next_steps 1
+  print_next_steps 1 1
   exit 0
 fi
 
@@ -319,15 +350,21 @@ if [[ "$install_mode" -eq 1 ]]; then
   esac
 fi
 
-collect_missing_tools
-if [[ ${#missing_tools[@]} -eq 0 ]]; then
+collect_toolchain_state
+evaluate_toolchain_state
+if [[ "$toolchain_proof_ready" -eq 1 ]]; then
   echo "Ada/SPARK toolchain bootstrap completed successfully."
-  print_next_steps 1
+  print_next_steps 1 1
   exit 0
 fi
 
 os="$(detect_os)"
 manager="$(detect_pkg_manager)"
+if [[ "$toolchain_build_ready" -eq 1 ]]; then
+  echo "Host build toolchain is ready, but gnatprove is still missing." >&2
+else
+  echo "Host build toolchain is not ready yet." >&2
+fi
 print_guidance "$os" "$manager" >&2
-print_next_steps 0 >&2
+print_next_steps "$toolchain_build_ready" "$toolchain_proof_ready" >&2
 exit 1

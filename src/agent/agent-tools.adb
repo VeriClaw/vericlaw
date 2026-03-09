@@ -10,6 +10,7 @@ with Agent.Orchestrator;
 with Memory.Vector;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Metrics;
+with Plugins.Loader;
 
 package body Agent.Tools
   with SPARK_Mode => Off
@@ -170,16 +171,23 @@ is
      & "}";
 
    Memory_Search_Params : constant String :=
-     "{"
-     & """type"":""object"","
-     & """properties"":{"
-     & """query"":{""type"":""string"","
+      "{"
+      & """type"":""object"","
+      & """properties"":{"
+      & """query"":{""type"":""string"","
      &   """description"":""The query to search for semantically similar memories""},"
      & """k"":{""type"":""integer"","
      &   """description"":""Number of results (1-10, default 5)"","
      &   """default"":5}"
-     & "},"
-     & """required"":[""query""]"
+      & "},"
+      & """required"":[""query""]"
+      & "}";
+
+   Plugin_Registry_Params : constant String :=
+     "{"
+     & """type"":""object"","
+     & """properties"":{},"
+     & """required"":[]"
      & "}";
 
    function Make_Schema (N, D, P : String) return Tool_Schema is
@@ -189,6 +197,14 @@ is
          Description => To_Unbounded_String (D),
          Parameters  => To_Unbounded_String (P));
    end Make_Schema;
+
+   function JSON_Bool (Value : Boolean) return String is
+   begin
+      if Value then
+         return "true";
+      end if;
+      return "false";
+   end JSON_Bool;
 
    function Is_Allowed_Tool_Name (Name : String) return Boolean is
    begin
@@ -275,13 +291,19 @@ is
          Spawn_Params);
       --  delegate (multi-agent orchestration)
       Num := Num + 1;
-      Schemas (Num) := Make_Schema
-        ("delegate",
-         "Delegate a task to a role-specialized sub-agent (researcher, coder, reviewer, general)",
-         Delegate_Params);
-      --  browser tools
-      if Length (Cfg.Browser_Bridge_URL) > 0 then
-         Browser_Pkg.Bridge_URL := Cfg.Browser_Bridge_URL;
+       Schemas (Num) := Make_Schema
+         ("delegate",
+          "Delegate a task to a role-specialized sub-agent (researcher, coder, reviewer, general)",
+          Delegate_Params);
+       --  plugin discovery (read-only)
+       Num := Num + 1;
+       Schemas (Num) := Make_Schema
+         ("plugin_registry",
+          "Inspect MCP-first extensibility state and discovered local plugin manifests (discovery only)",
+          Plugin_Registry_Params);
+       --  browser tools
+       if Length (Cfg.Browser_Bridge_URL) > 0 then
+          Browser_Pkg.Bridge_URL := Cfg.Browser_Bridge_URL;
          Num := Num + 1;
          Schemas (Num) := Make_Schema
            ("browser_browse",
@@ -515,10 +537,10 @@ is
             Set_Unbounded_String (Result.Output, SResp);
          end;
 
-      elsif Name = "delegate" then
-         Metrics.Increment ("tool_calls_total", "delegate");
-         declare
-            use Agent.Orchestrator;
+       elsif Name = "delegate" then
+          Metrics.Increment ("tool_calls_total", "delegate");
+          declare
+             use Agent.Orchestrator;
             Task_Str : constant String := Get_String (PR.Root, "task");
             Role_Str : constant String := Get_String (PR.Root, "role", "general");
             Tmout    : constant Integer := Get_Integer (PR.Root, "timeout", 120);
@@ -557,11 +579,28 @@ is
             else
                Set_Unbounded_String
                  (Result.Error, To_String (Del_Res.Error));
-            end if;
-         end;
+             end if;
+          end;
 
-      elsif Name = "browser_browse" then
-         Metrics.Increment ("tool_calls_total", "browser_browse");
+       elsif Name = "plugin_registry" then
+          Metrics.Increment ("tool_calls_total", "plugin_registry");
+          Result.Success := True;
+          Set_Unbounded_String
+            (Result.Output,
+             "{""extensibility_model"":"
+             & Escape_JSON_String (Plugins.Loader.Extensibility_Model)
+             & ",""local_plugin_mode"":"
+             & Escape_JSON_String (Plugins.Loader.Local_Plugin_Mode)
+             & ",""local_plugin_load_policy"":"
+             & Escape_JSON_String (Plugins.Loader.Local_Load_Policy)
+             & ",""mcp_bridge_configured"":" &
+               JSON_Bool (Length (Cfg.Tools.MCP_Bridge_URL) > 0)
+             & ",""local_plugins"":"
+             & Plugins.Loader.Runtime_Registry_JSON
+             & "}");
+
+       elsif Name = "browser_browse" then
+          Metrics.Increment ("tool_calls_total", "browser_browse");
          if Length (Cfg.Tools.Browser_Bridge_URL) = 0 then
             Set_Unbounded_String
               (Result.Error, "Browser bridge URL not configured");

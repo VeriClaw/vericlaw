@@ -5,6 +5,7 @@
 with Ada.Finalization;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;
+with Config.Schema;
 with System;
 
 package Memory.SQLite
@@ -44,7 +45,7 @@ is
    procedure Load_History
      (Handle     : Memory_Handle;
       Session_ID : String;
-      Max_Msgs   : Positive;
+      Max_Msgs   : Config.Schema.History_Limit;
       Conv       : out Agent.Context.Conversation);
 
    --  -----------------------------------------------------------------------
@@ -73,11 +74,13 @@ is
    --  Session export
    --  -----------------------------------------------------------------------
 
-   --  Export all messages for a session (up to Max_History).
+   --  Export the most recent Max_Msgs messages for a session.
    procedure Export_Session
      (Handle     : Memory_Handle;
       Session_ID : String;
-      Conv       : out Agent.Context.Conversation);
+      Conv       : out Agent.Context.Conversation;
+      Max_Msgs   : Config.Schema.History_Limit :=
+        Config.Schema.History_Limit'Last);
 
    --  -----------------------------------------------------------------------
    --  Cron scheduler

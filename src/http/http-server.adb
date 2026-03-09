@@ -8,6 +8,7 @@ with AWS.Config.Set;
 with Ada.Calendar;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
+with Build_Info;
 with Config.JSON_Parser;    use Config.JSON_Parser;
 with Config.Schema;         use Config.Schema;
 with Channels.Telegram;
@@ -15,6 +16,7 @@ with Channels.Signal;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Metrics;
+with Plugins.Loader;
 
 package body HTTP.Server
   with SPARK_Mode => Off
@@ -134,15 +136,131 @@ is
       Method : constant String := AWS.Status.Method (Request);
       Body_S : constant String := AWS.Status.Payload (Request);
 
+      function Starts_With (Value, Prefix : String) return Boolean is
+      begin
+         return Value'Length >= Prefix'Length
+           and then Value (Value'First .. Value'First + Prefix'Length - 1) =
+             Prefix;
+      end Starts_With;
+
       function Is_Localhost return Boolean is
          Addr : constant String := AWS.Status.Peername (Request);
       begin
          return Addr = "127.0.0.1" or else Addr = "::1";
       end Is_Localhost;
 
+      function Allowed_CORS_Origin return String is
+         Origin : constant String := AWS.Status.Origin (Request);
+      begin
+         if Origin = "http://localhost"
+           or else Origin = "http://127.0.0.1"
+           or else Origin = "http://[::1]"
+           or else Starts_With (Origin, "http://localhost:")
+           or else Starts_With (Origin, "http://127.0.0.1:")
+           or else Starts_With (Origin, "http://[::1]:")
+         then
+            return Origin;
+         end if;
+
+         return "";
+      end Allowed_CORS_Origin;
+
+      CORS_Origin : constant String := Allowed_CORS_Origin;
+
+      procedure Restore_Conversation
+        (Session_ID : String;
+         Conv       : in out Agent.Context.Conversation)
+      is
+         Loaded : Agent.Context.Conversation;
+      begin
+         Set_Unbounded_String (Conv.Session_ID, Session_ID);
+
+         if Shared_Mem_Ptr = null
+           or else not Memory.SQLite.Is_Open (Shared_Mem_Ptr.all)
+         then
+            return;
+         end if;
+
+         Memory.SQLite.Load_History
+           (Shared_Mem_Ptr.all,
+            Session_ID,
+            Shared_Cfg.Memory.Max_History,
+            Loaded);
+
+          if Loaded.Msg_Count = 0 then
+             return;
+          end if;
+
+          if Loaded.Messages (1).Role = Agent.Context.System_Role then
+             Conv := Loaded;
+             Set_Unbounded_String (Conv.Session_ID, Session_ID);
+             return;
+          end if;
+
+          --  Rebuild history with the system prompt first so the browser chat
+          --  can reuse a stable session_id without changing provider behavior.
+          Agent.Context.Append_Message
+            (Conv,
+             Agent.Context.System_Role,
+             To_String (Shared_Cfg.System_Prompt),
+             Limit => Shared_Cfg.Memory.Max_History);
+
+          declare
+             Capacity    : constant Natural :=
+               Natural (Shared_Cfg.Memory.Max_History);
+             Start_Index : Positive := 1;
+          begin
+             if Loaded.Msg_Count > Capacity - 1 then
+                Start_Index :=
+                  Positive (Loaded.Msg_Count - (Capacity - 1) + 1);
+             end if;
+
+             for I in Start_Index .. Loaded.Msg_Count loop
+                if Loaded.Messages (I).Role /= Agent.Context.System_Role then
+                   Agent.Context.Append_Message
+                     (Conv,
+                      Loaded.Messages (I).Role,
+                      To_String (Loaded.Messages (I).Content),
+                      Name  => To_String (Loaded.Messages (I).Name),
+                      Limit => Shared_Cfg.Memory.Max_History);
+                end if;
+             end loop;
+          end;
+       end Restore_Conversation;
+
       function Raw_Dispatch return AWS.Response.Data is
       begin
-         --  Per-IP rate limiting (skip /health)
+         if Method = "OPTIONS" then
+            declare
+               Allowed_Headers : constant String :=
+                 AWS.Status.Access_Control_Request_Headers (Request);
+               R : AWS.Response.Data :=
+                 AWS.Response.Acknowledge
+                   ((if CORS_Origin'Length > 0
+                     then AWS.Messages.S200
+                     else AWS.Messages.S403));
+            begin
+               if CORS_Origin'Length > 0 then
+                  AWS.Response.Set.Add_Header
+                    (R, "Access-Control-Allow-Origin", CORS_Origin);
+                  AWS.Response.Set.Add_Header (R, "Vary", "Origin");
+                  AWS.Response.Set.Add_Header
+                    (R, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                  AWS.Response.Set.Add_Header
+                    (R,
+                     "Access-Control-Allow-Headers",
+                     (if Allowed_Headers'Length > 0
+                      then Allowed_Headers
+                      else "Content-Type"));
+                  AWS.Response.Set.Add_Header
+                    (R, "Access-Control-Max-Age", "600");
+               end if;
+
+               return R;
+            end;
+         end if;
+
+          --  Per-IP rate limiting (skip /health)
          if URI /= "/health" then
             declare
                Allowed : Boolean;
@@ -289,14 +407,15 @@ is
          end if;
 
          --  Localhost guard for operator API endpoints
-         if not Is_Localhost
-           and then
-             (URI = "/api/status"
-              or else URI = "/api/channels"
-              or else URI = "/api/metrics/summary")
-         then
-            return AWS.Response.Build
-              ("application/json",
+          if not Is_Localhost
+            and then
+              (URI = "/api/status"
+               or else URI = "/api/channels"
+               or else URI = "/api/plugins"
+               or else URI = "/api/metrics/summary")
+          then
+             return AWS.Response.Build
+               ("application/json",
                "{""error"":""forbidden""}",
                AWS.Messages.S403);
          end if;
@@ -307,28 +426,48 @@ is
                use type Ada.Calendar.Time;
                Elapsed : constant Duration :=
                  Ada.Calendar.Clock - Start_Time;
-               Uptime  : constant Natural  := Natural (Elapsed);
-               Active  : Natural           := 0;
+               Uptime   : constant Natural  := Natural (Elapsed);
+               Active   : Natural           := 0;
+               Registry : constant Plugins.Loader.Plugin_Registry :=
+                 Plugins.Loader.Runtime_Registry;
             begin
                for I in 1 .. Shared_Cfg.Num_Channels loop
                   if Shared_Cfg.Channels (I).Enabled then
                      Active := Active + 1;
                   end if;
-               end loop;
-               return AWS.Response.Build
-                 ("application/json",
-                  "{""status"":""running"",""version"":""0.2.0"","
-                  & """uptime_s"":" & Img (Uptime) & ","
-                  & """channels_active"":" & Img (Active) & "}",
-                  AWS.Messages.S200);
-            end;
-         end if;
+                end loop;
+                return AWS.Response.Build
+                  ("application/json",
+                   "{""status"":""running"",""version"":"""
+                    & Build_Info.Version & ""","
+                    & """uptime_s"":" & Img (Uptime) & ","
+                    & """channels_active"":" & Img (Active) & ","
+                     & """extensibility_model"":"""
+                     & Plugins.Loader.Extensibility_Model & ""","
+                     & """local_plugin_mode"":"""
+                     & Plugins.Loader.Local_Plugin_Mode & ""","
+                     & """local_plugin_load_policy"":"""
+                     & Plugins.Loader.Local_Load_Policy & ""","
+                     & """mcp_bridge_configured"":"
+                     & Bool_Image (Length (Shared_Cfg.Tools.MCP_Bridge_URL) > 0)
+                     & ","
+                     & """plugins_discovered"":" & Img (Registry.Num_Loaded) & ","
+                     & """plugins_loaded"":" &
+                       Img (Plugins.Loader.Loaded_Plugin_Count (Registry)) & ","
+                     & """plugins_denied"":" &
+                       Img (Plugins.Loader.Denied_Plugin_Count (Registry)) & ","
+                     & """plugins_errors"":" &
+                       Img (Plugins.Loader.Error_Plugin_Count (Registry))
+                     & "}",
+                     AWS.Messages.S200);
+             end;
+          end if;
 
          --  GET /api/channels
-         if URI = "/api/channels" and then Method = "GET" then
-            declare
-               Result : Unbounded_String;
-            begin
+          if URI = "/api/channels" and then Method = "GET" then
+             declare
+                Result : Unbounded_String;
+             begin
                Set_Unbounded_String (Result, "{""channels"":[");
                for I in 1 .. Shared_Cfg.Num_Channels loop
                   if I > 1 then
@@ -344,12 +483,31 @@ is
                end loop;
                Append (Result, "]}");
                return AWS.Response.Build
-                 ("application/json", To_String (Result), AWS.Messages.S200);
-            end;
-         end if;
+                  ("application/json", To_String (Result), AWS.Messages.S200);
+             end;
+          end if;
 
-         --  GET /api/metrics/summary
-         if URI = "/api/metrics/summary" and then Method = "GET" then
+          --  GET /api/plugins
+          if URI = "/api/plugins" and then Method = "GET" then
+             return AWS.Response.Build
+               ("application/json",
+                "{""extensibility_model"":"""
+                & Plugins.Loader.Extensibility_Model & ""","
+                & """local_plugin_mode"":"""
+                & Plugins.Loader.Local_Plugin_Mode & ""","
+                & """local_plugin_load_policy"":"""
+                & Plugins.Loader.Local_Load_Policy & ""","
+                & """mcp_bridge_configured"":"
+                & Bool_Image (Length (Shared_Cfg.Tools.MCP_Bridge_URL) > 0)
+                & ","
+                & """local_plugins"":"
+                & Plugins.Loader.Runtime_Registry_JSON
+                & "}",
+                AWS.Messages.S200);
+          end if;
+
+          --  GET /api/metrics/summary
+          if URI = "/api/metrics/summary" and then Method = "GET" then
             declare
                Prov_Req : constant Natural :=
                  Metrics.Get_Counter ("provider_requests_total", "*");
@@ -389,22 +547,22 @@ is
                      AWS.Messages.S400);
                end if;
 
-               declare
-                  Msg   : constant String :=
-                    Config.JSON_Parser.Get_String (PR.Root, "message");
-                  SID   : constant String :=
-                    (if Config.JSON_Parser.Has_Key (PR.Root, "session_id")
-                     then Config.JSON_Parser.Get_String (PR.Root, "session_id")
-                     else "gateway");
-                  Conv  : Agent.Context.Conversation;
-                  Reply : Agent.Loop_Pkg.Agent_Reply;
-               begin
-                  Set_Unbounded_String (Conv.Session_ID, SID);
-                  Reply := Agent.Loop_Pkg.Process_Message
-                    (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
+                declare
+                   Msg   : constant String :=
+                     Config.JSON_Parser.Get_String (PR.Root, "message");
+                   SID   : constant String :=
+                     (if Config.JSON_Parser.Has_Key (PR.Root, "session_id")
+                      then Config.JSON_Parser.Get_String (PR.Root, "session_id")
+                      else "gateway");
+                   Conv  : Agent.Context.Conversation;
+                   Reply : Agent.Loop_Pkg.Agent_Reply;
+                begin
+                   Restore_Conversation (SID, Conv);
+                   Reply := Agent.Loop_Pkg.Process_Message
+                     (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
 
-                  if Reply.Success then
-                     return AWS.Response.Build
+                   if Reply.Success then
+                      return AWS.Response.Build
                        ("application/json",
                         "{""content"":" & Config.JSON_Parser.Escape_JSON_String
                           (To_String (Reply.Content)) & "}",
@@ -420,18 +578,16 @@ is
             end;
          end if;
 
-         --  POST /api/chat/stream — SSE streaming chat completion
-         --  Returns text/event-stream with "data: {json}\n\n" per token chunk,
-         --  followed by "data: [DONE]\n\n" when complete.
-         --  Note: AWS doesn't natively support streaming responses, so we build
-         --  the full SSE payload and return it as a single response with the
-         --  correct content type. True chunked streaming requires a raw socket
-         --  approach (future enhancement).
+         --  POST /api/chat/stream — SSE-framed chat completion.
+         --  Today this is buffered pseudo-SSE: the provider path may stream
+         --  internally, but AWS still returns one completed HTTP response.
+         --  Keep the wire format explicit so browser clients can be honest
+         --  about the limitation instead of faking token-by-token output.
          if URI = "/api/chat/stream" and then Method = "POST" then
             if not Is_Localhost then
                return AWS.Response.Build
-                 ("application/json",
-                  "{""error"":""forbidden""}",
+                  ("application/json",
+                   "{""error"":""forbidden""}",
                   AWS.Messages.S403);
             end if;
 
@@ -448,28 +604,28 @@ is
                      AWS.Messages.S400);
                end if;
 
-               declare
-                  Msg   : constant String :=
-                    Config.JSON_Parser.Get_String (PR.Root, "message");
-                  SID   : constant String :=
-                    (if Config.JSON_Parser.Has_Key (PR.Root, "session_id")
-                     then Config.JSON_Parser.Get_String (PR.Root, "session_id")
-                     else "gateway");
-                  Conv  : Agent.Context.Conversation;
-                  Reply : Agent.Loop_Pkg.Agent_Reply;
-                  SSE   : Unbounded_String;
-               begin
-                  Set_Unbounded_String (Conv.Session_ID, SID);
-                  Reply := Agent.Loop_Pkg.Process_Message_Streaming
-                    (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
+                declare
+                   Msg   : constant String :=
+                     Config.JSON_Parser.Get_String (PR.Root, "message");
+                   SID   : constant String :=
+                     (if Config.JSON_Parser.Has_Key (PR.Root, "session_id")
+                      then Config.JSON_Parser.Get_String (PR.Root, "session_id")
+                      else "gateway");
+                   Conv  : Agent.Context.Conversation;
+                   Reply : Agent.Loop_Pkg.Agent_Reply;
+                   SSE   : Unbounded_String;
+                begin
+                   Restore_Conversation (SID, Conv);
+                   Reply := Agent.Loop_Pkg.Process_Message_Streaming
+                     (Msg, Conv, Shared_Cfg, Shared_Mem_Ptr.all);
 
-                  --  Build SSE payload: one data event with the full content,
-                  --  then a [DONE] sentinel.
-                  if Reply.Success then
-                     Append (SSE, "data: {""content"":");
-                     Append (SSE, Config.JSON_Parser.Escape_JSON_String
-                       (To_String (Reply.Content)));
-                     Append (SSE, "}" & ASCII.LF & ASCII.LF);
+                   --  Build buffered SSE payload: one data event with the full
+                   --  content, then a [DONE] sentinel.
+                   if Reply.Success then
+                      Append (SSE, "data: {""content"":");
+                      Append (SSE, Config.JSON_Parser.Escape_JSON_String
+                        (To_String (Reply.Content)));
+                      Append (SSE, "}" & ASCII.LF & ASCII.LF);
                      Append (SSE, "data: [DONE]" & ASCII.LF & ASCII.LF);
                   else
                      Append (SSE, "data: {""error"":");
@@ -478,13 +634,20 @@ is
                      Append (SSE, "}" & ASCII.LF & ASCII.LF);
                   end if;
 
-                  return AWS.Response.Build
-                    ("text/event-stream",
-                     To_String (SSE),
-                     AWS.Messages.S200);
-               end;
-            end;
-         end if;
+                   declare
+                      R : AWS.Response.Data :=
+                        AWS.Response.Build
+                          ("text/event-stream",
+                           To_String (SSE),
+                           AWS.Messages.S200);
+                   begin
+                      AWS.Response.Set.Add_Header
+                        (R, "X-VeriClaw-Stream-Mode", "buffered-sse");
+                      return R;
+                   end;
+                end;
+             end;
+          end if;
 
          --  404 for everything else
          return AWS.Response.Build
@@ -494,12 +657,19 @@ is
       end Raw_Dispatch;
 
       R : AWS.Response.Data := Raw_Dispatch;
-   begin
-      AWS.Response.Set.Add_Header (R, "X-Content-Type-Options", "nosniff");
-      AWS.Response.Set.Add_Header (R, "X-Frame-Options", "DENY");
-      AWS.Response.Set.Add_Header (R, "Cache-Control", "no-store");
-      return R;
-   end Dispatch;
+    begin
+       AWS.Response.Set.Add_Header (R, "X-Content-Type-Options", "nosniff");
+       AWS.Response.Set.Add_Header (R, "X-Frame-Options", "DENY");
+       AWS.Response.Set.Add_Header (R, "Cache-Control", "no-store");
+       if Method /= "OPTIONS" and then CORS_Origin'Length > 0 then
+          AWS.Response.Set.Add_Header
+            (R, "Access-Control-Allow-Origin", CORS_Origin);
+          AWS.Response.Set.Add_Header (R, "Vary", "Origin");
+          AWS.Response.Set.Add_Header
+            (R, "Access-Control-Expose-Headers", "X-VeriClaw-Stream-Mode");
+       end if;
+       return R;
+    end Dispatch;
 
    procedure Run
      (Cfg : Config.Schema.Agent_Config;

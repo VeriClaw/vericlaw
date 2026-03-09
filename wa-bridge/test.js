@@ -2,10 +2,13 @@
 
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { spawn } = require('node:child_process');
 
 const PORT = 10000 + Math.floor(Math.random() * 50000);
-let proc, base;
+let proc, base, sessionsDir;
 
 async function waitForServer(url, timeoutMs = 15000) {
   const start = Date.now();
@@ -21,8 +24,9 @@ async function waitForServer(url, timeoutMs = 15000) {
 
 before(async () => {
   base = `http://127.0.0.1:${PORT}`;
+  sessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vericlaw-wa-test-'));
   proc = spawn('node', ['index.js'], {
-    env: { ...process.env, PORT: String(PORT) },
+    env: { ...process.env, PORT: String(PORT), SESSIONS_DIR: sessionsDir },
     cwd: __dirname,
     stdio: 'pipe',
   });
@@ -33,6 +37,7 @@ before(async () => {
 
 after(() => {
   if (proc) proc.kill();
+  if (sessionsDir) fs.rmSync(sessionsDir, { recursive: true, force: true });
 });
 
 describe('wa-bridge', () => {
@@ -41,6 +46,18 @@ describe('wa-bridge', () => {
     assert.strictEqual(res.status, 200);
     const body = await res.json();
     assert.strictEqual(body.ok, true);
+  });
+
+  it('GET /ready returns 503 until the session is open', async () => {
+    const res = await fetch(`${base}/ready`);
+    assert.strictEqual(res.status, 503);
+    const body = await res.json();
+    assert.strictEqual(body.ready, false);
+  });
+
+  it('GET /sessions/test/messages returns 503 while the session is closed', async () => {
+    const res = await fetch(`${base}/sessions/test/messages`);
+    assert.strictEqual(res.status, 503);
   });
 
   it('POST /sessions/test/messages without required fields returns 400', async () => {

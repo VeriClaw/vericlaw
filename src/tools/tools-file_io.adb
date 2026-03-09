@@ -1,8 +1,10 @@
+with Ada.Exceptions;     use Ada.Exceptions;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Directories;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Interfaces.C;
 with Interfaces.C.Strings;
+with Logging;
 
 package body Tools.File_IO
   with SPARK_Mode => Off
@@ -109,10 +111,12 @@ is
          Result.Content := Content;
          Result.Success := True;
       exception
-         when others =>
+         when E : others =>
             if Ada.Text_IO.Is_Open (File) then
                Ada.Text_IO.Close (File);
             end if;
+            Logging.Warning ("file_io: read error on " & Path
+              & " (" & Exception_Name (E) & "): " & Exception_Message (E));
             Set_Unbounded_String (Result.Error, "Error reading: " & Path);
       end;
       return Result;
@@ -149,10 +153,12 @@ is
       Set_Unbounded_String (Result.Content, "Written: " & Path);
       Result.Success := True;
    exception
-      when others =>
+      when E : others =>
          if Ada.Text_IO.Is_Open (File) then
             Ada.Text_IO.Close (File);
          end if;
+         Logging.Warning ("file_io: write error on " & Path
+           & " (" & Exception_Name (E) & "): " & Exception_Message (E));
          Set_Unbounded_String (Result.Error, "Error writing: " & Path);
    end Write_To_File;
 

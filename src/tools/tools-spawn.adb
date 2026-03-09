@@ -62,8 +62,11 @@ is
 
       Agent.Context.Append_Message
         (Conv, Agent.Context.System_Role,
-         Ada.Strings.Unbounded.To_String (Cfg.System_Prompt));
-      Agent.Context.Append_Message (Conv, Agent.Context.User, Prompt);
+         Ada.Strings.Unbounded.To_String (Cfg.System_Prompt),
+         Limit => Cfg.Memory.Max_History);
+      Agent.Context.Append_Message
+        (Conv, Agent.Context.User, Prompt,
+         Limit => Cfg.Memory.Max_History);
 
       Spawn_Depth := Spawn_Depth + 1;
       Provider    := Make_Provider_Local (Prov_Cfg);

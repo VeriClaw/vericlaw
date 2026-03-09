@@ -3,6 +3,7 @@
 
 with Ada.Text_IO;      use Ada.Text_IO;
 with Ada.Directories;
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Config.Schema;    use Config.Schema;
 with Config.Loader;    use Config.Loader;
@@ -30,8 +31,8 @@ procedure Config_Loader_Test is
       Cfg : constant Agent_Config := Default_Config;
    begin
       Put_Line ("--- Default_Config ---");
-      Assert (Cfg.Memory.Max_History = 50,
-              "Default Max_History = 50");
+      Assert (Cfg.Memory.Max_History = Default_Max_History,
+              "Default Max_History matches schema default");
       Assert (Cfg.Memory.Facts_Enabled,
               "Default Facts_Enabled = True");
       Assert (not Cfg.Tools.Shell_Enabled,
@@ -63,13 +64,13 @@ procedure Config_Loader_Test is
       Put_Line (F, "{");
       Put_Line (F, "  ""agent_name"": ""TestBot"",");
       Put_Line (F, "  ""system_prompt"": ""You are a test assistant."",");
-      Put_Line (F, "  ""providers"": [");
-      Put_Line (F, "    { ""kind"": ""openai"", ""api_key"": ""sk-test"", ""model"": ""gpt-4o"" }");
-      Put_Line (F, "  ],");
-      Put_Line (F, "  ""memory"": { ""max_history"": 25, ""facts_enabled"": false },");
-      Put_Line (F, "  ""tools"": { ""file"": true, ""shell"": false }");
-      Put_Line (F, "}");
-      Close (F);
+       Put_Line (F, "  ""providers"": [");
+       Put_Line (F, "    { ""kind"": ""openai"", ""api_key"": ""sk-test"", ""model"": ""gpt-4o"" }");
+       Put_Line (F, "  ],");
+       Put_Line (F, "  ""memory"": { ""max_history"": 25, ""facts_enabled"": false },");
+       Put_Line (F, "  ""tools"": { ""file"": true, ""shell"": false, ""plugin_directory"": ""~/plugins"" }");
+       Put_Line (F, "}");
+       Close (F);
 
       R := Load_From (Tmp_Path);
       Assert (R.Success, "Load_From returns Success = True");
@@ -79,32 +80,98 @@ procedure Config_Loader_Test is
               "Memory.Max_History = 25 from JSON");
       Assert (not R.Config.Memory.Facts_Enabled,
               "Memory.Facts_Enabled = false from JSON");
-      Assert (R.Config.Tools.File_Enabled,
-              "Tools.File_Enabled = true from JSON");
-      Assert (not R.Config.Tools.Shell_Enabled,
-              "Tools.Shell_Enabled = false from JSON");
-      Assert (R.Config.Num_Providers >= 1,
-              "At least one provider parsed");
+       Assert (R.Config.Tools.File_Enabled,
+               "Tools.File_Enabled = true from JSON");
+       Assert (not R.Config.Tools.Shell_Enabled,
+               "Tools.Shell_Enabled = false from JSON");
+       Assert (To_String (R.Config.Tools.Plugin_Directory) = "~/plugins",
+               "Tools.Plugin_Directory parsed correctly");
+       Assert (R.Config.Num_Providers >= 1,
+               "At least one provider parsed");
 
       Ada.Directories.Delete_File (Tmp_Path);
-   end Test_Load_From_Valid;
+    end Test_Load_From_Valid;
 
-   ---------------------------------------------------------
-   --  Section 3: Load_From with a missing file
-   ---------------------------------------------------------
-   procedure Test_Load_From_Missing is
+    ---------------------------------------------------------
+    --  Section 3: Load_From rejects invalid max_history values
+    ---------------------------------------------------------
+    procedure Test_Load_From_Invalid_Max_History is
+       Tmp_Path : constant String :=
+         Ada.Directories.Current_Directory & "/test_config_bad_history.json";
+       F : File_Type;
+       R : Load_Result;
+    begin
+       Put_Line ("--- Load_From (invalid max_history) ---");
+       Create (F, Out_File, Tmp_Path);
+       Put_Line (F, "{");
+       Put_Line (F, "  ""memory"": { ""max_history"": 1 }");
+       Put_Line (F, "}");
+       Close (F);
+
+       R := Load_From (Tmp_Path);
+       Assert (not R.Success,
+               "Load_From rejects out-of-range max_history");
+       Assert
+         (Ada.Strings.Fixed.Index (To_String (R.Error), "max_history") > 0,
+          "Load_From reports a max_history validation error");
+
+       Ada.Directories.Delete_File (Tmp_Path);
+    end Test_Load_From_Invalid_Max_History;
+
+    ---------------------------------------------------------
+    --  Section 4: Load_From preserves all channel kinds
+    ---------------------------------------------------------
+    procedure Test_Load_All_Channel_Kinds is
+      Tmp_Path : constant String :=
+        Ada.Directories.Current_Directory & "/test_config_channels.json";
+      F : File_Type;
+      R : Load_Result;
+   begin
+      Put_Line ("--- Load_From (all channel kinds) ---");
+      Create (F, Out_File, Tmp_Path);
+      Put_Line (F, "{");
+      Put_Line (F, "  ""channels"": [");
+      Put_Line (F, "    { ""kind"": ""cli"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""telegram"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""signal"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""whatsapp"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""discord"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""slack"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""email"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""irc"", ""enabled"": true },");
+      Put_Line (F, "    { ""kind"": ""matrix"", ""enabled"": true }");
+      Put_Line (F, "  ]");
+      Put_Line (F, "}");
+      Close (F);
+
+      R := Load_From (Tmp_Path);
+      Assert (R.Success, "Load_From returns Success = True for all channel kinds");
+      Assert (R.Config.Num_Channels = Max_Channels,
+              "All configured channels fit in schema storage");
+      Assert (R.Config.Channels (Max_Channels).Kind = Matrix,
+              "Final channel slot accepts Matrix");
+      Assert (Find_Channel (R.Config, Matrix).Enabled,
+              "Find_Channel returns the Matrix configuration");
+
+      Ada.Directories.Delete_File (Tmp_Path);
+    end Test_Load_All_Channel_Kinds;
+
+    ---------------------------------------------------------
+    --  Section 5: Load_From with a missing file
+    ---------------------------------------------------------
+    procedure Test_Load_From_Missing is
       R : Load_Result;
    begin
       Put_Line ("--- Load_From (missing file) ---");
       R := Load_From ("/nonexistent/path/vericlaw_config_test.json");
       Assert (not R.Success, "Load_From returns Success = False for missing file");
       Assert (Length (R.Error) > 0, "Error string is non-empty");
-   end Test_Load_From_Missing;
+    end Test_Load_From_Missing;
 
-   ---------------------------------------------------------
-   --  Section 4: Load_From with malformed JSON
-   ---------------------------------------------------------
-   procedure Test_Load_From_Malformed is
+    ---------------------------------------------------------
+    --  Section 6: Load_From with malformed JSON
+    ---------------------------------------------------------
+    procedure Test_Load_From_Malformed is
       Tmp_Path : constant String :=
         Ada.Directories.Current_Directory & "/test_config_bad.json";
       F : File_Type;
@@ -127,8 +194,10 @@ begin
    Put_Line ("=== config_loader_test ===");
    Test_Default_Config;
    Test_Load_From_Valid;
-   Test_Load_From_Missing;
-   Test_Load_From_Malformed;
+   Test_Load_From_Invalid_Max_History;
+     Test_Load_All_Channel_Kinds;
+     Test_Load_From_Missing;
+     Test_Load_From_Malformed;
 
    Put_Line ("");
    Put_Line ("Results: " & Natural'Image (Passed) & " passed, "

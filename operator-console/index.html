@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:*; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* http://[::1]:*; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
     <meta name="referrer" content="no-referrer">
     <title>VeriClaw Operator Console (Local)</title>
     <link rel="stylesheet" href="./styles.css">
@@ -11,61 +11,138 @@
   </head>
   <body>
     <main class="layout">
-      <header>
-        <h1>Operator Web Console</h1>
-        <p class="muted">Local-only console for secure defaults, release checks, and health guidance.</p>
+      <header class="hero">
+        <div>
+          <h1>Operator Web Console</h1>
+          <p class="muted">Local-only console for gateway health, release guidance, and pragmatic browser chat.</p>
+        </div>
+        <div class="hero-pills">
+          <span class="status-pill" id="connection-pill" data-state="idle">Gateway not checked</span>
+          <span class="status-pill" id="transport-pill" data-state="warning">Buffered SSE chat</span>
+        </div>
       </header>
 
-      <section class="panel">
-        <h2>Security defaults</h2>
-        <p class="muted">Derived from repository configuration defaults.</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Control</th>
-              <th>Default</th>
-            </tr>
-          </thead>
-          <tbody id="security-defaults"></tbody>
-        </table>
-      </section>
+      <div class="dashboard-grid">
+        <section class="panel chat-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Local chat</h2>
+              <p class="muted">Uses the existing localhost gateway APIs and keeps session IDs stable in this browser.</p>
+            </div>
+            <div class="button-row">
+              <button id="connect-btn" type="button">Check gateway</button>
+              <button id="new-session-btn" type="button" class="secondary">New session</button>
+            </div>
+          </div>
 
-      <section class="panel">
-        <h2>Release checklist snapshot</h2>
-        <ul id="todo-snapshot"></ul>
-      </section>
+          <div class="control-grid">
+            <label class="field" for="gateway-url">
+              <span>Gateway URL</span>
+              <input id="gateway-url" type="text" value="http://127.0.0.1:8787" spellcheck="false" inputmode="url">
+            </label>
+            <label class="field" for="session-id">
+              <span>Session ID</span>
+              <input id="session-id" type="text" spellcheck="false" autocomplete="off">
+            </label>
+          </div>
 
-      <section class="panel">
-        <h2>Health snapshot</h2>
-        <ul id="health-snapshot"></ul>
-      </section>
+          <div class="banner banner-info" id="streaming-banner">
+            Chat posts to <code>POST /api/chat/stream</code> with an SSE parser, but the current AWS gateway still buffers the whole reply before sending it. The UI is ready for chunked SSE later, yet today most replies arrive only once they are complete.
+          </div>
 
-      <section class="panel">
-        <h2>Live gateway</h2>
-        <p class="muted">Connect to a running vericlaw gateway instance.</p>
-        <div>
-          <label for="gateway-url">Gateway URL</label>
-          <input id="gateway-url" type="text" value="http://127.0.0.1:8787">
-          <button id="connect-btn">Connect</button>
-        </div>
-        <div id="gateway-status">Not connected</div>
-        <table id="channels-table">
-          <thead><tr><th>Channel</th><th>Enabled</th><th>Max RPS</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </section>
+          <div class="banner banner-error hidden" id="error-banner" role="alert">
+            <span id="error-message"></span>
+            <button id="clear-error-btn" type="button" class="ghost">Clear</button>
+          </div>
 
-      <section class="panel">
-        <h2>Setup guidance</h2>
-        <ol>
-          <li>Run <code>make operator-console-check</code> to validate local scaffold files.</li>
-          <li>Run <code>make operator-console-serve</code> to serve on <code>127.0.0.1</code> by default.</li>
-          <li>If non-loopback hosting is required, pass <code>--allow-non-loopback</code> and secure access at the host/network layer.</li>
-        </ol>
-      </section>
+          <div class="meta-grid">
+            <section class="meta-card">
+              <h3>Gateway status</h3>
+              <p id="gateway-status">Not connected</p>
+              <p id="gateway-detail" class="muted">Check the local gateway before chatting to confirm health and CORS access.</p>
+            </section>
+            <section class="meta-card">
+              <h3>Session continuity</h3>
+              <p id="session-summary">No active session yet.</p>
+              <p id="session-detail" class="muted">The browser keeps the transcript and session ID locally. Backend continuity depends on the gateway still retaining history for the same session ID.</p>
+            </section>
+          </div>
 
-      <footer class="muted">
-        <p>Local-only scaffold. External telemetry/export remains disabled.</p>
+          <section class="chat-history" id="chat-history" aria-live="polite">
+            <div class="empty-state">No messages yet. Start the gateway, check connectivity, then send a prompt.</div>
+          </section>
+
+          <form id="chat-form" class="composer">
+            <label class="composer-label" for="chat-input">Message</label>
+            <textarea id="chat-input" rows="5" placeholder="Ask the local gateway…"></textarea>
+            <div class="composer-footer">
+              <p class="muted" id="composer-hint">Press Enter to send, Shift+Enter for a newline. Use New session when you want a fresh backend conversation.</p>
+              <button id="send-btn" type="submit">Send</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel">
+            <h2>Live gateway</h2>
+            <p class="muted">Fetched from the configured gateway when you connect or send a message.</p>
+            <dl class="metric-list">
+              <div><dt>Version</dt><dd id="gateway-version">unknown</dd></div>
+              <div><dt>Uptime</dt><dd id="gateway-uptime">unknown</dd></div>
+              <div><dt>Provider requests</dt><dd id="gateway-provider-requests">0</dd></div>
+              <div><dt>Provider errors</dt><dd id="gateway-provider-errors">0</dd></div>
+              <div><dt>Tool calls</dt><dd id="gateway-tool-calls">0</dd></div>
+            </dl>
+            <table id="channels-table">
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th>Enabled</th>
+                  <th>Max RPS</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </section>
+
+          <section class="panel">
+            <h2>Security defaults</h2>
+            <p class="muted">Derived from repository configuration defaults.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Control</th>
+                  <th>Default</th>
+                </tr>
+              </thead>
+              <tbody id="security-defaults"></tbody>
+            </table>
+          </section>
+
+          <section class="panel">
+            <h2>Release checklist snapshot</h2>
+            <ul id="todo-snapshot"></ul>
+          </section>
+
+          <section class="panel">
+            <h2>Health snapshot</h2>
+            <ul id="health-snapshot"></ul>
+          </section>
+
+          <section class="panel">
+            <h2>Setup guidance</h2>
+            <ol>
+              <li>Run <code>make operator-console-check</code> to validate the local console files.</li>
+              <li>Start the local gateway on loopback, then run <code>make operator-console-serve</code>.</li>
+              <li>Browser chat relies on <code>/api/chat/stream</code>, but current builds still return buffered pseudo-SSE rather than token-by-token output.</li>
+              <li>If non-loopback hosting is required, pass <code>--allow-non-loopback</code> and secure access at the host or network layer.</li>
+            </ol>
+          </section>
+        </aside>
+      </div>
+
+      <footer class="footer muted">
+        <p>Local-only scaffold. Browser transcripts stay on this machine and gateway chat remains localhost-only.</p>
         <p>Rendered: <span id="rendered-at">pending</span></p>
       </footer>
     </main>

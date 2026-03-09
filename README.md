@@ -43,7 +43,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 
 **LLM providers**
 - OpenAI (GPT-4o, GPT-4-turbo), Anthropic (Claude 3.5/3.7), Azure AI Foundry, Google Gemini (2.0 Flash), and any OpenAI-compatible endpoint — Ollama, Groq, OpenRouter, LiteLLM, LM Studio
-- Multi-provider failover — automatic fallback to secondary provider on failure
+- Runtime provider routing — ordered primary -> failover -> long-tail fallback across configured providers
 - Streaming SSE token output in CLI mode (always-on, no flag needed)
 
 **Channels (9 total)**
@@ -53,7 +53,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - All channels run concurrently in `gateway` mode using Ada tasks
 - Per-user memory isolation — operator gets full access, guests get sandboxed namespaces
 
-**Tools (13 built-in + unlimited via MCP)**
+**Tools (built-in + unlimited via MCP)**
 - `file` — read/write/list files in `~/.vericlaw/workspace/` (workspace-scoped, path-traversal blocked)
 - `shell` — execute commands via popen (disabled by default, allowlisted)
 - `web_fetch` — fetch and parse web pages
@@ -61,6 +61,8 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - `git_operations` — `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout`
 - `cron_add` / `cron_list` / `cron_remove` — schedule recurring AI tasks
 - `spawn` — delegate a subtask to an independent sub-agent (depth-capped at 1)
+- `delegate` — hand work to a role-specialized sub-agent (`researcher`, `coder`, `reviewer`, `general`)
+- `plugin_registry` — inspect MCP-first extensibility state and discovered local plugin manifests
 - `browser_browse` — fetch a web page using a real browser (JavaScript rendered)
 - `browser_screenshot` — take a screenshot of any URL (PNG, base64)
 - `memory_search` — semantic similarity search over conversation history (vector RAG)
@@ -91,7 +93,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - `export` command — export conversation history (`--format md|json`)
 - `--json` flag — machine-readable JSON output for `agent` and `status` commands
 - `--no-color` flag — disable ANSI colors (auto-detected for pipes, respects `NO_COLOR`)
-- Plugin loader — discover and load plugins with SPARK-verified capability policy
+- Plugin registry — discover signed local plugin manifests with SPARK-verified capability policy (discovery-only; no arbitrary local execution at load time)
 - Systemd / launchd / Windows service packaging
 - Dockerfiles and publish scaffolding for multi-arch images (amd64 / arm64 / arm/v7; GHCR publish TBC)
 
@@ -332,13 +334,20 @@ alr with gnatcoll gnatcoll_sqlite aws
 make bootstrap
 ```
 
-### 2. Build
+### 2. Validate and build
 
 ```bash
-make build            # dev build (full SPARK assertions)
-make edge-speed-build # speed-optimised binary (~6.84 MB)
-make edge-size-build  # size-optimised binary (~400-600 KB)
+make toolchain-status                  # inspect host/container readiness
+make build                             # fast dev build
+make validate                          # blessed build + proof + test entrypoint
+VALIDATION_BACKEND=container make validate  # force container validation
+make edge-speed-build                  # speed-optimised binary (~6.84 MB)
+make edge-size-build                   # size-optimised binary (~400-600 KB)
 ```
+
+`make validate` prefers the local GNAT/SPARK toolchain when available and falls back
+to the container runner when Docker is ready. `make check` remains an alias for
+`make validate`.
 
 ### 3. Configure
 
@@ -368,12 +377,19 @@ This asks for your provider, API key, model, agent name, and channel, then write
     "web_fetch": false,
     "brave_search": false,
     "brave_api_key": "",
+    "mcp_bridge_url": "",          // optional: "http://mcp-bridge:3004"
+    "plugin_directory": "",        // optional: default ~/.vericlaw/plugins
     "git": true,
     "browser_bridge_url": "",      // optional: "http://browser-bridge:3007"
     "rag_enabled": false,          // optional: true to enable vector memory search
     "rag_embed_base_url": ""       // optional: "https://api.openai.com/v1"
   },
-  "memory": { "max_history": 50, "facts_enabled": true, "session_retention_days": 30 },
+  "memory": {
+    "max_history": 50,
+    "compact_at_pct": 0,           // optional: 80 compacts when history is 80% full
+    "facts_enabled": true,
+    "session_retention_days": 30
+  },
   "gateway": { "bind_host": "127.0.0.1", "bind_port": 8787 }
 }
 ```
@@ -403,7 +419,9 @@ vericlaw help                           # show all commands
 | Google Gemini | `gemini` | `model`: gemini-2.0-flash (default), gemini-1.5-pro, etc. |
 | OpenAI-compatible | `openai_compatible` | `base_url` covers Ollama, Groq, OpenRouter, LiteLLM, LM Studio |
 
-**Multi-provider failover:** List providers in order; VeriClaw automatically falls back to the next on failure.
+**Multi-provider routing:** List providers in order; `providers[1]` is the primary,
+`providers[2]` is the dedicated failover, and `providers[3..n]` are tried in order
+as long-tail fallbacks.
 
 **Streaming:** Always-on in CLI mode — tokens are printed as they arrive for all OpenAI and Anthropic providers. Other providers fall back gracefully to non-streaming.
 
@@ -517,6 +535,8 @@ Anyone else reaching the agent when `allowlist: "*"` is a **guest** — sandboxe
 | Git operations | `git: true` | **on** | `status`, `log`, `diff`, `add`, `commit`, `push`, `pull`, `branch`, `checkout` |
 | Cron scheduler | always available | — | `cron_add`, `cron_list`, `cron_remove` — schedule recurring AI tasks |
 | Spawn | always available | — | Delegate a subtask to an isolated sub-agent |
+| Delegate | always available | — | Delegate a task to a role-specialized sub-agent (`researcher`, `coder`, `reviewer`, `general`) |
+| Plugin registry | always available | — | Inspect discovered local plugin manifests and MCP-first extensibility state |
 | Browser browse | `browser_bridge_url` | off | Fetch JS-rendered page text via headless Chromium |
 | Browser screenshot | `browser_bridge_url` | off | Screenshot any URL as PNG (base64) |
 | Memory search | `rag_enabled: true` | off | Semantic similarity search over conversation history |
@@ -552,6 +572,23 @@ mcp-bridge:
 ```
 
 On startup, VeriClaw fetches the tool list from the bridge and exposes them to the LLM as `mcp__{server}__{tool}` — transparently alongside built-in tools. See [docs/setup/mcp.md](docs/setup/mcp.md).
+
+### Plugin registry
+
+Local plugins are discovery-only today. Point `tools.plugin_directory` at a folder
+of manifests, then inspect the runtime registry via the built-in `plugin_registry`
+tool or the HTTP API:
+
+```json
+{
+  "tools": {
+    "plugin_directory": "~/.vericlaw/plugins"
+  }
+}
+```
+
+Only manifests with `signature_state: "signed_trusted_key"` are surfaced in the
+runtime registry. The loader does not execute arbitrary local plugin code at startup.
 
 ### Spawn / subagent
 
@@ -636,8 +673,9 @@ See [docs/setup/rag.md](docs/setup/rag.md) for full setup, including using Ollam
 ### Running GNATprove
 
 ```bash
-make check           # flow analysis (fast, development)
-gnatprove -P vericlaw.gpr --level=2 --report=fail   # full Silver proof
+make validate                         # build + proofs + tests (auto host/container)
+make prove-host                       # explicit Silver proof on a local toolchain
+VALIDATION_BACKEND=container make validate  # force Docker-based validation
 ```
 
 ## Operations
@@ -716,6 +754,9 @@ curl http://127.0.0.1:8787/api/status
 curl http://127.0.0.1:8787/api/channels
 # {"channels":[{"kind":"telegram","enabled":true,"max_rps":5},{"kind":"slack","enabled":true,"max_rps":5},...]}
 
+curl http://127.0.0.1:8787/api/plugins
+# {"extensibility_model":"mcp_first","local_plugins":[...]}
+
 curl http://127.0.0.1:8787/api/metrics/summary
 # {"provider_requests_total":42,"provider_errors_total":0,"tool_calls_total":17}
 
@@ -725,31 +766,39 @@ curl -X POST http://127.0.0.1:8787/api/chat \
   -d '{"message":"Hello","session_id":"my-session"}'
 # {"content":"Hi! How can I help?"}
 
-# SSE streaming chat completion
-curl -X POST http://127.0.0.1:8787/api/chat/stream \
+# SSE chat completion
+curl -i -X POST http://127.0.0.1:8787/api/chat/stream \
   -H 'Content-Type: application/json' \
   -d '{"message":"Hello","session_id":"my-session"}'
+# X-VeriClaw-Stream-Mode: buffered-sse
 # data: {"content":"Hi! How can I help?"}
 # data: [DONE]
 ```
 
 The `version` field mirrors `Build_Info.Version` embedded in the binary you are running.
 
+The stream endpoint currently emits buffered SSE responses and advertises the
+transport explicitly via `X-VeriClaw-Stream-Mode: buffered-sse` so browser clients
+can distinguish today's behavior from future chunked streaming.
+
 All API endpoints are restricted to `127.0.0.1` — `403 Forbidden` for any other source address.
 
 ### Operator console
 
-A local web dashboard for checking gateway health and security defaults:
+A local web dashboard and chat client for checking gateway health, plugins, and
+running conversations against the localhost API:
 
 ```bash
-# Open directly in browser (no server needed — reads local report files)
+# Open directly in browser (no server needed)
 open operator-console/index.html
 
 # Or connect to a running gateway
 # Enter "http://127.0.0.1:8787" in the Gateway URL field and click Connect
 ```
 
-The console shows: security defaults, active channels with their RPS config, live Prometheus metric totals, and release metadata when present.
+The console persists the gateway URL, session ID, and transcript in `localStorage`.
+It detects `X-VeriClaw-Stream-Mode`, shows connection/error state pills, restores the
+last local session, and surfaces status, channel, metric, and plugin inventory data.
 
 ## Testing
 
@@ -758,7 +807,8 @@ The console shows: security defaults, active channels with their RPS config, liv
 ```bash
 make secrets-test        # crypto + secret store policy (SPARK)
 make conformance-suite   # channel allowlist + adapter policy (SPARK)
-make check               # full build + SPARK flow analysis
+make validate            # full build + proof + tests (preferred)
+make check               # alias for make validate
 ```
 
 ### Runtime unit tests (agent runtime modules)
@@ -797,12 +847,13 @@ make edge-speed-build   # speed-optimised (-O2)
 
 1. Validate/bootstrap toolchain:
    ```bash
+   make toolchain-status
    make bootstrap-validate
    make bootstrap   # if validation fails
    ```
 2. Run core quality checks:
    ```bash
-   make check
+   make validate
    make secrets-test
    make conformance-suite
    ```
@@ -817,6 +868,7 @@ make edge-speed-build   # speed-optimised (-O2)
    ```
 5. Operator console (local):
    ```bash
+   make operator-console-check
    make operator-console-serve
    ```
 
@@ -954,7 +1006,7 @@ The `make competitive-regression-gate` gate **fails** if any VeriClaw metric reg
 
 | Category | Command | Report |
 |---|---|---|
-| Build + proof | `make check` | — |
+| Build + proof | `make validate` (`make check` alias) | — |
 | Security tests | `make secrets-test` | — |
 | Runtime tests | `make runtime-tests` | — |
 | Conformance | `make conformance-suite` | `tests/cross_repo_conformance_report.json` |

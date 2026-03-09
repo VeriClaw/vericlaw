@@ -30,6 +30,7 @@ const {
   makeCacheableSignalKeyStore,
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
+const { addHealthRoutes, createBackoff, listen } = require('../bridge-common');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const DEFAULT_SESSION = process.env.WA_SESSION || 'vericlaw';
@@ -44,19 +45,66 @@ const messageQueues = {};
 const seenIds = {};
 const SEEN_LIMIT = 200;
 
+// Active socket + state per session
+const sockets = {};
+const sessionStatus = {}; // "connecting" | "open" | "close"
+const pairingCodeResolvers = {}; // pending pair() Promises
+const sessionErrors = {};
+const reconnectBackoffs = {};
+const reconnectTimers = {};
+const sessionPromises = {};
+
+let shuttingDown = false;
+
 function markSeen(session, id) {
   if (!seenIds[session]) seenIds[session] = [];
   seenIds[session].push(id);
   if (seenIds[session].length > SEEN_LIMIT) seenIds[session].shift();
 }
+
 function wasSeen(session, id) {
   return seenIds[session] && seenIds[session].includes(id);
 }
 
-// Active socket + state per session
-const sockets = {};
-const sessionStatus = {}; // "connecting" | "open" | "close"
-const pairingCodeResolvers = {}; // pending pair() Promises
+function getReconnectBackoff(name) {
+  if (!reconnectBackoffs[name]) {
+    reconnectBackoffs[name] = createBackoff({
+      initialMs: 1_000,
+      maxMs: 30_000,
+      factor: 2,
+      jitterMs: 500,
+    });
+  }
+
+  return reconnectBackoffs[name];
+}
+
+function clearReconnect(name) {
+  if (!reconnectTimers[name]) return;
+  clearTimeout(reconnectTimers[name]);
+  delete reconnectTimers[name];
+}
+
+function scheduleReconnect(name, reason) {
+  if (shuttingDown) return;
+
+  clearReconnect(name);
+  sessionStatus[name] = 'connecting';
+  const delayMs = getReconnectBackoff(name).fail();
+  reconnectTimers[name] = setTimeout(() => {
+    delete reconnectTimers[name];
+    void startSession(name).catch(() => {});
+  }, delayMs);
+  reconnectTimers[name].unref?.();
+
+  logger.info({ session: name, delayMs, reason }, 'Scheduling WhatsApp reconnect');
+}
+
+function rejectPairingCode(name, err) {
+  if (!pairingCodeResolvers[name]) return;
+  pairingCodeResolvers[name].reject(err);
+  delete pairingCodeResolvers[name];
+}
 
 async function createSession(name) {
   const authDir = path.join(SESSIONS_DIR, name);
@@ -78,6 +126,7 @@ async function createSession(name) {
 
   sockets[name] = sock;
   sessionStatus[name] = 'connecting';
+  sessionErrors[name] = null;
   messageQueues[name] = messageQueues[name] || [];
 
   sock.ev.on('creds.update', saveCreds);
@@ -85,14 +134,18 @@ async function createSession(name) {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
+    if (connection === 'connecting') {
+      sessionStatus[name] = 'connecting';
+      sessionErrors[name] = null;
+    }
+
     if (qr) {
-      // QR generated — if we have a phone number waiting, request pairing code instead
       const phone = AUTO_PHONE || (pairingCodeResolvers[name] && pairingCodeResolvers[name].phone);
       if (phone) {
         try {
           const normalized = phone.replace(/[^0-9]/g, '');
           const code = await sock.requestPairingCode(normalized);
-          const formatted = code.match(/.{1,4}/g).join('-');
+          const formatted = code.match(/.{1,4}/g)?.join('-') || code;
           logger.info({ session: name, code: formatted },
             `WhatsApp pairing code: ${formatted} — enter in WhatsApp > Settings > Linked Devices > Link with phone number`);
           process.stdout.write(`\nWhatsApp pairing code: ${formatted}\nEnter this in WhatsApp > Settings > Linked Devices > "Link with phone number"\n\n`);
@@ -102,10 +155,7 @@ async function createSession(name) {
           }
         } catch (err) {
           logger.error({ err }, 'Failed to request pairing code');
-          if (pairingCodeResolvers[name]) {
-            pairingCodeResolvers[name].reject(err);
-            delete pairingCodeResolvers[name];
-          }
+          rejectPairingCode(name, err);
         }
       } else {
         logger.warn({ session: name },
@@ -115,15 +165,31 @@ async function createSession(name) {
 
     if (connection === 'open') {
       sessionStatus[name] = 'open';
+      sessionErrors[name] = null;
+      getReconnectBackoff(name).reset();
+      clearReconnect(name);
       logger.info({ session: name }, 'WhatsApp session open');
-    } else if (connection === 'close') {
+      return;
+    }
+
+    if (connection === 'close') {
+      delete sockets[name];
       sessionStatus[name] = 'close';
       const code = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = code !== DisconnectReason.loggedOut;
+      const shouldReconnect = !shuttingDown && code !== DisconnectReason.loggedOut;
+      sessionErrors[name] =
+        (code === DisconnectReason.loggedOut
+          ? 'logged out'
+          : (lastDisconnect?.error?.message || 'connection closed'));
       logger.info({ session: name, code, shouldReconnect }, 'Connection closed');
+
+      if (pairingCodeResolvers[name] && code === DisconnectReason.loggedOut) {
+        rejectPairingCode(name, new Error('session logged out'));
+      }
+
       if (shouldReconnect) {
-        setTimeout(() => createSession(name), 5000);
-      } else {
+        scheduleReconnect(name, sessionErrors[name]);
+      } else if (code === DisconnectReason.loggedOut) {
         logger.warn({ session: name }, 'Logged out — delete session dir to re-pair');
       }
     }
@@ -146,7 +212,6 @@ async function createSession(name) {
       const timestamp = msg.messageTimestamp || Math.floor(Date.now() / 1000);
 
       messageQueues[name].push({ id, from, body, fromMe, timestamp });
-      // Keep buffer bounded
       if (messageQueues[name].length > 500) messageQueues[name].shift();
     }
   });
@@ -154,40 +219,56 @@ async function createSession(name) {
   return sock;
 }
 
-// Start default session on boot
-createSession(DEFAULT_SESSION).catch((err) =>
-  logger.error({ err }, 'Failed to create default session'));
+async function startSession(name) {
+  if (sessionPromises[name]) return sessionPromises[name];
+
+  sessionStatus[name] = 'connecting';
+  clearReconnect(name);
+
+  const promise = createSession(name)
+    .catch((err) => {
+      sessionStatus[name] = 'close';
+      sessionErrors[name] = err?.message || String(err);
+      rejectPairingCode(name, err);
+      logger.error({ err, session: name }, 'Failed to create WhatsApp session');
+      scheduleReconnect(name, sessionErrors[name]);
+      throw err;
+    })
+    .finally(() => {
+      delete sessionPromises[name];
+    });
+
+  sessionPromises[name] = promise;
+  return promise;
+}
+
+void startSession(DEFAULT_SESSION).catch(() => {});
 
 // ─── Express ────────────────────────────────────────────────────────────────
 
 const app = express();
 app.use(express.json());
 
-// GET /sessions/:name/status
 app.get('/sessions/:name/status', (req, res) => {
   const { name } = req.params;
   res.json({ status: sessionStatus[name] || 'close' });
 });
 
-// POST /sessions/:name/pair  {phone: "+1234567890"}
 app.post('/sessions/:name/pair', async (req, res) => {
   const { name } = req.params;
   const { phone } = req.body || {};
   if (!phone) return res.status(400).json({ error: 'phone required' });
 
-  // If session is already open, nothing to do
   if (sessionStatus[name] === 'open') {
     return res.json({ status: 'already_open' });
   }
 
-  // Store resolver; the connection.update handler will call it when QR fires
   const promise = new Promise((resolve, reject) => {
     pairingCodeResolvers[name] = { phone, resolve, reject };
   });
 
-  // If socket not yet created, create it now
-  if (!sockets[name]) {
-    createSession(name).catch(reject => logger.error({ reject }, 'session error'));
+  if (!sockets[name] && !sessionPromises[name]) {
+    void startSession(name).catch(() => {});
   }
 
   try {
@@ -202,17 +283,21 @@ app.post('/sessions/:name/pair', async (req, res) => {
   }
 });
 
-// GET /sessions/:name/messages?limit=10
 app.get('/sessions/:name/messages', (req, res) => {
   const { name } = req.params;
+  if (sessionStatus[name] !== 'open') {
+    return res.status(503).json({
+      error: 'session not open',
+      status: sessionStatus[name] || 'close',
+    });
+  }
+
   const limit = Math.min(parseInt(req.query.limit || '10', 10), 100);
   const queue = messageQueues[name] || [];
-  // Return and drain
   const msgs = queue.splice(0, limit);
   res.json(msgs);
 });
 
-// POST /sessions/:name/messages  {chatId, message}
 app.post('/sessions/:name/messages', async (req, res) => {
   const { name } = req.params;
   const { chatId, message } = req.body || {};
@@ -232,11 +317,39 @@ app.post('/sessions/:name/messages', async (req, res) => {
   }
 });
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+addHealthRoutes(app, () => ({
+  ready: sessionStatus[DEFAULT_SESSION] === 'open',
+  status: sessionStatus[DEFAULT_SESSION] || 'close',
+  reason:
+    sessionStatus[DEFAULT_SESSION] === 'open'
+      ? undefined
+      : (sessionErrors[DEFAULT_SESSION] || 'whatsapp session not open'),
+}));
 
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info({ port: PORT }, 'VeriClaw WhatsApp bridge listening');
-  if (AUTO_PHONE) {
-    logger.info({ phone: AUTO_PHONE }, 'Auto-pairing enabled via WA_PHONE');
-  }
+listen(app, PORT, 'WhatsApp', {
+  onShutdown: async () => {
+    shuttingDown = true;
+
+    for (const name of Object.keys(reconnectTimers)) {
+      clearReconnect(name);
+    }
+
+    for (const name of Object.keys(pairingCodeResolvers)) {
+      rejectPairingCode(name, new Error('shutdown'));
+    }
+
+    for (const [name, sock] of Object.entries(sockets)) {
+      if (typeof sock?.end === 'function') {
+        try {
+          sock.end(new Error('shutdown'));
+        } catch (err) {
+          logger.warn({ err, session: name }, 'Failed to close WhatsApp session cleanly');
+        }
+      }
+    }
+  },
 });
+
+if (AUTO_PHONE) {
+  logger.info({ phone: AUTO_PHONE }, 'Auto-pairing enabled via WA_PHONE');
+}

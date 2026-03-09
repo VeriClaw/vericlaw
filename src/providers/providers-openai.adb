@@ -1,5 +1,7 @@
+with Ada.Exceptions;     use Ada.Exceptions;
 with Ada.Text_IO;
 with HTTP.Client;
+with Logging;
 with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
 with Agent.Context;      use Agent.Context;
@@ -130,10 +132,12 @@ is
          end;
       end;
    exception
-      when others =>
+      when E : others =>
          --  Cannot propagate Ada exceptions through C (libcurl) stack frames.
          --  Discard malformed SSE chunk; streaming continues on next callback.
          Metrics.Increment ("provider_stream_errors", "openai");
+         Logging.Warning ("openai: SSE parse error ("
+           & Exception_Name (E) & "): " & Exception_Message (E));
    end OpenAI_SSE_Parse;
 
    function Create (Cfg : Provider_Config) return OpenAI_Provider is

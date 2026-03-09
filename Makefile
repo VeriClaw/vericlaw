@@ -38,41 +38,80 @@ COSIGN_KEY ?=
 COSIGN_EXTRA_ARGS ?=
 EDGE_SIZE_BINDER_MODE ?= minimal
 EDGE_SPEED_BINDER_MODE ?= portable
+VALIDATION_BACKEND ?= auto
 
 EMBED_VERSION := ./scripts/embed_version.sh
 
 .PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite coverage docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test gateway-integration-test version-info ci-image ci-image-push
+.PHONY: build-host prove-host test test-host validate validate-host validate-container container-test container-validate toolchain-status
 
-build:
-	$(TOOLCHAIN_CHECK)
+toolchain-status:
+	@$(TOOLCHAIN_CHECK) --mode auto || true
+
+build-host:
+	$(TOOLCHAIN_CHECK) --mode build
 	$(EMBED_VERSION)
 	gprbuild -P $(PROJECT)
 
-prove:
-	$(TOOLCHAIN_CHECK)
+build: build-host
+
+prove-host:
+	$(TOOLCHAIN_CHECK) --mode full
 	gnatprove -P $(PROJECT) --level=2
 
-check:
-	$(TOOLCHAIN_CHECK)
-	$(EMBED_VERSION)
-	gprbuild -P $(PROJECT)
-	gnatprove -P $(PROJECT) --level=2
-	$(AUDIT_LOG_CHECK)
-	$(SERVICE_SUPERVISOR_CHECK)
+prove: prove-host
+
+test-host:
+	$(MAKE) runtime-tests
+	$(MAKE) secrets-test
+	$(MAKE) service-supervisor-check
+
+test: test-host
+
+validate-host:
+	@echo "==> build"
+	$(MAKE) build-host
+	@echo "==> proof"
+	$(MAKE) prove-host
+	@echo "==> tests"
+	$(MAKE) test-host
+
+validate-container:
+	$(CONTAINER_RUNNER) validate
+
+validate:
+	@if [ "$(VALIDATION_BACKEND)" = "host" ]; then \
+	  echo "validate: using host toolchain"; \
+	  $(MAKE) validate-host; \
+	elif [ "$(VALIDATION_BACKEND)" = "container" ]; then \
+	  echo "validate: using container toolchain"; \
+	  $(MAKE) validate-container; \
+	elif $(TOOLCHAIN_CHECK) --mode full --quiet; then \
+	  echo "validate: using host toolchain"; \
+	  $(MAKE) validate-host; \
+	elif $(TOOLCHAIN_CHECK) --mode container --quiet; then \
+	  echo "validate: using container toolchain"; \
+	  $(MAKE) validate-container; \
+	else \
+	  $(TOOLCHAIN_CHECK) --mode auto; \
+	  exit 1; \
+	fi
+
+check: validate
 
 version-info:
 	$(EMBED_VERSION)
 
 small-build:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P $(PROJECT) -XBUILD_PROFILE=small
 
 edge-size-build:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P $(PROJECT) -XBUILD_PROFILE=edge-size -XBINDER_MODE=$(EDGE_SIZE_BINDER_MODE)
 
 edge-speed-build:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P $(PROJECT) -XBUILD_PROFILE=edge-speed -XBINDER_MODE=$(EDGE_SPEED_BINDER_MODE)
 
 measure-small:
@@ -85,23 +124,23 @@ measure-edge-speed:
 	$(SMALL_METRICS) --profile edge-speed --binder-mode $(EDGE_SPEED_BINDER_MODE)
 
 secrets-test:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P tests/security_secrets_tests.gpr
 	./tests/security_secrets_tests
 	$(AUDIT_LOG_CHECK)
 
 config-test:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P tests/config_loader_test.gpr
 	./tests/config_loader_test
 
 context-test:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P tests/agent_context_test.gpr
 	./tests/agent_context_test
 
 memory-test:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	@if gprls gnatcoll_sqlite 2>/dev/null | grep -q gnatcoll_sqlite.gpr; then \
 	  gprbuild -P tests/memory_sqlite_test.gpr && ./tests/memory_sqlite_test; \
 	else \
@@ -109,19 +148,19 @@ memory-test:
 	fi
 
 tools-test:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P tests/agent_tools_test.gpr
 	./tests/agent_tools_test
 
 runtime-tests: config-test context-test memory-test tools-test
 
 fuzz-suite:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P tests/competitive_v2_security_regression_fuzz_suite.gpr
 	./tests/competitive_v2_security_regression_fuzz_suite
 
 coverage:
-	$(TOOLCHAIN_CHECK)
+	$(TOOLCHAIN_CHECK) --mode build
 	gprbuild -P $(PROJECT) -XBUILD_PROFILE=coverage
 	gprbuild -P tests/config_loader_test.gpr -XBUILD_PROFILE=coverage
 	gprbuild -P tests/agent_context_test.gpr -XBUILD_PROFILE=coverage
@@ -193,8 +232,13 @@ container-build:
 container-prove:
 	$(CONTAINER_RUNNER) prove
 
-container-check:
-	$(CONTAINER_RUNNER) check
+container-test:
+	$(CONTAINER_RUNNER) test
+
+container-validate:
+	$(CONTAINER_RUNNER) validate
+
+container-check: container-validate
 
 container-measure-small:
 	$(CONTAINER_RUNNER) measure-small
