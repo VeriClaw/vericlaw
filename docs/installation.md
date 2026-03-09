@@ -149,6 +149,34 @@ vericlaw update-check    # See if a newer release is available
 
 ---
 
+## Next Steps
+
+Once VeriClaw is installed and verified:
+
+1. **Run the setup wizard** to configure your LLM provider and channel:
+   ```bash
+   vericlaw onboard
+   ```
+   The wizard walks you through provider selection, API key entry, and channel
+   setup with colored confirmations at each step.
+
+2. **Check your setup** with the built-in doctor:
+   ```bash
+   vericlaw doctor
+   ```
+   Shows colored ✓/✗ health checks for config, database, bridges, and security.
+
+3. **Start chatting**:
+   ```bash
+   vericlaw chat
+   ```
+
+> [!TIP]
+> See [getting-started.md](getting-started.md) for the full walkthrough with
+> examples of what you'll see at each step.
+
+---
+
 ## Supported Platforms
 
 | OS | Architecture | Binary | Homebrew | Scoop | DEB | RPM | install.sh |

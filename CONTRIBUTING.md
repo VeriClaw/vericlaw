@@ -70,6 +70,7 @@ Use the existing bridge pattern as your reference:
 - **Node.js sidecar**: copy `wa-bridge/index.js` as a template. The sidecar must expose a local HTTP REST API and forward messages to/from the Ada runtime.
 - **Ada channel package**: copy `src/channels/channels-whatsapp.adb` as a template. The package must call `Channels_Security.Check_Allowlist` and `Gateway_Auth.Validate_Token` before processing any message.
 - **SPARK adapter spec**: add a `channels-adapters-<name>.ads` in `src/` following the pattern in `channels-adapters-slack.ads`.
+- **`src/terminal/`** — Terminal styling layer (`Terminal.Style`): ANSI colors, ASCII banner, themed output functions. All user-facing CLI output goes through this module so `--no-color` works consistently.
 - Add channel setup documentation in `docs/setup/<name>.md`.
 - Register the sidecar port in `docker-compose.yml`.
 

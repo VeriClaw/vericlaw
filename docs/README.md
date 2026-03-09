@@ -6,6 +6,7 @@
 
 | Guide | Description |
 |-------|-------------|
+| [Getting Started](getting-started.md) | Install → onboard → doctor → chat walkthrough |
 | [Installation](installation.md) | All installation methods (native, Docker, Homebrew, Scoop) |
 | [Project README](../README.md) | Project overview and quick-start basics |
 

@@ -12,7 +12,7 @@
 > builds are functional. APIs and config formats may still change. See the
 > [changelog](CHANGELOG.md) for what shipped recently.
 
-VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent runtime in its class with **formally verified security policies**. It runs your AI assistant across 9 messaging channels simultaneously, routes between 5 LLM provider families with automatic failover, and ships as a single static binary under 6 MB.
+VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent runtime in its class with **formally verified security policies**. It runs your AI assistant across 9 messaging channels simultaneously, routes between 5 LLM provider families with automatic failover, and ships as a single static binary under 6 MB with a **polished, colored CLI**.
 
 ---
 
@@ -89,6 +89,10 @@ vericlaw gateway                        # start all channels concurrently
 vericlaw doctor                         # verify config and connectivity
 ```
 
+> [!TIP]
+> All CLI output is **color-coded** — green ✓ for success, red ✗ for failures.
+> Use `--no-color` to disable.
+
 ---
 
 ## Features
@@ -114,12 +118,16 @@ SQLite with FTS5 full-text search + persistent facts store. Vector RAG memory vi
 ### 📊 Operations
 Prometheus `/metrics` endpoint. `SIGHUP` hot config reload. Structured JSON logging with request correlation. Live gateway REST API. Operator web console. Systemd / launchd / Windows service packaging. → [docs/operations.md](docs/operations.md)
 
+### 🎨 CLI Experience
+Styled terminal output with ANSI colors and ASCII banner. Colored health checks (`✓`/`✗`) in `doctor`. Interactive chat with `/help`, `/clear`, `/memory`, `/edit` commands. Gateway boot panel shows all-at-a-glance system status. First-run welcome guides new users to `vericlaw onboard`. Respects `--no-color` and `NO_COLOR` convention.
+
 ---
 
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
+| **[Getting Started](docs/getting-started.md)** | Install → onboard → doctor → chat journey |
 | **[Installation](docs/installation.md)** | All install methods — source, Docker, Homebrew, Scoop, RPi |
 | **[Providers](docs/providers.md)** | LLM provider setup and multi-provider routing |
 | **[Channels](docs/channels.md)** | Channel configuration and multi-user gateway |
@@ -148,7 +156,8 @@ vericlaw/
 │   ├── providers/               #   5 LLM provider families
 │   ├── memory/                  #   SQLite WAL + FTS5 + vector RAG
 │   ├── http/                    #   libcurl + gateway server
-│   └── tools/                   #   13 built-in tools
+│   ├── tools/                   #   13 built-in tools
+│   └── terminal/                #   ANSI colors, banner, themed output
 ├── wa-bridge/                    # WhatsApp sidecar (Baileys)
 ├── slack-bridge/                 # Slack Socket Mode sidecar
 ├── discord-bridge/               # Discord Gateway sidecar
@@ -195,18 +204,26 @@ native x86_64 measurements for fairness.
 ## CLI Commands
 
 ```bash
-vericlaw onboard                        # interactive setup wizard
-vericlaw chat                           # interactive CLI with streaming
+# Getting started
+vericlaw onboard                        # interactive setup wizard (colored output)
+vericlaw doctor                         # health checks with ✓/✗ status indicators
+vericlaw config validate                # validate config file
+
+# Runtime
+vericlaw chat                           # interactive CLI (type /help for commands)
 vericlaw agent "..."                    # one-shot agent mode
-vericlaw gateway                        # run all enabled channels
-vericlaw config validate                # validate config
-vericlaw doctor                         # check config, health, connectivity
-vericlaw status [--json]                # runtime status
+vericlaw gateway                        # multi-channel daemon (shows boot panel)
+
+# Utilities
+vericlaw status [--json]                # runtime status summary
 vericlaw export --session <id> --format md|json
 vericlaw channels login --channel whatsapp
-vericlaw version                        # print version
+vericlaw update-check                   # check for new releases
+vericlaw version                        # version info
 vericlaw help                           # show all commands
 ```
+
+> Use `--no-color` or set `NO_COLOR=1` to disable ANSI colors (auto-detected for pipes).
 
 ---
 

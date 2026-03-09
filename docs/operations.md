@@ -259,3 +259,25 @@ docker compose up vericlaw   # gateway only
 make docker-runtime-bundle-check
 docker compose -f docker-compose.secure.yml up --build
 ```
+
+### Environment Variables
+
+VeriClaw ships a `.env.example` file with all Docker Compose environment variables.
+Use it as a starting template:
+
+```bash
+cp .env.example .env
+# Edit .env to fill in your API keys, channel tokens, and bridge credentials
+docker compose up
+```
+
+The file includes commented defaults for:
+- Channel tokens (Discord, Slack, Telegram)
+- Email bridge credentials (IMAP/SMTP)
+- IRC and Matrix configuration
+- MCP bridge URL
+- Logging level
+
+> [!TIP]
+> Required variables use `?` syntax in `docker-compose.yml` — Docker will error
+> with a clear message if they're missing.

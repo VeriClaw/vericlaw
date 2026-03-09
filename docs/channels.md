@@ -166,4 +166,19 @@ vericlaw gateway
 docker compose up
 ```
 
+When the gateway starts, VeriClaw displays a **boot status panel** showing
+your runtime configuration at a glance:
+
+```
+  model     gpt-4o (OPENAI)
+  memory    ok (sqlite)
+  channels  cli, telegram, whatsapp (3 active)
+  gateway   http://127.0.0.1:8787
+
+  Press Ctrl+C to stop.
+```
+
+All output is color-coded: green for healthy systems, yellow for warnings,
+red for failures. Use `--no-color` to disable.
+
 The gateway multiplexes all channels in one process. Each channel's lifecycle is managed by its own Ada task, so a crash in one channel does not affect the others.

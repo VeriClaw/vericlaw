@@ -33,6 +33,13 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - `--skip-build` flag for `scripts/measure_small_infra.sh`
 - Competitive benchmark reports: scorecard, regression gate, direct comparison, and final summary artifacts
 - Comprehensive documentation suite: `docs/installation.md`, `docs/providers.md`, `docs/channels.md`, `docs/tools.md`, `docs/operations.md`, `docs/testing.md`, `docs/README.md` navigation hub
+- Terminal styling package (`Terminal.Style`): ANSI colors, ASCII art banner, themed output — pure Ada, zero external dependencies
+- Colored CLI output: styled prompts, health check symbols (✓/✗), branded headings, semantic colors (success/error/warn)
+- `/help` slash command in interactive chat showing all available commands (`/clear`, `/memory`, `/edit N`, `exit`)
+- Gateway boot status panel: shows model, memory, active channels, and bind URL on startup
+- Onboard wizard confirmations: step-by-step ✓ markers and "Next steps" guidance (doctor → chat → gateway)
+- First-run welcome banner with automatic `vericlaw onboard` suggestion when no config exists
+- `.env.example` file documenting all Docker Compose environment variables
 
 ### Changed
 - `memory.compact_at_pct` defaults to `0` (disabled); set to `80` for long-running sessions to keep context within bounds without losing assistant turns
@@ -40,6 +47,9 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - README.md overhauled: slimmed from 1,081 to ~450 lines; detailed reference content moved to `docs/`
 - Binary size reduced to 5.31 MB (from 6.84 MB) via parenthesis aggregate syntax and compiler switch tuning
 - Container image size: 37.1 MB (smallest among competitors)
+- Help text reorganized into categories (Getting Started / Runtime / Utilities / Flags) with styled output
+- Error messages now show red ✗ prefix with actionable recovery suggestions
+- SPARK assertion failure message replaced with user-friendly explanation
 
 ### Fixed
 - Ada compile errors: added `use type Agent.Context.Role` for operator visibility in `http-server.adb`
