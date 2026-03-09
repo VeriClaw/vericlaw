@@ -1,0 +1,29 @@
+{
+  "deployment_maturity": {
+    "multi_arch_image": true,
+    "signed_artifacts": true,
+    "smoke_matrix": 5
+  },
+  "evidence": {
+    "channels_source": "../openclaw/README.md",
+    "security_source": "../openclaw/README.md",
+    "tools_source": "../openclaw/README.md"
+  },
+  "feature_parity": {
+    "channels": 13,
+    "providers": 10,
+    "tools": 12
+  },
+  "performance": {},
+  "project": "openclaw",
+  "scorecard_version": 2,
+  "security_non_regression": {
+    "allow_public_bind_default": false,
+    "deny_private_and_local_egress": false,
+    "empty_allowlist_denies_all": false,
+    "encrypt_secrets_at_rest": false,
+    "require_pairing_default": true,
+    "workspace_scope_default": true
+  },
+  "snapshot_id": "competitive-v2-openclaw-source-scorecard"
+}

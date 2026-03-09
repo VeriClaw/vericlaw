@@ -73,6 +73,7 @@ mkdir -p "$(dirname "${scorecard_report_path}")"
 mkdir -p "$(dirname "${regression_report_path}")"
 
 python3 - "${report_path}" "${baseline_path}" "${direct_report_path}" "${scorecard_report_path}" "${regression_report_path}" <<'PY'
+from datetime import datetime, timezone
 import json
 import pathlib
 import sys
@@ -98,12 +99,25 @@ metric_map = {
     "binary_size_mb": "binary_size_mb",
     "container_size_mb": "container_size_mb",
 }
-regression_metric_ids = (
+default_regression_metric_ids = (
     "startup_ms",
     "idle_rss_mb",
     "dispatch_latency_p95_ms",
     "throughput_ops_per_sec",
 )
+baseline_metric_ids = []
+for metric in baseline.get("edge_performance_metrics", []):
+    if isinstance(metric, dict):
+        metric_id = metric.get("id")
+        if isinstance(metric_id, str) and metric_id:
+            baseline_metric_ids.append(metric_id)
+baseline_metric_id_set = set(baseline_metric_ids)
+regression_metric_ids = tuple(
+    metric_id
+    for metric_id in default_regression_metric_ids
+    if not baseline_metric_id_set or metric_id in baseline_metric_id_set
+)
+generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def is_number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool)
@@ -542,7 +556,8 @@ def run_v2_checks():
         }
 
     scorecard_snapshot = {
-        "generated_at": report.get("generated_at"),
+        "generated_at": generated_at,
+        "benchmark_report_generated_at": report.get("generated_at"),
         "baseline_id": baseline.get("baseline_id"),
         "primary_project": baseline.get("primary_project", "vericlaw"),
         "pass_fail_projects": pass_fail_projects,
@@ -582,7 +597,8 @@ if scorecard_snapshot is not None:
     print(f"competitive-scorecard: {scorecard_report_path}")
 
 regression_payload = {
-    "generated_at": report.get("generated_at"),
+    "generated_at": generated_at,
+    "benchmark_report_generated_at": report.get("generated_at"),
     "baseline_id": baseline.get("baseline_id"),
     "baseline_version": baseline_version,
     "status": "fail" if errors else "pass",

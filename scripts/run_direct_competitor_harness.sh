@@ -240,6 +240,32 @@ def normalize_project(project, payload, scenario, source_path, peer_mode):
     return normalized
 
 
+pass_fail_projects = baseline.get("pass_fail_compared_projects")
+if not isinstance(pass_fail_projects, list):
+    pass_fail_projects = baseline.get("compared_projects", [])
+if not isinstance(pass_fail_projects, list):
+    pass_fail_projects = []
+pass_fail_projects = [project for project in pass_fail_projects if isinstance(project, str) and project]
+
+scorecard_only_projects = baseline.get("scorecard_only_projects", [])
+if not isinstance(scorecard_only_projects, list):
+    scorecard_only_projects = []
+scorecard_only_projects = [project for project in scorecard_only_projects if isinstance(project, str) and project]
+scorecard_only_set = set(scorecard_only_projects)
+pass_fail_projects = [project for project in pass_fail_projects if project not in scorecard_only_set]
+
+if not pass_fail_projects and not scorecard_only_projects:
+    pass_fail_projects = ["zeroclaw", "nullclaw"]
+    scorecard_only_projects = ["openclaw"]
+    scorecard_only_set = set(scorecard_only_projects)
+
+
+def peer_mode_for(project):
+    if project in scorecard_only_set:
+        return "scorecard_only"
+    return "pass_fail"
+
+
 vericlaw_payload = vericlaw_report.get("vericlaw", {})
 scenario = {
     "benchmark_runs": vericlaw_payload.get("benchmark_runs"),
@@ -269,7 +295,7 @@ vericlaw_project = normalize_project(
     vericlaw_payload,
     scenario,
     vericlaw_report_path,
-    "pass_fail",
+    peer_mode_for("vericlaw"),
 )
 if vericlaw_feature:
     vericlaw_project["feature_parity"] = vericlaw_feature
@@ -278,9 +304,9 @@ if vericlaw_deployment:
 if vericlaw_security:
     vericlaw_project["security_non_regression"] = vericlaw_security
 
-zeroclaw_project = normalize_project("zeroclaw", zeroclaw_payload, scenario, zeroclaw_path, "pass_fail")
-nullclaw_project = normalize_project("nullclaw", nullclaw_payload, scenario, nullclaw_path, "pass_fail")
-openclaw_project = normalize_project("openclaw", openclaw_payload, scenario, openclaw_path, "scorecard_only")
+zeroclaw_project = normalize_project("zeroclaw", zeroclaw_payload, scenario, zeroclaw_path, peer_mode_for("zeroclaw"))
+nullclaw_project = normalize_project("nullclaw", nullclaw_payload, scenario, nullclaw_path, peer_mode_for("nullclaw"))
+openclaw_project = normalize_project("openclaw", openclaw_payload, scenario, openclaw_path, peer_mode_for("openclaw"))
 openclaw_project["performance"] = {}
 
 comparisons = {}
@@ -306,7 +332,7 @@ report = {
     "schema_version": "competitive-v2-direct-harness",
     "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "performance_peers": ["vericlaw", "zeroclaw", "nullclaw"],
-    "scorecard_only_projects": ["openclaw"],
+    "scorecard_only_projects": scorecard_only_projects,
     "scenario": scenario,
     "projects": {
         "vericlaw": vericlaw_project,

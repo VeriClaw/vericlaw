@@ -11,6 +11,7 @@ on:
 env:
   ALIRE_VERSION: '2.0.2'
   GNAT_VERSION: 'gnat_native=14.2.1'
+  TRIVY_VERSION: '0.69.3'
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -34,9 +35,7 @@ jobs:
 
       - name: Build with blessed target
         run: |
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          ./scripts/check_toolchain.sh --mode build
-          make build
+          alr exec -- make build-host
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
@@ -66,8 +65,7 @@ jobs:
 
       - name: Ensure proof toolchain is available
         run: |
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          if ./scripts/check_toolchain.sh --mode full --quiet; then
+          if alr exec -- ./scripts/check_toolchain.sh --mode full --quiet; then
             exit 0
           fi
           proof_package="none"
@@ -89,8 +87,7 @@ jobs:
             echo "::error::No gnatprove/spark2014 package is available on this runner."
             exit 1
           fi
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          if ! ./scripts/check_toolchain.sh --mode full; then
+          if ! alr exec -- ./scripts/check_toolchain.sh --mode full; then
             echo "::error::Proof gate is required, but the installed ${proof_package} toolchain is still unavailable."
             exit 1
           fi
@@ -98,15 +95,13 @@ jobs:
       - name: SPARK level 2 proofs (push/PR)
         if: github.event_name != 'schedule'
         run: |
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          make prove
+          alr exec -- make prove-host
 
       - name: SPARK level 4 proofs (weekly)
         if: github.event_name == 'schedule'
         run: |
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          ./scripts/check_toolchain.sh --mode full
-          gnatprove -P vericlaw.gpr \
+          alr exec -- ./scripts/check_toolchain.sh --mode full
+          alr exec -- gnatprove -P vericlaw.gpr \
             --level=4 \
             --prover=all \
             --timeout=300 \
@@ -138,13 +133,7 @@ jobs:
 
       - name: Run GNATcheck
         run: |
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          if command -v gnatcheck &>/dev/null; then
-            gnatcheck -P vericlaw.gpr \
-              -rules -from=config/gnatcheck.rules
-          else
-            echo "::warning::gnatcheck not available — skipping static analysis"
-          fi
+          alr exec -- bash -lc 'if command -v gnatcheck >/dev/null 2>&1; then gnatcheck -P vericlaw.gpr -rules -from=config/gnatcheck.rules; else echo "::warning::gnatcheck not available — skipping static analysis"; fi'
 
   # ---------------------------------------------------------------------------
   # Stage 4: Unit Tests
@@ -168,9 +157,7 @@ jobs:
 
       - name: Run blessed test target
         run: |
-          eval "$(alr printenv 2>/dev/null | grep '^export ')"
-          ./scripts/check_toolchain.sh --mode build
-          make test
+          alr exec -- make test-host
 
       - name: Upload test results
         if: always()
@@ -282,21 +269,18 @@ jobs:
           fetch-depth: 0
 
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.34.1
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL'
-          exit-code: '1'
+        continue-on-error: true
+        run: |
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+          sudo install /tmp/trivy /usr/local/bin/trivy
+          trivy --version
+          trivy fs --severity CRITICAL --exit-code 1 --no-progress .
 
       - name: Trivy HIGH scan (informational)
-        uses: aquasecurity/trivy-action@0.34.1
         continue-on-error: true
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'HIGH'
-          exit-code: '0'
+        run: |
+          trivy fs --severity HIGH --exit-code 0 --no-progress .
 
       - name: git-secrets scan
         run: |

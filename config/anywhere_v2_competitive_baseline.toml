@@ -1,0 +1,109 @@
+version = 2
+baseline_id = "competitive-v2-anywhere"
+primary_project = "vericlaw"
+pass_fail_compared_projects = []
+scorecard_only_projects = ["zeroclaw", "nullclaw", "openclaw"]
+
+[competitor_scorecards]
+zeroclaw = "config/competitive_scorecards/zeroclaw_v2_scorecard.json"
+nullclaw = "config/competitive_scorecards/nullclaw_v2_scorecard.json"
+openclaw = "config/competitive_scorecards/openclaw_v2_scorecard.json"
+
+[[edge_performance_metrics]]
+id = "startup_ms"
+direction = "lower_is_better"
+vericlaw_slo_max = 120
+
+[[edge_performance_metrics]]
+id = "dispatch_latency_p95_ms"
+direction = "lower_is_better"
+vericlaw_slo_max = 75
+
+[[edge_performance_metrics]]
+id = "throughput_ops_per_sec"
+direction = "higher_is_better"
+vericlaw_slo_min = 15
+
+[[edge_performance_metrics]]
+id = "binary_size_mb"
+direction = "lower_is_better"
+vericlaw_slo_max = 8
+
+[vericlaw_scorecard.feature_parity]
+channels = 9
+providers = 5
+tools = 12
+
+[[feature_parity_counters]]
+id = "channels"
+vericlaw_min = 9
+
+[[feature_parity_counters]]
+id = "providers"
+vericlaw_min = 5
+
+[[feature_parity_counters]]
+id = "tools"
+vericlaw_min = 12
+
+[vericlaw_scorecard.deployment_maturity]
+multi_arch_image = true
+signed_artifacts = false
+smoke_matrix = 3
+
+[[deployment_maturity_checks]]
+id = "multi_arch_image"
+check_type = "bool"
+vericlaw_expected = true
+
+[[deployment_maturity_checks]]
+id = "signed_artifacts"
+check_type = "bool"
+vericlaw_expected = false
+
+[[deployment_maturity_checks]]
+id = "smoke_matrix"
+check_type = "count"
+vericlaw_min = 3
+
+[vericlaw_scorecard.security_non_regression]
+allow_public_bind_default = false
+deny_private_and_local_egress = true
+empty_allowlist_denies_all = true
+encrypt_secrets_at_rest = true
+require_pairing_default = true
+workspace_scope_default = true
+
+[security_defaults_source]
+path = "config/security_slos.toml"
+table = "security"
+
+[[security_non_regression_checks]]
+id = "empty_allowlist_denies_all"
+source_key = "empty_allowlist_denies_all"
+expected = true
+
+[[security_non_regression_checks]]
+id = "pairing_required_by_default"
+source_key = "pairing_required_by_default"
+expected = true
+
+[[security_non_regression_checks]]
+id = "public_bind_default"
+source_key = "public_bind_default"
+expected = false
+
+[[security_non_regression_checks]]
+id = "workspace_scope_default"
+source_key = "workspace_scope_default"
+expected = true
+
+[[security_non_regression_checks]]
+id = "egress_private_network_blocked"
+source_key = "egress_private_network_blocked"
+expected = true
+
+[[security_non_regression_checks]]
+id = "encrypt_secrets_at_rest"
+source_key = "encrypt_secrets_at_rest"
+expected = true

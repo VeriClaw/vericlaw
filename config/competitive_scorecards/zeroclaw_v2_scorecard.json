@@ -1,0 +1,33 @@
+{
+  "deployment_maturity": {
+    "multi_arch_image": true,
+    "signed_artifacts": true,
+    "smoke_matrix": 5
+  },
+  "evidence": {
+    "channels_source": "../zeroclaw/README.md",
+    "performance_source": "../zeroclaw/README.md",
+    "tools_source": "../zeroclaw/README.md"
+  },
+  "feature_parity": {
+    "channels": 17,
+    "providers": 12,
+    "tools": 11
+  },
+  "performance": {
+    "container_size_mb": 42.0,
+    "dispatch_latency_p95_ms": 13.4,
+    "throughput_ops_per_sec": 80.0
+  },
+  "project": "zeroclaw",
+  "scorecard_version": 2,
+  "security_non_regression": {
+    "allow_public_bind_default": false,
+    "deny_private_and_local_egress": true,
+    "empty_allowlist_denies_all": true,
+    "encrypt_secrets_at_rest": true,
+    "require_pairing_default": true,
+    "workspace_scope_default": true
+  },
+  "snapshot_id": "competitive-v2-zeroclaw-source-scorecard"
+}

@@ -8,6 +8,7 @@ RELEASE_CHECK := ./scripts/release_check.sh
 COMPETITIVE_BENCH := ./scripts/run_competitive_benchmarks.sh
 COMPETITIVE_MULTIARCH_BENCH := ./scripts/run_competitive_multiarch_benchmarks.sh
 DIRECT_COMPETITIVE_HARNESS := ./scripts/run_direct_competitor_harness.sh
+COMPETITIVE_FINAL_REPORT := ./scripts/generate_competitive_v2_final_report.sh
 CONFORMANCE_RUNNER := ./scripts/run_cross_repo_conformance_suite.sh
 SMOKE_RUNNER := ./scripts/run_cross_platform_smoke_suite.sh
 ATTESTATION := ./scripts/generate_attestation_artifacts.sh
@@ -42,7 +43,7 @@ VALIDATION_BACKEND ?= auto
 
 EMBED_VERSION := ./scripts/embed_version.sh
 
-.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite coverage docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test gateway-integration-test version-info ci-image ci-image-push
+.PHONY: build prove check small-build edge-size-build edge-speed-build measure-small measure-edge-size measure-edge-speed secrets-test conformance-suite cross-platform-smoke release-check competitive-bench competitive-bench-multiarch competitive-direct-harness competitive-baseline-check competitive-final-report competitive-regression-gate ingest-nullclaw ingest-zeroclaw supply-chain-attest supply-chain-verify vulnerability-license-gate release-candidate-gate competitive-v2-release-readiness-gate bootstrap bootstrap-validate container-build container-prove container-check container-measure-small container-secrets-test container-conformance-suite image-build-local image-build-multiarch docker-runtime-bundle-check service-supervisor-check audit-log-check operator-console-check operator-console-serve gateway-doctor-check runtime-tests config-test context-test memory-test tools-test fuzz-suite coverage docker-dev-image docker-dev-build docker-dev-shell docker-dev-prove docker-dev-test docker-dev-integration-test gateway-integration-test version-info ci-image ci-image-push
 .PHONY: build-host prove-host test test-host validate validate-host validate-container container-test container-validate toolchain-status
 
 toolchain-status:
@@ -199,6 +200,9 @@ competitive-direct-harness:
 
 competitive-baseline-check:
 	$(COMPETITIVE_BASELINE_CHECK)
+
+competitive-final-report:
+	$(COMPETITIVE_FINAL_REPORT)
 
 competitive-regression-gate:
 	$(COMPETITIVE_BENCH)

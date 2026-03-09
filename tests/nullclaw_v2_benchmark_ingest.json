@@ -4,6 +4,11 @@
     "signed_artifacts": true,
     "smoke_matrix": 4
   },
+  "evidence": {
+    "channels_source": "../nullclaw/README.md",
+    "performance_source": "../nullclaw/README.md",
+    "tools_source": "../nullclaw/README.md"
+  },
   "execution_feasibility": {
     "benchmark_execution_feasible": false,
     "reason": "zig 0.15.2 unavailable on host; ingested best-available local artifacts",
@@ -11,11 +16,11 @@
     "zig_version": null
   },
   "feature_parity": {
-    "channels": 3,
-    "providers": 3,
-    "tools": 10
+    "channels": 17,
+    "providers": 22,
+    "tools": 18
   },
-  "generated_at": "2026-02-26T18:32:52Z",
+  "generated_at": "2026-03-09T15:41:31Z",
   "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
   "ingest_source": {
     "nullclaw_ci_workflow": "/Users/eugene/apps/demo/claw-mania/nullclaw/.github/workflows/ci.yml",
@@ -39,6 +44,7 @@
     "throughput_ops_per_sec": "fallback from source scorecard due missing local benchmark artifact"
   },
   "project": "nullclaw",
+  "scorecard_version": 2,
   "security_non_regression": {
     "allow_public_bind_default": false,
     "deny_private_and_local_egress": true,
