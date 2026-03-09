@@ -57,7 +57,9 @@ is
       Put_Line ("  " & Terminal.Style.Cmd ("config validate") & "                  Validate config without starting");
       New_Line;
       Put_Line (Terminal.Style.Heading ("Runtime"));
-      Put_Line ("  " & Terminal.Style.Cmd ("chat") & "                             Interactive CLI chat " & Terminal.Style.Muted ("(default)"));
+      Put_Line ("  " & Terminal.Style.Cmd ("chat")
+                & "                             Interactive CLI chat "
+                & Terminal.Style.Muted ("(default)"));
       Put_Line ("  " & Terminal.Style.Cmd ("agent <message>") & "                  Send a message and print reply");
       Put_Line ("  " & Terminal.Style.Cmd ("gateway") & "                          Run HTTP gateway + all channels");
       New_Line;
@@ -78,8 +80,11 @@ is
 
    procedure Cmd_Version is
    begin
-      Put_Line (Terminal.Style.Brand ("vericlaw") & " " & Build_Info.Version &
-                Terminal.Style.Muted (" (" & Build_Info.Git_Commit & " " & Build_Info.Build_Date & " " & Build_Info.Target_Triple & ")"));
+      Put_Line (Terminal.Style.Brand ("vericlaw") & " "
+                & Build_Info.Version & Terminal.Style.Muted
+                  (" (" & Build_Info.Git_Commit & " "
+                   & Build_Info.Build_Date & " "
+                   & Build_Info.Target_Triple & ")"));
       Put_Line (Terminal.Style.Muted ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw"));
    end Cmd_Version;
 
@@ -177,7 +182,9 @@ is
    begin
       Result := Config.Loader.Load;
       if not Result.Success then
-         Put_Line (Terminal.Style.Cross & " " & Terminal.Style.Error ("Config error:") & " " & To_String (Result.Error));
+         Put_Line (Terminal.Style.Cross & " "
+                  & Terminal.Style.Error ("Config error:")
+                  & " " & To_String (Result.Error));
          --  If config doesn't exist, write a starter and bail with guidance.
          if not Ada.Directories.Exists (Default_Path) then
             Config.Loader.Write_Default_Config (Default_Path);
@@ -189,7 +196,9 @@ is
             Put_Line ("  " & Terminal.Style.Check & " Created starter config: " & Terminal.Style.Muted (Default_Path));
             New_Line;
             Put_Line ("  " & Terminal.Style.Heading ("Get started:"));
-            Put_Line ("    " & Terminal.Style.Cmd ("vericlaw onboard") & "   — interactive setup wizard " & Terminal.Style.Muted ("(recommended)"));
+            Put_Line ("    " & Terminal.Style.Cmd ("vericlaw onboard")
+                     & "   — interactive setup wizard "
+                     & Terminal.Style.Muted ("(recommended)"));
             Put_Line ("    " & Terminal.Style.Muted ("or edit " & Default_Path & " manually"));
          end if;
          Set_Exit_Status (Failure);
@@ -800,16 +809,43 @@ begin
                   end if;
                end loop;
 
-               Put_Line ("  " & Terminal.Style.Muted ("model") & "     "
-                 & Terminal.Style.Success (To_String (CR.Config.Providers (1).Model))
-                 & Terminal.Style.Muted (" (" & Config.Schema.Provider_Kind'Image (CR.Config.Providers (1).Kind) & ")"));
-               Put_Line ("  " & Terminal.Style.Muted ("memory") & "    "
-                 & (if Mem_OK then Terminal.Style.Success ("ok") & Terminal.Style.Muted (" (sqlite)") else Terminal.Style.Warn ("unavailable")));
+               declare
+                  Kind_Img : constant String :=
+                    Config.Schema.Provider_Kind'Image
+                      (CR.Config.Providers (1).Kind);
+               begin
+                  Put_Line ("  " & Terminal.Style.Muted ("model")
+                    & "     "
+                    & Terminal.Style.Success
+                        (To_String (CR.Config.Providers (1).Model))
+                    & Terminal.Style.Muted
+                        (" (" & Kind_Img & ")"));
+               end;
+               Put_Line ("  " & Terminal.Style.Muted ("memory")
+                 & "    "
+                 & (if Mem_OK
+                    then Terminal.Style.Success ("ok")
+                       & Terminal.Style.Muted (" (sqlite)")
+                    else Terminal.Style.Warn ("unavailable")));
                Put_Line ("  " & Terminal.Style.Muted ("channels") & "  "
                  & Terminal.Style.Success (To_String (Chan_List))
                  & Terminal.Style.Muted (" (" & Natural'Image (Active_Count) & " active)"));
-               Put_Line ("  " & Terminal.Style.Muted ("gateway") & "   "
-                 & Terminal.Style.Brand ("http://" & To_String (CR.Config.Gateway.Bind_Host) & ":" & Ada.Strings.Fixed.Trim (Positive'Image (CR.Config.Gateway.Bind_Port), Ada.Strings.Left)));
+               declare
+                  Port_Img : constant String :=
+                    Ada.Strings.Fixed.Trim
+                      (Positive'Image
+                         (CR.Config.Gateway.Bind_Port),
+                       Ada.Strings.Left);
+                  GW_URL : constant String :=
+                    "http://"
+                    & To_String (CR.Config.Gateway.Bind_Host)
+                    & ":" & Port_Img;
+               begin
+                  Put_Line ("  "
+                    & Terminal.Style.Muted ("gateway")
+                    & "   "
+                    & Terminal.Style.Brand (GW_URL));
+               end;
                New_Line;
                Put_Line ("  " & Terminal.Style.Muted ("Press Ctrl+C to stop."));
                New_Line;
