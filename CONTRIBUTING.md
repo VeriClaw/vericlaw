@@ -6,7 +6,7 @@ Thank you for contributing. Please read this guide before opening a PR.
 
 ## Coding Standards
 
-VeriClaw follows the conventions in [`ada-coding-practices.md`](ada-coding-practices.md). Key points:
+VeriClaw follows the conventions in [`docs/ada-coding-practices.md`](docs/ada-coding-practices.md). Key points:
 
 ### Naming Conventions
 

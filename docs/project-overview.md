@@ -299,3 +299,47 @@ The remaining work is now a strategic backlog rather than unfinished execution f
 ## Summary
 
 VeriClaw is already a credible, differentiated agent platform: a native multi-channel AI runtime with a formally verified security core, solid operational foundations, and a growing product surface. Its next phase is less about fixing fundamentals and more about finishing the last-mile product work that competitors are strongest at: streaming polish, extension execution, distribution maturity, and broader ecosystem reach.
+
+---
+
+## Capability Inventory (v0.2.0)
+
+This is the authoritative list of implemented, tested capabilities as of the current release.
+
+**CLI commands:** `onboard`, `chat`, `agent "..."`, `gateway`, `config validate`, `doctor`, `status [--json]`, `export --session <id> --format md|json`, `channels login --channel whatsapp`, `version`, `help`
+
+**LLM providers (5):** OpenAI, Anthropic, Azure AI Foundry, Google Gemini, any OpenAI-compatible (Groq, Ollama, OpenRouter, LiteLLM)
+
+**Channels (9, concurrently in gateway mode):** CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix
+
+**Built-in tools (13) + unlimited via MCP:** `file`, `shell`, `web_fetch`, `brave_search`, `git_operations`, `cron_add/list/remove`, `spawn`, `delegate`, `browser_browse`, `browser_screenshot`, `memory_search`, `plugin_registry`
+
+**Runtime and infrastructure:**
+- Streaming SSE token output (OpenAI + Anthropic providers)
+- Runtime provider routing: stateful primary/failover/long-tail loop
+- Multi-provider failover with automatic fallback
+- Session expiry auto-prune (configurable, default 30 days)
+- Prometheus `/metrics` endpoint — per-channel, per-provider, per-tool counters
+- `SIGHUP` hot config reload — update tokens/allowlists without restart
+- Multi-user gateway (operator vs guest memory isolation)
+- Parallel tool execution (Ada task pool; ordering-sensitive tools run sequentially)
+- Cron heartbeat background task
+- Syslog audit forwarding (POSIX `openlog`/`syslog`)
+- Structured JSON logging (`VERICLAW_LOG_LEVEL` filter, `req_id` correlation)
+- Live gateway REST API (`/api/status`, `/api/channels`, `/api/metrics/summary`, `POST /api/chat`, `POST /api/chat/stream`)
+- Operator web console with security defaults, channel view, metric totals, and browser chat panel
+- Vector RAG memory via `sqlite-vec` + OpenAI `text-embedding-3-small` (or Ollama `nomic-embed-text`)
+- Browser/screenshot tool via Puppeteer headless Chromium
+- SPARK Silver proofs on security core (GNATprove `--level=2`)
+- SQLite WAL mode for safe concurrent multi-channel writes
+- Context compaction for long sessions (`memory.compact_at_pct`)
+- Config input validation for control characters and unsafe URI schemes
+- Multimodal image input via `[IMAGE:path]` / `[IMAGE:url]` markers
+- Multi-agent orchestration: role-based delegation with SPARK-proved depth limit
+- Conversation branching: `/edit N`, `/branch`, `/branch switch <id>` REPL commands
+- Database schema versioning with sequential migration framework
+- Plugin loader with SPARK-verified capability policy
+- OpenTelemetry OTLP tracing (optional, zero overhead when off)
+- LLM cost tracking per provider with token budget enforcement
+- Multi-arch Docker publish scaffolding (GHCR, activation pending)
+- Systemd / launchd / Windows service packaging

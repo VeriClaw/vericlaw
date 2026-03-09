@@ -29,10 +29,29 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Operator console local browser chat panel: sends to `POST /api/chat/stream`, renders full reply on completion
 - Operator console transport status pill ("Buffered SSE chat") — honest label noting current AWS gateway buffers the full reply before flushing; UI is ready for chunked SSE once the gateway is updated
 - Config input validation: `Validate_String_Field` and `Validate_URL_Field` helpers in `Config.Loader` reject control characters and unsafe URI schemes
+- `STYLE_CHECKS` build toggle in `vericlaw.gpr` — `alr build -- -XSTYLE_CHECKS=off` to skip strict style checks during benchmarks
+- `--skip-build` flag for `scripts/measure_small_infra.sh`
+- Competitive benchmark reports: scorecard, regression gate, direct comparison, and final summary artifacts
+- Comprehensive documentation suite: `docs/installation.md`, `docs/providers.md`, `docs/channels.md`, `docs/tools.md`, `docs/operations.md`, `docs/testing.md`, `docs/README.md` navigation hub
 
 ### Changed
 - `memory.compact_at_pct` defaults to `0` (disabled); set to `80` for long-running sessions to keep context within bounds without losing assistant turns
 - Operator console description updated to reflect live chat capability
+- README.md overhauled: slimmed from 1,081 to ~450 lines; detailed reference content moved to `docs/`
+- Binary size reduced to 5.31 MB (from 6.84 MB) via parenthesis aggregate syntax and compiler switch tuning
+- Container image size: 37.1 MB (smallest among competitors)
+
+### Fixed
+- Ada compile errors: added `use type Agent.Context.Role` for operator visibility in `http-server.adb`
+- 26 indentation/style violations across `http-server.adb`, `config-loader.adb`, `agent-tools.adb`, `gateway-provider-routing.adb`
+- Ada 2022 bracket aggregate syntax `[...]` converted to parenthesis `(...)` for GNAT Community 2021 compatibility (20+ files)
+- JSON parser API: replaced non-existent `Get_Array_String` with `Value_To_Array`/`Array_Item` pattern in `plugins-loader.adb`
+- Memory SQLite body default expression conformance with spec
+- Redundant range check warning in `gateway-provider-runtime_routing.adb`
+- Added `-gnatwJ` to suppress GNAT 14 obsolescent aggregate warnings (cross-compiler compatibility)
+
+### Security
+- All security modules maintain SPARK Silver proof status after syntax changes
 
 ## [0.1.0] - 2026-03-01
 
