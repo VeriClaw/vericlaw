@@ -965,25 +965,25 @@ begin
          Cmd_Doctor (CR.Config);
 
       elsif C = "status" then
-          --  Show runtime status: version, active channels, provider, memory, cost.
-          declare
-             Active          : Natural := 0;
-             Tok_In          : constant Natural := Metrics.Cost.Total_Tokens_In;
-             Tok_Out         : constant Natural := Metrics.Cost.Total_Tokens_Out;
-             Tot_Cost        : constant Float   := Metrics.Cost.Total_Cost;
-             Cost_Img        : constant String  := Float'Image (Tot_Cost);
-             Registry        : constant Plugins.Loader.Plugin_Registry :=
-               Plugins.Loader.Runtime_Registry;
-             Plugins_Loaded  : constant Natural :=
-               Plugins.Loader.Loaded_Plugin_Count (Registry);
-             Plugins_Denied  : constant Natural :=
-               Plugins.Loader.Denied_Plugin_Count (Registry);
-             Plugins_Errors  : constant Natural :=
-               Plugins.Loader.Error_Plugin_Count (Registry);
-          begin
-             for I in 1 .. CR.Config.Num_Channels loop
-                if CR.Config.Channels (I).Enabled then
-                   Active := Active + 1;
+         --  Show runtime status: version, active channels, provider, memory, cost.
+         declare
+            Active         : Natural := 0;
+            Tok_In         : constant Natural := Metrics.Cost.Total_Tokens_In;
+            Tok_Out        : constant Natural := Metrics.Cost.Total_Tokens_Out;
+            Tot_Cost       : constant Float   := Metrics.Cost.Total_Cost;
+            Cost_Img       : constant String  := Float'Image (Tot_Cost);
+            Registry       : constant Plugins.Loader.Plugin_Registry :=
+              Plugins.Loader.Runtime_Registry;
+            Plugins_Loaded : constant Natural :=
+              Plugins.Loader.Loaded_Plugin_Count (Registry);
+            Plugins_Denied : constant Natural :=
+              Plugins.Loader.Denied_Plugin_Count (Registry);
+            Plugins_Errors : constant Natural :=
+              Plugins.Loader.Error_Plugin_Count (Registry);
+         begin
+            for I in 1 .. CR.Config.Num_Channels loop
+               if CR.Config.Channels (I).Enabled then
+                  Active := Active + 1;
                end if;
             end loop;
             if JSON_Mode then
@@ -999,66 +999,66 @@ begin
                      (To_String (CR.Config.Providers (1).Model))
                  & ",""memory"":"
                  & (if Mem_OK then """ok""" else """unavailable""")
-                  & ",""gateway"":"
-                  & Config.JSON_Parser.Escape_JSON_String
-                      (To_String (CR.Config.Gateway.Bind_Host) & ":"
-                       & Positive'Image (CR.Config.Gateway.Bind_Port))
-                  & ",""extensibility_model"":"
-                  & Config.JSON_Parser.Escape_JSON_String
-                      (Plugins.Loader.Extensibility_Model)
-                  & ",""local_plugin_mode"":"
-                  & Config.JSON_Parser.Escape_JSON_String
-                      (Plugins.Loader.Local_Plugin_Mode)
-                  & ",""local_plugin_load_policy"":"
-                  & Config.JSON_Parser.Escape_JSON_String
-                      (Plugins.Loader.Local_Load_Policy)
-                  & ",""mcp_bridge_configured"":"
-                  & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
-                     then "true"
-                     else "false")
-                  & ",""plugins_discovered"":" & Natural'Image (Registry.Num_Loaded)
-                  & ",""plugins_loaded"":" & Natural'Image (Plugins_Loaded)
-                  & ",""plugins_denied"":" & Natural'Image (Plugins_Denied)
-                  & ",""plugins_errors"":" & Natural'Image (Plugins_Errors)
-                  & ",""tokens_in"":" & Natural'Image (Tok_In)
-                  & ",""tokens_out"":" & Natural'Image (Tok_Out)
-                  & ",""total_cost"":" & Cost_Img
-                  & "}");
+                 & ",""gateway"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (To_String (CR.Config.Gateway.Bind_Host) & ":"
+                      & Positive'Image (CR.Config.Gateway.Bind_Port))
+                 & ",""extensibility_model"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (Plugins.Loader.Extensibility_Model)
+                 & ",""local_plugin_mode"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (Plugins.Loader.Local_Plugin_Mode)
+                 & ",""local_plugin_load_policy"":"
+                 & Config.JSON_Parser.Escape_JSON_String
+                     (Plugins.Loader.Local_Load_Policy)
+                 & ",""mcp_bridge_configured"":"
+                 & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
+                    then "true"
+                    else "false")
+                 & ",""plugins_discovered"":" & Natural'Image (Registry.Num_Loaded)
+                 & ",""plugins_loaded"":" & Natural'Image (Plugins_Loaded)
+                 & ",""plugins_denied"":" & Natural'Image (Plugins_Denied)
+                 & ",""plugins_errors"":" & Natural'Image (Plugins_Errors)
+                 & ",""tokens_in"":" & Natural'Image (Tok_In)
+                 & ",""tokens_out"":" & Natural'Image (Tok_Out)
+                 & ",""total_cost"":" & Cost_Img
+                 & "}");
             else
                Put_Line ("VeriClaw status");
                Put_Line ("  version   : " & Build_Info.Version);
                Put_Line ("  channels  : "
-                          & Natural'Image (Active) & " active /"
-                          & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels) & " configured");
+                         & Natural'Image (Active) & " active /"
+                         & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels) & " configured");
                Put_Line ("  provider  : "
-                          & Config.Schema.Provider_Kind'Image
-                              (CR.Config.Providers (1).Kind));
+                         & Config.Schema.Provider_Kind'Image
+                             (CR.Config.Providers (1).Kind));
                Put_Line ("  model     : "
-                          & To_String (CR.Config.Providers (1).Model));
-                Put_Line ("  memory    : "
-                           & (if Mem_OK then "ok" else "unavailable"));
-                Put_Line ("  gateway   : "
-                           & To_String (CR.Config.Gateway.Bind_Host) & ":"
-                           & Positive'Image (CR.Config.Gateway.Bind_Port));
-                Put_Line ("  ext model : MCP-first ("
-                           & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
-                              then "MCP bridge configured"
-                              else "MCP bridge disabled")
-                           & ")");
-                Put_Line ("  load rule : " & Plugins.Loader.Local_Load_Policy);
-                Put_Line ("  plugins   : "
-                           & Natural'Image (Registry.Num_Loaded)
-                           & " discovered /"
-                           & Natural'Image (Plugins_Loaded)
-                           & " loaded /"
-                           & Natural'Image (Plugins_Denied)
-                           & " denied /"
-                           & Natural'Image (Plugins_Errors)
-                           & " errors (manifest discovery only)");
-                Put_Line ("  tokens    : "
-                           & Natural'Image (Tok_In) & " in /"
-                           & Natural'Image (Tok_Out) & " out");
-                Put_Line ("  cost      : $" & Cost_Img);
+                         & To_String (CR.Config.Providers (1).Model));
+               Put_Line ("  memory    : "
+                         & (if Mem_OK then "ok" else "unavailable"));
+               Put_Line ("  gateway   : "
+                         & To_String (CR.Config.Gateway.Bind_Host) & ":"
+                         & Positive'Image (CR.Config.Gateway.Bind_Port));
+               Put_Line ("  ext model : MCP-first ("
+                         & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
+                            then "MCP bridge configured"
+                            else "MCP bridge disabled")
+                         & ")");
+               Put_Line ("  load rule : " & Plugins.Loader.Local_Load_Policy);
+               Put_Line ("  plugins   : "
+                         & Natural'Image (Registry.Num_Loaded)
+                         & " discovered /"
+                         & Natural'Image (Plugins_Loaded)
+                         & " loaded /"
+                         & Natural'Image (Plugins_Denied)
+                         & " denied /"
+                         & Natural'Image (Plugins_Errors)
+                         & " errors (manifest discovery only)");
+               Put_Line ("  tokens    : "
+                         & Natural'Image (Tok_In) & " in /"
+                         & Natural'Image (Tok_Out) & " out");
+               Put_Line ("  cost      : $" & Cost_Img);
             end if;
          end;
 
