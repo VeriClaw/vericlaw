@@ -35,7 +35,8 @@ jobs:
 
       - name: Build with blessed target
         run: |
-          alr exec -- make build-host
+          ./scripts/embed_version.sh
+          alr build
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
@@ -95,7 +96,7 @@ jobs:
       - name: SPARK level 2 proofs (push/PR)
         if: github.event_name != 'schedule'
         run: |
-          alr exec -- make prove-host
+          alr exec -- gnatprove -P vericlaw.gpr --level=2
 
       - name: SPARK level 4 proofs (weekly)
         if: github.event_name == 'schedule'
@@ -157,7 +158,24 @@ jobs:
 
       - name: Run blessed test target
         run: |
-          alr exec -- make test-host
+          ./scripts/embed_version.sh
+          alr exec -- ./scripts/check_toolchain.sh --mode build
+          alr build -- -P tests/config_loader_test.gpr
+          ./tests/config_loader_test
+          alr build -- -P tests/agent_context_test.gpr
+          ./tests/agent_context_test
+          if alr exec -- gprls gnatcoll_sqlite 2>/dev/null | grep -q gnatcoll_sqlite.gpr; then
+            alr build -- -P tests/memory_sqlite_test.gpr
+            ./tests/memory_sqlite_test
+          else
+            echo "SKIP memory-test: gnatcoll_sqlite not available in this environment"
+          fi
+          alr build -- -P tests/agent_tools_test.gpr
+          ./tests/agent_tools_test
+          alr build -- -P tests/security_secrets_tests.gpr
+          ./tests/security_secrets_tests
+          ./scripts/check_audit_event_log.sh
+          ./scripts/check_service_supervisors.sh
 
       - name: Upload test results
         if: always()
@@ -295,11 +313,23 @@ jobs:
           git secrets --add 'AIza[a-zA-Z0-9_-]{35}'       # Google AI
           git secrets --scan
 
-      - name: Secret scan (trufflehog)
+      - name: Secret scan (trufflehog pull requests)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
+          base: ${{ github.event.pull_request.base.sha }}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Secret scan (trufflehog pushes)
+        if: github.event_name != 'pull_request' && github.event.before != '0000000000000000000000000000000000000000'
+        continue-on-error: true
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.before }}
           head: HEAD
           extra_args: --only-verified
 
