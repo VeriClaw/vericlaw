@@ -2,7 +2,6 @@ with Ada.Numerics.Discrete_Random;
 with Ada.Strings.Fixed;
 with Ada.Directories;
 with Ada.Streams.Stream_IO;
-with Config.Schema;
 
 package body Agent.Context
   with SPARK_Mode => Off

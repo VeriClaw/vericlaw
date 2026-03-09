@@ -1,5 +1,3 @@
-with Gateway.Provider.Credentials;
-with Gateway.Provider.Registry;
 
 package body Gateway.Provider.Routing with SPARK_Mode is
    use type Gateway.Provider.Credentials.Credential_Decision;

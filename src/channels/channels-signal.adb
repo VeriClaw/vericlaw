@@ -2,7 +2,7 @@ with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-with Config.Schema;      use Config.Schema;
+use Config.Schema;
 with Config.Loader;
 with Config.Reload;
 with Agent.Context;

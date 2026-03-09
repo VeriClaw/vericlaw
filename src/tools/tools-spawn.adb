@@ -1,6 +1,6 @@
 with Ada.Strings.Unbounded;
 with Agent.Context;
-with Config.Schema;            use Config.Schema;
+use Config.Schema;
 with Providers.Interface_Pkg;  use Providers.Interface_Pkg;
 with Providers.OpenAI;
 with Providers.Anthropic;

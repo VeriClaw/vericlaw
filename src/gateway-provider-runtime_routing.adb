@@ -1,6 +1,4 @@
-with Config.Schema;
 with Gateway.Provider.Registry;
-with Gateway.Provider.Routing;
 
 package body Gateway.Provider.Runtime_Routing
   with SPARK_Mode => Off

@@ -1,4 +1,3 @@
-with Security.Defaults;
 
 package body Security.Migration with SPARK_Mode is
    function Migrate_Gateway_Bind_Host

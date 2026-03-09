@@ -4,11 +4,10 @@
 
 with Interfaces.C;            use Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;
-with System;                   use System;
+use System;
 with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
-with Config.Schema;
 with Observability.Tracing;
 
 package body Memory.SQLite

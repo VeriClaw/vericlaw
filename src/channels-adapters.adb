@@ -1,4 +1,3 @@
-with Channels.Security;
 
 package body Channels.Adapters with SPARK_Mode is
    function To_Inbound_Decision

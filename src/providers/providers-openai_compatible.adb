@@ -1,7 +1,7 @@
 with Ada.Exceptions;     use Ada.Exceptions;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-with Agent.Context;      use Agent.Context;
+use Agent.Context;
 with Ada.Text_IO;
 with Logging;
 

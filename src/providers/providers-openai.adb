@@ -4,7 +4,7 @@ with HTTP.Client;
 with Logging;
 with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
-with Agent.Context;      use Agent.Context;
+use Agent.Context;
 
 package body Providers.OpenAI
   with SPARK_Mode => Off

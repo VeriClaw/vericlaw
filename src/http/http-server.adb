@@ -10,7 +10,7 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Build_Info;
 with Config.JSON_Parser;    use Config.JSON_Parser;
-with Config.Schema;         use Config.Schema;
+use Config.Schema;
 with Channels.Telegram;
 with Channels.Signal;
 with Agent.Context;

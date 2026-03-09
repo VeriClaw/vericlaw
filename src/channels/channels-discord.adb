@@ -2,7 +2,7 @@ with Logging;
 with Ada.Exceptions; use Ada.Exceptions;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-with Config.Schema;      use Config.Schema;
+use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
