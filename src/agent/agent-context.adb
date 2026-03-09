@@ -2,6 +2,7 @@ with Ada.Numerics.Discrete_Random;
 with Ada.Strings.Fixed;
 with Ada.Directories;
 with Ada.Streams.Stream_IO;
+with Config.Schema;
 
 package body Agent.Context
   with SPARK_Mode => Off
@@ -27,8 +28,10 @@ is
      (Conv    : in out Conversation;
       Role    : Agent.Context.Role;
       Content : String;
-      Name    : String := "")
+      Name    : String := "";
+      Limit   : Config.Schema.History_Limit := Max_Stored_Messages)
    is
+      History_Cap : constant Positive := Positive (Limit);
       New_Msg : constant Message :=
         (Role       => Role,
          Content    => To_Unbounded_String (Content),
@@ -36,19 +39,47 @@ is
          Images     => [others => (others => Null_Unbounded_String)],
          Num_Images => 0);
    begin
-      if Conv.Msg_Count < Max_History then
+      if Conv.Msg_Count > Natural (History_Cap) then
+          if Conv.Messages (1).Role = System_Role and then History_Cap > 1 then
+             declare
+                Keep_Count : constant Natural := Natural (History_Cap) - 1;
+                Source_First : constant Positive :=
+                  Positive (Conv.Msg_Count - Keep_Count + 1);
+             begin
+                pragma Assert (Source_First <= Conv.Msg_Count);
+                Conv.Messages (2 .. History_Cap) :=
+                  Conv.Messages (Source_First .. Conv.Msg_Count);
+             end;
+          else
+             declare
+                Keep_Count : constant Natural := Natural (History_Cap);
+                Source_First : constant Positive :=
+                  Positive (Conv.Msg_Count - Keep_Count + 1);
+             begin
+                pragma Assert (Source_First <= Conv.Msg_Count);
+                Conv.Messages (1 .. History_Cap) :=
+                  Conv.Messages (Source_First .. Conv.Msg_Count);
+             end;
+          end if;
+         Conv.Msg_Count := Natural (History_Cap);
+      end if;
+
+      if Conv.Msg_Count < Natural (History_Cap) then
          Conv.Msg_Count := Conv.Msg_Count + 1;
          Conv.Messages (Conv.Msg_Count) := New_Msg;
-      else
-         --  Evict oldest non-system message (shift left from index 2).
-         --  Index 1 is always the system prompt if present; preserve it.
+       else
+          --  Evict oldest non-system message (shift left from index 2).
+          --  Index 1 is always the system prompt if present; preserve it.
          declare
             Start : constant Positive :=
-              (if Conv.Messages (1).Role = System_Role then 2 else 1);
+               (if Conv.Messages (1).Role = System_Role then 2 else 1);
          begin
-            Conv.Messages (Start .. Max_History - 1) :=
-              Conv.Messages (Start + 1 .. Max_History);
-            Conv.Messages (Max_History) := New_Msg;
+            if Start < History_Cap then
+               Conv.Messages (Start .. History_Cap - 1) :=
+                 Conv.Messages (Start + 1 .. History_Cap);
+            end if;
+            Conv.Messages (History_Cap) := New_Msg;
+            Conv.Msg_Count := Natural (History_Cap);
          end;
       end if;
    end Append_Message;
@@ -78,6 +109,81 @@ is
       end loop;
       return Total;
    end Token_Estimate;
+
+   --  Internal helper: return at most Max characters from S.
+   function Head (S : String; Max : Natural) return String is
+   begin
+      if S'Length <= Max then
+         return S;
+      end if;
+      --  Reserve 3 chars for the ellipsis; guard against tiny Max values.
+      if Max <= 3 then
+         return "...";
+      end if;
+      return S (S'First .. S'First + Max - 4) & "...";
+   end Head;
+
+   procedure Compact_Oldest_Turn (Conv : in out Conversation) is
+      Start : Positive;
+   begin
+      if Conv.Msg_Count < 2 then
+         return;
+      end if;
+
+      Start :=
+        (if Conv.Messages (1).Role = System_Role then 2 else 1);
+
+      if Start > Conv.Msg_Count then
+         return;
+      end if;
+
+      if Start + 1 <= Conv.Msg_Count
+        and then Conv.Messages (Start).Role = User
+        and then Conv.Messages (Start + 1).Role = Assistant
+      then
+         --  Pair found: replace with a single summary message, then left-shift.
+         declare
+            U_Head : constant String :=
+              Head (To_String (Conv.Messages (Start).Content),
+                    Compact_Summary_Len);
+            A_Head : constant String :=
+              Head (To_String (Conv.Messages (Start + 1).Content),
+                    Compact_Summary_Len);
+            Summary : constant String :=
+              "[Earlier: " & U_Head & " → " & A_Head & "]";
+         begin
+            Conv.Messages (Start) :=
+              (Role       => User,
+               Content    => To_Unbounded_String (Summary),
+               Name       => Null_Unbounded_String,
+               Images     => [others => (others => Null_Unbounded_String)],
+               Num_Images => 0);
+            --  Remove the assistant message at Start+1 by left-shifting.
+            for I in Start + 1 .. Conv.Msg_Count - 1 loop
+               Conv.Messages (I) := Conv.Messages (I + 1);
+            end loop;
+            Conv.Msg_Count := Conv.Msg_Count - 1;
+         end;
+      else
+         --  No pair: just drop the oldest non-system message.
+         for I in Start .. Conv.Msg_Count - 1 loop
+            Conv.Messages (I) := Conv.Messages (I + 1);
+         end loop;
+         Conv.Msg_Count := Conv.Msg_Count - 1;
+      end if;
+   end Compact_Oldest_Turn;
+
+   function Compaction_Needed
+     (Conv          : Conversation;
+      Threshold_Pct : Config.Schema.Compact_Pct;
+      Limit         : Config.Schema.History_Limit) return Boolean
+   is
+   begin
+      if Threshold_Pct = 0 then
+         return False;
+      end if;
+      return Conv.Msg_Count * 100 / Natural (Limit) >= Natural (Threshold_Pct);
+   end Compaction_Needed;
 
    --  Base64 encoding table
    B64 : constant String :=

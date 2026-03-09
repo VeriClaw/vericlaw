@@ -215,12 +215,15 @@ is
                Set_Unbounded_String
                  (Result.Config.Tools.Brave_API_Key,
                   Get_String (T, "brave_api_key"));
-               Set_Unbounded_String
-                 (Result.Config.Tools.MCP_Bridge_URL,
-                  Get_String (T, "mcp_bridge_url"));
-               Set_Unbounded_String
-                 (Result.Config.Tools.Browser_Bridge_URL,
-                  Get_String (T, "browser_bridge_url"));
+                Set_Unbounded_String
+                  (Result.Config.Tools.MCP_Bridge_URL,
+                   Get_String (T, "mcp_bridge_url"));
+                Set_Unbounded_String
+                  (Result.Config.Tools.Plugin_Directory,
+                   Get_String (T, "plugin_directory"));
+                Set_Unbounded_String
+                  (Result.Config.Tools.Browser_Bridge_URL,
+                   Get_String (T, "browser_bridge_url"));
                Result.Config.Tools.RAG_Enabled :=
                  Get_Boolean (T, "rag_enabled", False);
                Set_Unbounded_String
@@ -236,13 +239,28 @@ is
             begin
                Set_Unbounded_String
                  (Result.Config.Memory.DB_Path, Get_String (M, "db_path"));
-               declare
-                  MH : constant Integer := Get_Integer (M, "max_history", 50);
-               begin
-                  if MH > 0 then
-                     Result.Config.Memory.Max_History := Positive (MH);
-                  end if;
-               end;
+                declare
+                   MH : constant Integer :=
+                     Get_Integer (M, "max_history",
+                                  Integer (Default_Max_History));
+                begin
+                   if Has_Key (M, "max_history") then
+                      if MH in Integer (History_Limit'First)
+                        .. Integer (History_Limit'Last)
+                      then
+                         Result.Config.Memory.Max_History :=
+                           History_Limit (MH);
+                      else
+                         Set_Unbounded_String
+                           (Result.Error,
+                            "Memory max_history must be between"
+                            & Integer'Image (Integer (History_Limit'First))
+                            & " and"
+                            & Integer'Image (Integer (History_Limit'Last)));
+                         return Result;
+                      end if;
+                   end if;
+                end;
                Result.Config.Memory.Facts_Enabled :=
                  Get_Boolean (M, "facts_enabled", True);
                declare
@@ -251,6 +269,15 @@ is
                begin
                   if Rd >= 0 then
                      Result.Config.Memory.Session_Retention_Days := Natural (Rd);
+                  end if;
+               end;
+               declare
+                  Cp : constant Integer :=
+                    Get_Integer (M, "compact_at_pct", 0);
+               begin
+                  if Cp in 0 .. 100 then
+                     Result.Config.Memory.Compact_At_Pct :=
+                       Config.Schema.Compact_Pct (Cp);
                   end if;
                end;
             end;
@@ -347,17 +374,26 @@ is
          return Result;
       end if;
 
-      if Length (Result.Config.Observability.OTLP_Endpoint) > 0
-        and then not Is_Safe_URL
-          (To_String (Result.Config.Observability.OTLP_Endpoint))
+       if Length (Result.Config.Observability.OTLP_Endpoint) > 0
+         and then not Is_Safe_URL
+           (To_String (Result.Config.Observability.OTLP_Endpoint))
       then
          Set_Unbounded_String
            (Result.Error, "Observability otlp_endpoint is invalid");
          return Result;
       end if;
 
-      Result.Success := True;
-      return Result;
+       if Length (Result.Config.Tools.Plugin_Directory) > 0
+         and then not Is_Safe_String
+           (To_String (Result.Config.Tools.Plugin_Directory))
+       then
+          Set_Unbounded_String
+            (Result.Error, "Tools plugin_directory contains invalid characters");
+          return Result;
+       end if;
+
+       Result.Success := True;
+       return Result;
    end Parse_Config;
 
    function Load_From (Path : String) return Load_Result is

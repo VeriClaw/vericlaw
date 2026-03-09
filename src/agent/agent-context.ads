@@ -4,6 +4,7 @@
 --  that act on messages are still SPARK-verified in Security.Policy.
 
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Config.Schema;
 
 package Agent.Context
   with SPARK_Mode => Off
@@ -28,7 +29,8 @@ is
       Num_Images : Natural := 0;
    end record;
 
-   Max_History : constant := 200;  -- hard cap on in-memory messages
+   Max_Stored_Messages : constant Config.Schema.History_Limit :=
+     Config.Schema.History_Limit'Last;
 
    type Message_Array is array (Positive range <>) of Message;
 
@@ -36,7 +38,7 @@ is
    type Conversation is record
       Session_ID : Unbounded_String;  -- unique per CLI session / channel message thread
       Channel    : Unbounded_String;  -- "cli", "telegram:<chat_id>", etc.
-      Messages   : Message_Array (1 .. Max_History);
+      Messages   : Message_Array (1 .. Max_Stored_Messages);
       Msg_Count  : Natural := 0;
    end record;
 
@@ -47,15 +49,44 @@ is
      (Conv    : in out Conversation;
       Role    : Agent.Context.Role;
       Content : String;
-      Name    : String := "");
-   --  Appends a message, evicting oldest non-system messages if at capacity.
+      Name    : String := "";
+      Limit   : Config.Schema.History_Limit := Max_Stored_Messages);
+   --  Appends a message, evicting oldest non-system messages if at the
+   --  requested history limit.
 
    function Last_User_Message (Conv : Conversation) return String;
    function Format_For_Provider (Conv : Conversation) return Message_Array;
    --  Returns messages trimmed to the current context window.
 
    function Token_Estimate (Conv : Conversation) return Natural;
-   --  Rough token estimate: total chars / 4.
+   --  Rough token estimate: total chars / 4 plus per-message overhead.
+
+   --  -----------------------------------------------------------------------
+   --  Context compaction
+   --  -----------------------------------------------------------------------
+
+   Compact_Summary_Len : constant := 80;
+   --  Maximum characters kept from each side (user / assistant) when building
+   --  the one-line compaction stub.
+
+   procedure Compact_Oldest_Turn (Conv : in out Conversation);
+   --  Reduces Msg_Count by 1 by collapsing the oldest non-system message pair.
+   --  Rule (deterministic):
+   --    Let start := 2 when msg[1] is System_Role, else 1.
+   --    If start+1 <= Msg_Count and messages at (start, start+1) are a
+   --    User+Assistant pair, replace them with a single User message:
+   --      "[Earlier: <user_head> → <assistant_head>]"
+   --    where each head is at most Compact_Summary_Len characters.
+   --    Otherwise drop the message at start.
+   --    Shifts all following messages left; decrements Msg_Count by 1.
+   --  Does nothing when Msg_Count < 2.
+
+   function Compaction_Needed
+     (Conv          : Conversation;
+      Threshold_Pct : Config.Schema.Compact_Pct;
+      Limit         : Config.Schema.History_Limit) return Boolean;
+   --  Returns True when Threshold_Pct > 0 and
+   --    Conv.Msg_Count * 100 / Natural (Limit) >= Threshold_Pct.
 
    --  Parse [IMAGE:path] and [IMAGE:url] markers from user input.
    --  Returns the text with markers removed and images populated.

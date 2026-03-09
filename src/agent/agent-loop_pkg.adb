@@ -7,6 +7,8 @@ with Providers.Gemini;
 with Config.Schema;                  use Config.Schema;
 with Agent.Context;                  use Agent.Context;
 with Agent.Tools;
+with Gateway.Provider.Routing;
+with Gateway.Provider.Runtime_Routing;
 with Metrics;
 with Metrics.Cost;
 with Observability.Tracing;
@@ -59,6 +61,95 @@ is
       end case;
    end Provider_Label;
 
+   function Call_Provider_With_Routing
+     (Conv         : Agent.Context.Conversation;
+      Cfg          : Agent_Config;
+      Tool_Schemas : Tool_Schema_Array;
+      Num_Tools    : Natural;
+      Streaming    : Boolean) return Provider_Response
+   is
+      Routing_State : Gateway.Provider.Runtime_Routing.Attempt_State;
+      Attempt       : Gateway.Provider.Runtime_Routing.Provider_Attempt;
+      Response      : Provider_Response;
+      First_Error   : Unbounded_String;
+      Error_Set     : Boolean := False;
+   begin
+      --  Runtime config is still ordered. Route providers[1], [2], and [3..]
+      --  through the existing primary/failover/long-tail tiers.
+      loop
+         Attempt :=
+           Gateway.Provider.Runtime_Routing.Next_Attempt
+             (Cfg   => Cfg,
+              State => Routing_State);
+         exit when not Attempt.Allowed;
+
+         declare
+            Attempt_Index : constant Config.Schema.Provider_Index :=
+              Config.Schema.Provider_Index (Attempt.Config_Index);
+            Attempt_Cfg   : constant Provider_Config := Cfg.Providers (Attempt_Index);
+            Provider      : constant access Provider_Type'Class :=
+              Make_Provider (Attempt_Cfg);
+            Prov_Label    : constant String := Provider_Label (Attempt_Cfg.Kind);
+            LLM_Span      : constant Observability.Tracing.Span_ID :=
+              Observability.Tracing.Start_Span ("llm.chat");
+            Prov_Resp     : Provider_Response;
+            Use_Streaming : constant Boolean :=
+              Streaming
+              and then Attempt_Index = Config.Schema.Provider_Index'First
+              and then not Gateway.Provider.Routing.Route_Uses_Fallback
+                (Attempt.Route);
+         begin
+            if Use_Streaming then
+               Prov_Resp := Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
+            else
+               Prov_Resp := Provider.Chat (Conv, Tool_Schemas, Num_Tools);
+            end if;
+
+            Observability.Tracing.Set_Attribute
+              (LLM_Span, "provider", Prov_Label);
+            Observability.Tracing.Set_Attribute
+              (LLM_Span, "model", To_String (Attempt_Cfg.Model));
+            if not Prov_Resp.Success then
+               Observability.Tracing.Set_Error
+                 (LLM_Span, To_String (Prov_Resp.Error));
+            end if;
+            Observability.Tracing.End_Span (LLM_Span);
+
+            Metrics.Increment ("provider_calls_total", Prov_Label);
+
+            if Prov_Resp.Success then
+               Metrics.Cost.Record_Usage
+                 (Prov_Label,
+                  Prov_Resp.Input_Tokens,
+                  Prov_Resp.Output_Tokens,
+                  Attempt_Cfg.Price_Per_1K_Input,
+                  Attempt_Cfg.Price_Per_1K_Output);
+               return Prov_Resp;
+            end if;
+
+            Metrics.Increment ("provider_errors_total", Prov_Label);
+            if not Error_Set then
+               First_Error := Prov_Resp.Error;
+               Error_Set := True;
+            end if;
+
+            Gateway.Provider.Runtime_Routing.Mark_Failed
+              (State   => Routing_State,
+               Attempt => Attempt);
+         end;
+      end loop;
+
+      Response.Success := False;
+      if Error_Set then
+         Response.Error := First_Error;
+      else
+         Response.Error :=
+           To_Unbounded_String
+             ("No provider available. Add a provider to config.");
+      end if;
+      return Response;
+   end Call_Provider_With_Routing;
+
    --  Inject system prompt at the start of the conversation if not present.
    procedure Ensure_System_Prompt
      (Conv : in out Agent.Context.Conversation;
@@ -71,9 +162,26 @@ is
          Agent.Context.Append_Message
            (Conv,
             Agent.Context.System_Role,
-            To_String (Cfg.System_Prompt));
+            To_String (Cfg.System_Prompt),
+            Limit => Cfg.Memory.Max_History);
       end if;
    end Ensure_System_Prompt;
+
+   --  Compact the oldest turn when the configured fill-ratio threshold is met.
+   --  Called once per user turn, before appending the new user message.
+   procedure Compact_If_Needed
+     (Conv : in out Agent.Context.Conversation;
+      Cfg  : Agent_Config)
+   is
+   begin
+      if Agent.Context.Compaction_Needed
+           (Conv          => Conv,
+            Threshold_Pct => Cfg.Memory.Compact_At_Pct,
+            Limit         => Cfg.Memory.Max_History)
+      then
+         Agent.Context.Compact_Oldest_Turn (Conv);
+      end if;
+   end Compact_If_Needed;
 
    function Process_Message
      (User_Input : String;
@@ -81,11 +189,10 @@ is
       Cfg        : Agent_Config;
       Mem        : Memory.SQLite.Memory_Handle) return Agent_Reply
    is
-      Reply         : Agent_Reply;
-      Provider      : access Provider_Type'Class;
-      Tool_Schemas  : Tool_Schema_Array (1 .. Max_Schema_Count);
-      Num_Tools     : Natural := 0;
-      Round         : Natural := 0;
+      Reply        : Agent_Reply;
+      Tool_Schemas : Tool_Schema_Array (1 .. Max_Schema_Count);
+      Num_Tools    : Natural := 0;
+      Round        : Natural := 0;
    begin
       --  Guard: need at least one provider (defensive; Provider_Index >= 1).
       pragma Warnings (Off, "condition can only be");
@@ -97,6 +204,7 @@ is
       pragma Warnings (On, "condition can only be");
 
       Ensure_System_Prompt (Conv, Cfg);
+      Compact_If_Needed (Conv, Cfg);
 
       --  Parse [IMAGE:path] markers from user input.
       declare
@@ -107,7 +215,8 @@ is
          Agent.Context.Parse_Image_Markers
            (User_Input, Text_Part, Imgs, Num_Imgs);
          Agent.Context.Append_Message
-           (Conv, Agent.Context.User, To_String (Text_Part));
+           (Conv, Agent.Context.User, To_String (Text_Part),
+            Limit => Cfg.Memory.Max_History);
          --  Attach parsed images to the just-appended message.
          if Num_Imgs > 0 and Conv.Msg_Count > 0 then
             Conv.Messages (Conv.Msg_Count).Images := Imgs;
@@ -128,75 +237,24 @@ is
       --  Build tool schemas from config.
       Agent.Tools.Build_Schemas (Cfg.Tools, Tool_Schemas, Num_Tools);
 
-      --  Create primary provider.
-      Provider := Make_Provider (Cfg.Providers (1));
-
       --  Agentic loop: keep calling provider until no more tool calls.
       loop
          Round := Round + 1;
          exit when Round > Max_Tool_Rounds;
 
          declare
-            Prov_Label : constant String :=
-              Provider_Label (Cfg.Providers (1).Kind);
-            LLM_Span : constant Observability.Tracing.Span_ID :=
-              Observability.Tracing.Start_Span ("llm.chat");
-            Prov_Resp : Provider_Response :=
-              Provider.Chat (Conv, Tool_Schemas, Num_Tools);
-            Used_Failover : Boolean := False;
+            Prov_Resp : constant Provider_Response :=
+              Call_Provider_With_Routing
+                (Conv         => Conv,
+                 Cfg          => Cfg,
+                 Tool_Schemas => Tool_Schemas,
+                 Num_Tools    => Num_Tools,
+                 Streaming    => False);
          begin
-            Observability.Tracing.Set_Attribute
-              (LLM_Span, "provider", Prov_Label);
-            Observability.Tracing.Set_Attribute
-              (LLM_Span, "model",
-               To_String (Cfg.Providers (1).Model));
             if not Prov_Resp.Success then
-               Observability.Tracing.Set_Error
-                 (LLM_Span, To_String (Prov_Resp.Error));
-            end if;
-            Observability.Tracing.End_Span (LLM_Span);
-            Metrics.Increment ("provider_calls_total", Prov_Label);
-            if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
-               --  Try failover provider.
-               declare
-                  Failover       : constant access Provider_Type'Class :=
-                    Make_Provider (Cfg.Providers (2));
-                  Failover_Label : constant String :=
-                    Provider_Label (Cfg.Providers (2).Kind);
-                  FR2            : constant Provider_Response :=
-                    Failover.Chat (Conv, Tool_Schemas, Num_Tools);
-               begin
-                  Metrics.Increment ("provider_calls_total", Failover_Label);
-                  if FR2.Success then
-                     Prov_Resp := FR2;
-                     Used_Failover := True;
-                     Metrics.Cost.Record_Usage
-                       (Failover_Label,
-                        FR2.Input_Tokens,
-                        FR2.Output_Tokens,
-                        Cfg.Providers (2).Price_Per_1K_Input,
-                        Cfg.Providers (2).Price_Per_1K_Output);
-                  else
-                     Metrics.Increment ("provider_errors_total", Failover_Label);
-                  end if;
-               end;
-            end if;
-
-            if not Prov_Resp.Success then
-               Metrics.Increment ("provider_errors_total", Prov_Label);
                Set_Unbounded_String
                  (Reply.Error, To_String (Prov_Resp.Error));
                return Reply;
-            end if;
-
-            --  Record cost for the primary provider call (skip if failover was used).
-            if not Used_Failover then
-               Metrics.Cost.Record_Usage
-                 (Prov_Label,
-                  Prov_Resp.Input_Tokens,
-                  Prov_Resp.Output_Tokens,
-                  Cfg.Providers (1).Price_Per_1K_Input,
-                  Cfg.Providers (1).Price_Per_1K_Output);
             end if;
 
             --  No tool calls → done.
@@ -207,7 +265,8 @@ is
                --  Append assistant reply to conversation.
                Agent.Context.Append_Message
                  (Conv, Agent.Context.Assistant,
-                  To_String (Prov_Resp.Content));
+                  To_String (Prov_Resp.Content),
+                  Limit => Cfg.Memory.Max_History);
 
                --  Persist assistant reply.
                if Memory.SQLite.Is_Open (Mem) then
@@ -226,7 +285,8 @@ is
             Agent.Context.Append_Message
               (Conv, Agent.Context.Assistant,
                "[tool calls: "
-               & Natural'Image (Prov_Resp.Num_Tool_Calls) & "]");
+               & Natural'Image (Prov_Resp.Num_Tool_Calls) & "]",
+               Limit => Cfg.Memory.Max_History);
 
             --  Execute tool calls; parallelise safe ones when N > 1.
             declare
@@ -359,7 +419,8 @@ is
                   Agent.Context.Append_Message
                     (Conv, Agent.Context.Tool_Result,
                      To_String (Outputs (I)),
-                     To_String (Prov_Resp.Tool_Calls (I).ID));
+                     Name  => To_String (Prov_Resp.Tool_Calls (I).ID),
+                     Limit => Cfg.Memory.Max_History);
                end loop;
             end;
          end;
@@ -383,7 +444,6 @@ is
       Mem        : Memory.SQLite.Memory_Handle) return Agent_Reply
    is
       Reply        : Agent_Reply;
-      Provider     : access Provider_Type'Class;
       Tool_Schemas : Tool_Schema_Array (1 .. Max_Schema_Count);
       Num_Tools    : Natural := 0;
       Round        : Natural := 0;
@@ -397,6 +457,7 @@ is
       pragma Warnings (On, "condition can only be");
 
       Ensure_System_Prompt (Conv, Cfg);
+      Compact_If_Needed (Conv, Cfg);
 
       --  Parse [IMAGE:path] markers from user input.
       declare
@@ -407,7 +468,8 @@ is
          Agent.Context.Parse_Image_Markers
            (User_Input, Text_Part, Imgs, Num_Imgs);
          Agent.Context.Append_Message
-           (Conv, Agent.Context.User, To_String (Text_Part));
+           (Conv, Agent.Context.User, To_String (Text_Part),
+            Limit => Cfg.Memory.Max_History);
          if Num_Imgs > 0 and Conv.Msg_Count > 0 then
             Conv.Messages (Conv.Msg_Count).Images := Imgs;
             Conv.Messages (Conv.Msg_Count).Num_Images := Num_Imgs;
@@ -424,64 +486,24 @@ is
       end if;
 
       Agent.Tools.Build_Schemas (Cfg.Tools, Tool_Schemas, Num_Tools);
-      Provider := Make_Provider (Cfg.Providers (1));
 
       loop
          Round := Round + 1;
          exit when Round > Max_Tool_Rounds;
 
          declare
-            LLM_Span_S : constant Observability.Tracing.Span_ID :=
-              Observability.Tracing.Start_Span ("llm.chat");
-            Prov_Resp : Provider_Response :=
-              Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
-            Used_Failover : Boolean := False;
+            Prov_Resp : constant Provider_Response :=
+              Call_Provider_With_Routing
+                (Conv         => Conv,
+                 Cfg          => Cfg,
+                 Tool_Schemas => Tool_Schemas,
+                 Num_Tools    => Num_Tools,
+                 Streaming    => True);
          begin
-            Observability.Tracing.Set_Attribute
-              (LLM_Span_S, "provider",
-               Provider_Label (Cfg.Providers (1).Kind));
-            Observability.Tracing.Set_Attribute
-              (LLM_Span_S, "model",
-               To_String (Cfg.Providers (1).Model));
-            if not Prov_Resp.Success then
-               Observability.Tracing.Set_Error
-                 (LLM_Span_S, To_String (Prov_Resp.Error));
-            end if;
-            Observability.Tracing.End_Span (LLM_Span_S);
-            if not Prov_Resp.Success and then Cfg.Num_Providers >= 2 then
-               declare
-                  Failover : constant access Provider_Type'Class :=
-                    Make_Provider (Cfg.Providers (2));
-                  FR2      : constant Provider_Response :=
-                    Failover.Chat (Conv, Tool_Schemas, Num_Tools);
-               begin
-                  if FR2.Success then
-                     Prov_Resp := FR2;
-                     Used_Failover := True;
-                     Metrics.Cost.Record_Usage
-                       (Provider_Label (Cfg.Providers (2).Kind),
-                        FR2.Input_Tokens,
-                        FR2.Output_Tokens,
-                        Cfg.Providers (2).Price_Per_1K_Input,
-                        Cfg.Providers (2).Price_Per_1K_Output);
-                  end if;
-               end;
-            end if;
-
             if not Prov_Resp.Success then
                Set_Unbounded_String
                  (Reply.Error, To_String (Prov_Resp.Error));
                return Reply;
-            end if;
-
-            --  Record cost for the primary provider call (skip if failover was used).
-            if not Used_Failover then
-               Metrics.Cost.Record_Usage
-                 (Provider_Label (Cfg.Providers (1).Kind),
-                  Prov_Resp.Input_Tokens,
-                  Prov_Resp.Output_Tokens,
-                  Cfg.Providers (1).Price_Per_1K_Input,
-                  Cfg.Providers (1).Price_Per_1K_Output);
             end if;
 
             if Prov_Resp.Num_Tool_Calls = 0 then
@@ -490,7 +512,8 @@ is
 
                Agent.Context.Append_Message
                  (Conv, Agent.Context.Assistant,
-                  To_String (Prov_Resp.Content));
+                  To_String (Prov_Resp.Content),
+                  Limit => Cfg.Memory.Max_History);
 
                if Memory.SQLite.Is_Open (Mem) then
                   Memory.SQLite.Save_Message
@@ -507,7 +530,8 @@ is
             Agent.Context.Append_Message
               (Conv, Agent.Context.Assistant,
                "[tool calls: "
-               & Natural'Image (Prov_Resp.Num_Tool_Calls) & "]");
+               & Natural'Image (Prov_Resp.Num_Tool_Calls) & "]",
+               Limit => Cfg.Memory.Max_History);
 
             for I in 1 .. Prov_Resp.Num_Tool_Calls loop
                declare
@@ -537,7 +561,8 @@ is
                   Agent.Context.Append_Message
                     (Conv, Agent.Context.Tool_Result,
                      Output,
-                     To_String (TC.ID));
+                     Name  => To_String (TC.ID),
+                     Limit => Cfg.Memory.Max_History);
                end;
             end loop;
          end;

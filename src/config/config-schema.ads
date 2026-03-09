@@ -24,7 +24,11 @@ is
    --  Gateway-level limits
    subtype Port_Number    is Positive range 1 .. 65_535;     -- TCP/UDP port
    subtype Max_Conn_Limit is Positive range 1 .. 4_096;     -- AWS max connections
-   subtype History_Limit  is Positive range 1 .. 10_000;     -- conversation turns kept
+   Max_In_Memory_History : constant := 200;
+   --  Keep at least one slot available for the system prompt and one for
+   --  conversational history.
+   subtype History_Limit  is Positive range 2 .. Max_In_Memory_History;
+   Default_Max_History    : constant History_Limit := 50;
 
    --  Agent-level limits
    subtype Depth_Limit    is Natural  range 0 .. 10;         -- spawn depth cap
@@ -69,7 +73,7 @@ is
       Max_RPS    : RPS_Limit       := 5;
    end record;
 
-   Max_Channels : constant := 8;
+   Max_Channels : constant := Channel_Kind'Pos (Channel_Kind'Last) + 1;
    type Channel_Index is range 1 .. Max_Channels;
    type Channel_Array is array (Channel_Index range <>) of Channel_Config;
 
@@ -85,6 +89,7 @@ is
       Git_Enabled        : Boolean := True;
       Brave_API_Key      : Unbounded_String;
       MCP_Bridge_URL     : Unbounded_String;  -- e.g. "http://mcp-bridge:3004"
+      Plugin_Directory   : Unbounded_String;  -- empty = ~/.vericlaw/plugins
       Browser_Bridge_URL : Unbounded_String;  -- e.g. "http://browser-bridge:3007"
       RAG_Enabled        : Boolean := False;
       RAG_Embed_Base_URL : Unbounded_String;  -- default: https://api.openai.com/v1
@@ -94,11 +99,17 @@ is
    --  Memory config
    --  -----------------------------------------------------------------------
 
+   --  Minimum remaining message slots before Compact_Oldest_Turn is called.
+   --  Expressed as a fill-ratio percentage (0 = disabled, 80 = compact when
+   --  80 % of Max_History slots are occupied). Range capped to 0..100.
+   subtype Compact_Pct is Natural range 0 .. 100;
+
    type Memory_Config is record
       DB_Path                : Unbounded_String;    -- "" = ~/.vericlaw/memory.db
-      Max_History            : History_Limit := 50; -- messages kept per session
+      Max_History            : History_Limit := Default_Max_History;
       Facts_Enabled          : Boolean       := True;
       Session_Retention_Days : Natural       := 30; -- auto-prune sessions older than N days (0 = never)
+      Compact_At_Pct         : Compact_Pct   := 0;  -- 0 = disabled; e.g. 80 = compact at 80 % full
    end record;
 
    --  -----------------------------------------------------------------------
