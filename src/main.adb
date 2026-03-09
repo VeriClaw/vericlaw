@@ -2,6 +2,7 @@ with Ada.Text_IO;           use Ada.Text_IO;
 with Ada.Command_Line;      use Ada.Command_Line;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Strings.Fixed;
+with Ada.Strings.Maps.Constants;
 with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Calendar;
@@ -38,6 +39,7 @@ with Observability.Tracing;
 with Sandbox;
 with Plugins.Loader;
 with Plugins.Capabilities;
+with Terminal.Style;
 
 procedure Main
   with SPARK_Mode => Off
@@ -47,37 +49,38 @@ is
 
    procedure Print_Usage is
    begin
-      Put_Line ("Usage: vericlaw <command> [options]");
+      Put_Line (Terminal.Style.Brand ("VeriClaw") & " — formally verified AI runtime");
       New_Line;
-      Put_Line ("Commands:");
-      Put_Line ("  onboard                          Interactive setup wizard (run this first)");
-      Put_Line ("  channels login --channel <name>  Link a messaging channel (e.g. whatsapp)");
-      Put_Line ("  chat                             Interactive CLI chat (default)");
-      Put_Line ("  agent <message>                  One-shot agent: send a message and print reply");
-      Put_Line ("  gateway                          Run HTTP gateway + all configured channels");
-      Put_Line ("  status                           Show runtime status summary");
-      Put_Line ("  export --session <id> [--format] Export conversation (md or json)");
-      Put_Line ("  config validate                  Validate config file without starting agent");
-      Put_Line ("  doctor                           Print configuration and health status");
-      Put_Line ("  update-check                     Check for new VeriClaw releases");
-      Put_Line ("  version                          Print version information");
-      Put_Line ("  help                             Show this help message");
+      Put_Line (Terminal.Style.Heading ("Getting Started"));
+      Put_Line ("  " & Terminal.Style.Cmd ("onboard") & "                          Interactive setup wizard");
+      Put_Line ("  " & Terminal.Style.Cmd ("doctor") & "                           Check configuration and health");
+      Put_Line ("  " & Terminal.Style.Cmd ("config validate") & "                  Validate config without starting");
       New_Line;
-      Put_Line ("Global flags:");
-      Put_Line ("  --json       Machine-readable JSON output (agent, status)");
-      Put_Line ("  --no-color   Disable ANSI colors (auto-detected for pipes)");
+      Put_Line (Terminal.Style.Heading ("Runtime"));
+      Put_Line ("  " & Terminal.Style.Cmd ("chat") & "                             Interactive CLI chat " & Terminal.Style.Muted ("(default)"));
+      Put_Line ("  " & Terminal.Style.Cmd ("agent <message>") & "                  Send a message and print reply");
+      Put_Line ("  " & Terminal.Style.Cmd ("gateway") & "                          Run HTTP gateway + all channels");
       New_Line;
-      Put_Line ("Config: ~/.vericlaw/config.json  (or VERICLAW_CONFIG env var)");
-      Put_Line ("WhatsApp: see docs/setup/whatsapp.md for full setup guide");
+      Put_Line (Terminal.Style.Heading ("Utilities"));
+      Put_Line ("  " & Terminal.Style.Cmd ("channels login --channel <name>") & "  Link a messaging channel");
+      Put_Line ("  " & Terminal.Style.Cmd ("status") & "                           Show runtime status summary");
+      Put_Line ("  " & Terminal.Style.Cmd ("export --session <id> [--format]") & " Export conversation");
+      Put_Line ("  " & Terminal.Style.Cmd ("update-check") & "                     Check for new releases");
+      Put_Line ("  " & Terminal.Style.Cmd ("version") & "                          Print version information");
+      New_Line;
+      Put_Line (Terminal.Style.Heading ("Flags"));
+      Put_Line ("  " & Terminal.Style.Cmd ("--json") & "       Machine-readable JSON output");
+      Put_Line ("  " & Terminal.Style.Cmd ("--no-color") & "   Disable ANSI colors");
+      New_Line;
+      Put_Line (Terminal.Style.Muted ("Config: ~/.vericlaw/config.json  (or VERICLAW_CONFIG env var)"));
+      Put_Line (Terminal.Style.Muted ("Docs:   https://github.com/VeriClaw/vericlaw/tree/main/docs"));
    end Print_Usage;
 
    procedure Cmd_Version is
    begin
-      Put_Line ("vericlaw " & Build_Info.Version & " (" &
-                Build_Info.Git_Commit & " " &
-                Build_Info.Build_Date & " " &
-                Build_Info.Target_Triple & ")");
-      Put_Line ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw");
+      Put_Line (Terminal.Style.Brand ("vericlaw") & " " & Build_Info.Version &
+                Terminal.Style.Muted (" (" & Build_Info.Git_Commit & " " & Build_Info.Build_Date & " " & Build_Info.Target_Triple & ")"));
+      Put_Line (Terminal.Style.Muted ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw"));
    end Cmd_Version;
 
    procedure Cmd_Update_Check is
@@ -156,7 +159,10 @@ is
       if not Core.Agent.Config_Is_Safe_Default (Spark_Cfg)
         or else not Channel_Result.Allowed
       then
-         Put_Line ("FATAL: SPARK security assertion failed. Refusing to start.");
+         Put_Line (Terminal.Style.Cross & " " & Terminal.Style.Error ("Security check failed"));
+         Put_Line ("  The SPARK-verified security defaults could not be validated.");
+         Put_Line ("  This usually means the binary was built incorrectly.");
+         Put_Line ("  " & Terminal.Style.Muted ("Please reinstall VeriClaw or report this issue."));
          Set_Exit_Status (Failure);
          return;
       end if;
@@ -171,12 +177,20 @@ is
    begin
       Result := Config.Loader.Load;
       if not Result.Success then
-         Put_Line ("Config error: " & To_String (Result.Error));
+         Put_Line (Terminal.Style.Cross & " " & Terminal.Style.Error ("Config error:") & " " & To_String (Result.Error));
          --  If config doesn't exist, write a starter and bail with guidance.
          if not Ada.Directories.Exists (Default_Path) then
             Config.Loader.Write_Default_Config (Default_Path);
-            Put_Line ("Created starter config: " & Default_Path);
-            Put_Line ("Edit it to add your API keys, then run vericlaw again.");
+            New_Line;
+            Put_Line (Terminal.Style.Banner);
+            New_Line;
+            Put_Line ("  " & Terminal.Style.Heading ("Welcome to VeriClaw!"));
+            New_Line;
+            Put_Line ("  " & Terminal.Style.Check & " Created starter config: " & Terminal.Style.Muted (Default_Path));
+            New_Line;
+            Put_Line ("  " & Terminal.Style.Heading ("Get started:"));
+            Put_Line ("    " & Terminal.Style.Cmd ("vericlaw onboard") & "   — interactive setup wizard " & Terminal.Style.Muted ("(recommended)"));
+            Put_Line ("    " & Terminal.Style.Muted ("or edit " & Default_Path & " manually"));
          end if;
          Set_Exit_Status (Failure);
       end if;
@@ -198,7 +212,7 @@ is
       OK := Memory.SQLite.Open (Mem, DB_Path, Err,
                                 Cfg.Memory.Session_Retention_Days);
       if not OK then
-         Put_Line ("Warning: memory unavailable: " & To_String (Err));
+         Put_Line (Terminal.Style.Warn ("Warning:") & " memory unavailable: " & To_String (Err));
       end if;
    end Open_Memory_Or_Warn;
 
@@ -237,12 +251,13 @@ is
       Total  : Natural := 0;
       Passed : Natural := 0;
    begin
-      Put_Line ("=== VeriClaw Doctor ===");
+      Put_Line (Terminal.Style.Banner);
       New_Line;
+      Put_Line (Terminal.Style.Heading ("Doctor — system health check"));
 
       --  1. Config check (already loaded by caller via Load_Config_Or_Die)
-      Put_Line ("Config:");
-      Put_Line ("  config      : OK");
+      Put_Line (Terminal.Style.Brand ("Config:"));
+      Put_Line ("  config      : " & Terminal.Style.Check);
       Total  := Total + 1;
       Passed := Passed + 1;
       Put_Line ("  agent_name  : " & To_String (Cfg.Agent_Name));
@@ -270,7 +285,7 @@ is
       New_Line;
 
       --  2. Database connectivity
-      Put_Line ("Database:");
+      Put_Line (Terminal.Style.Brand ("Database:"));
       Total := Total + 1;
       declare
          Test_Mem : Memory.SQLite.Memory_Handle;
@@ -279,17 +294,17 @@ is
       begin
          Test_OK := Memory.SQLite.Open (Test_Mem, DB_Path, Err);
          if Test_OK then
-            Put_Line ("  database    : OK (" & DB_Path & ")");
+            Put_Line ("  database    : " & Terminal.Style.Check & " (" & DB_Path & ")");
             Memory.SQLite.Close (Test_Mem);
             Passed := Passed + 1;
          else
-            Put_Line ("  database    : FAIL (" & To_String (Err) & ")");
+            Put_Line ("  database    : " & Terminal.Style.Cross & " (" & To_String (Err) & ")");
          end if;
       end;
       New_Line;
 
       --  3. Bridge health — check each enabled bridge channel
-      Put_Line ("Bridges:");
+      Put_Line (Terminal.Style.Brand ("Bridges:"));
       for I in 1 .. Cfg.Num_Channels loop
          if Cfg.Channels (I).Enabled
            and then Length (Cfg.Channels (I).Bridge_URL) > 0
@@ -307,13 +322,13 @@ is
                   Put_Line ("  "
                     & Config.Schema.Channel_Kind'Image
                         (Cfg.Channels (I).Kind)
-                    & " bridge : OK (" & URL & ")");
+                    & " bridge : " & Terminal.Style.Check & " (" & URL & ")");
                   Passed := Passed + 1;
                else
                   Put_Line ("  "
                     & Config.Schema.Channel_Kind'Image
                         (Cfg.Channels (I).Kind)
-                    & " bridge : FAIL (" & URL & " => "
+                    & " bridge : " & Terminal.Style.Cross & " (" & URL & " => "
                     & (if Length (Resp.Error) > 0
                        then To_String (Resp.Error)
                        else "HTTP" & Natural'Image (Resp.Status_Code))
@@ -325,14 +340,14 @@ is
       New_Line;
 
       --  4. SPARK security core (compile-time verified)
-      Put_Line ("SPARK:");
-      Put_Line ("  security core: OK (compile-time verified)");
+      Put_Line (Terminal.Style.Brand ("SPARK:"));
+      Put_Line ("  security core: " & Terminal.Style.Check & " (compile-time verified)");
       Total  := Total + 1;
       Passed := Passed + 1;
       New_Line;
 
       --  5. Workspace directory
-      Put_Line ("Workspace:");
+      Put_Line (Terminal.Style.Brand ("Workspace:"));
       Total := Total + 1;
       if Ada.Directories.Exists (Workspace_Path) then
          declare
@@ -345,16 +360,16 @@ is
                Ada.Text_IO.Create (F, Ada.Text_IO.Out_File, Test_File);
                Ada.Text_IO.Close (F);
                Ada.Directories.Delete_File (Test_File);
-               Put_Line ("  workspace   : OK (" & Workspace_Path & ")");
+               Put_Line ("  workspace   : " & Terminal.Style.Check & " (" & Workspace_Path & ")");
                Passed := Passed + 1;
             exception
                when others =>
-                  Put_Line ("  workspace   : FAIL (not writable: "
+                  Put_Line ("  workspace   : " & Terminal.Style.Cross & " (not writable: "
                     & Workspace_Path & ")");
             end;
          end;
       else
-         Put_Line ("  workspace   : FAIL (missing: "
+         Put_Line ("  workspace   : " & Terminal.Style.Cross & " (missing: "
            & Workspace_Path & ")");
       end if;
       New_Line;
@@ -365,7 +380,7 @@ is
          Plugin_Dir : constant String :=
            Plugins.Loader.Runtime_Plugin_Directory;
       begin
-         Put_Line ("Extensibility:");
+         Put_Line (Terminal.Style.Brand ("Extensibility:"));
          Put_Line ("  model       : MCP-first");
          Put_Line ("  mcp bridge  : "
            & (if Length (Cfg.Tools.MCP_Bridge_URL) > 0
@@ -396,13 +411,24 @@ is
                   then To_String (Info.Name)
                   else "<unnamed>");
             begin
-               Put_Line
-                 ("    - " & Name
-                  & " [" & Plugins.Loader.Plugin_Status_Name (Info.Status) & "]"
-                  & " signature="
-                  & Plugins.Loader.Signature_State_Name
-                      (Info.Manifest.Signature)
-                  & " tools=" & Plugin_Tool_List (Info));
+               declare
+                  Status_Str : constant String :=
+                    Plugins.Loader.Plugin_Status_Name (Info.Status);
+                  Colored_Status : constant String :=
+                    (if Status_Str = "loaded"
+                     then Terminal.Style.Success (Status_Str)
+                     elsif Status_Str = "denied"
+                     then Terminal.Style.Warn (Status_Str)
+                     else Terminal.Style.Error (Status_Str));
+               begin
+                  Put_Line
+                    ("    " & Terminal.Style.Bullet & " " & Name
+                     & " [" & Colored_Status & "]"
+                     & " signature="
+                     & Plugins.Loader.Signature_State_Name
+                         (Info.Manifest.Signature)
+                     & " tools=" & Plugin_Tool_List (Info));
+               end;
                if Length (Info.Version) > 0 then
                   Put_Line ("      version: " & To_String (Info.Version));
                end if;
@@ -418,8 +444,13 @@ is
       end;
 
       --  Summary
-      Put_Line ("Summary: " & Natural'Image (Passed) & " /"
-        & Natural'Image (Total) & " checks passed");
+      if Passed = Total then
+         Put_Line (Terminal.Style.Success ("Summary: " & Natural'Image (Passed) & " /"
+           & Natural'Image (Total) & " checks passed"));
+      else
+         Put_Line (Terminal.Style.Warn ("Summary: " & Natural'Image (Passed) & " /"
+           & Natural'Image (Total) & " checks passed"));
+      end if;
       if Passed < Total then
          Ada.Command_Line.Set_Exit_Status (1);
       end if;
@@ -476,6 +507,9 @@ begin
 
    --  Parse global flags (--json, --no-color).
    Parse_Global_Flags;
+
+   --  Propagate color preference to the terminal style layer.
+   Terminal.Style.Set_Enabled (not No_Color);
 
    --  Parse subcommand (skip flags starting with --).
    if Argument_Count >= 1
@@ -742,6 +776,44 @@ begin
                   exit;
                end if;
             end loop;
+
+            --  Boot status panel
+            Put_Line (Terminal.Style.Banner);
+            New_Line;
+
+            --  Gather active channel list
+            declare
+               Chan_List : Unbounded_String;
+               Active_Count : Natural := 0;
+            begin
+               for I in 1 .. CR.Config.Num_Channels loop
+                  if CR.Config.Channels (I).Enabled then
+                     Active_Count := Active_Count + 1;
+                     if Length (Chan_List) > 0 then
+                        Append (Chan_List, ", ");
+                     end if;
+                     Append (Chan_List,
+                       Ada.Strings.Fixed.Translate
+                         (Config.Schema.Channel_Kind'Image
+                            (CR.Config.Channels (I).Kind),
+                          Ada.Strings.Maps.Constants.Lower_Case_Map));
+                  end if;
+               end loop;
+
+               Put_Line ("  " & Terminal.Style.Muted ("model") & "     "
+                 & Terminal.Style.Success (To_String (CR.Config.Providers (1).Model))
+                 & Terminal.Style.Muted (" (" & Config.Schema.Provider_Kind'Image (CR.Config.Providers (1).Kind) & ")"));
+               Put_Line ("  " & Terminal.Style.Muted ("memory") & "    "
+                 & (if Mem_OK then Terminal.Style.Success ("ok") & Terminal.Style.Muted (" (sqlite)") else Terminal.Style.Warn ("unavailable")));
+               Put_Line ("  " & Terminal.Style.Muted ("channels") & "  "
+                 & Terminal.Style.Success (To_String (Chan_List))
+                 & Terminal.Style.Muted (" (" & Natural'Image (Active_Count) & " active)"));
+               Put_Line ("  " & Terminal.Style.Muted ("gateway") & "   "
+                 & Terminal.Style.Brand ("http://" & To_String (CR.Config.Gateway.Bind_Host) & ":" & Ada.Strings.Fixed.Trim (Positive'Image (CR.Config.Gateway.Bind_Port), Ada.Strings.Left)));
+               New_Line;
+               Put_Line ("  " & Terminal.Style.Muted ("Press Ctrl+C to stop."));
+               New_Line;
+            end;
 
             if Has_Any then
                declare
@@ -1025,28 +1097,28 @@ begin
                  & ",""total_cost"":" & Cost_Img
                  & "}");
             else
-               Put_Line ("VeriClaw status");
-               Put_Line ("  version   : " & Build_Info.Version);
-               Put_Line ("  channels  : "
+               Put_Line (Terminal.Style.Brand ("VeriClaw") & " status");
+               Put_Line ("  " & Terminal.Style.Muted ("version") & "   " & Build_Info.Version);
+               Put_Line ("  " & Terminal.Style.Muted ("channels") & "  "
                          & Natural'Image (Active) & " active /"
                          & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels) & " configured");
-               Put_Line ("  provider  : "
+               Put_Line ("  " & Terminal.Style.Muted ("provider") & "  "
                          & Config.Schema.Provider_Kind'Image
                              (CR.Config.Providers (1).Kind));
-               Put_Line ("  model     : "
+               Put_Line ("  " & Terminal.Style.Muted ("model") & "     "
                          & To_String (CR.Config.Providers (1).Model));
-               Put_Line ("  memory    : "
-                         & (if Mem_OK then "ok" else "unavailable"));
-               Put_Line ("  gateway   : "
+               Put_Line ("  " & Terminal.Style.Muted ("memory") & "    "
+                         & (if Mem_OK then Terminal.Style.Success ("ok") else Terminal.Style.Warn ("unavailable")));
+               Put_Line ("  " & Terminal.Style.Muted ("gateway") & "   "
                          & To_String (CR.Config.Gateway.Bind_Host) & ":"
                          & Positive'Image (CR.Config.Gateway.Bind_Port));
-               Put_Line ("  ext model : MCP-first ("
+               Put_Line ("  " & Terminal.Style.Muted ("ext model") & " MCP-first ("
                          & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
-                            then "MCP bridge configured"
-                            else "MCP bridge disabled")
+                            then Terminal.Style.Success ("MCP bridge configured")
+                            else Terminal.Style.Muted ("MCP bridge disabled"))
                          & ")");
-               Put_Line ("  load rule : " & Plugins.Loader.Local_Load_Policy);
-               Put_Line ("  plugins   : "
+               Put_Line ("  " & Terminal.Style.Muted ("load rule") & " " & Plugins.Loader.Local_Load_Policy);
+               Put_Line ("  " & Terminal.Style.Muted ("plugins") & "   "
                          & Natural'Image (Registry.Num_Loaded)
                          & " discovered /"
                          & Natural'Image (Plugins_Loaded)
@@ -1054,11 +1126,11 @@ begin
                          & Natural'Image (Plugins_Denied)
                          & " denied /"
                          & Natural'Image (Plugins_Errors)
-                         & " errors (manifest discovery only)");
-               Put_Line ("  tokens    : "
+                         & " errors");
+               Put_Line ("  " & Terminal.Style.Muted ("tokens") & "    "
                          & Natural'Image (Tok_In) & " in /"
                          & Natural'Image (Tok_Out) & " out");
-               Put_Line ("  cost      : $" & Cost_Img);
+               Put_Line ("  " & Terminal.Style.Muted ("cost") & "      $" & Cost_Img);
             end if;
          end;
 
@@ -1067,7 +1139,7 @@ begin
          if Argument_Count >= 2
            and then Argument (2) = "validate"
          then
-            Put_Line ("Config loaded and validated successfully.");
+            Put_Line (Terminal.Style.Check & " Config loaded and validated successfully.");
             Put_Line ("  provider : "
                        & Config.Schema.Provider_Kind'Image
                            (CR.Config.Providers (1).Kind));

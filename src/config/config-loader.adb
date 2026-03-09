@@ -2,6 +2,7 @@ with Ada.Environment_Variables;
 with Ada.Directories;
 with Ada.Text_IO;
 with Config.JSON_Parser;    use Config.JSON_Parser;
+with Terminal.Style;
 
 package body Config.Loader
   with SPARK_Mode => Off
@@ -515,7 +516,9 @@ is
       Is_Ollama : Boolean := False;
    begin
       New_Line;
-      Put_Line ("=== VeriClaw Setup Wizard ===");
+      Put_Line (Terminal.Style.Banner);
+      New_Line;
+      Put_Line (Terminal.Style.Heading ("Setup Wizard"));
       New_Line;
       Put_Line ("Choose your LLM provider:");
       Put_Line ("  1  openai           (OpenAI GPT-4o, requires API key)");
@@ -535,6 +538,7 @@ is
       elsif PL = 1 and then Provider_Buf (1) = '4' then
          Provider_Buf (1 .. 17) := "openai_compatible"; PL := 17;
       end if;
+      Put_Line ("  " & Terminal.Style.Check & " Provider: " & Provider_Buf (1 .. PL));
 
       Is_Ollama := PL >= 6 and then Provider_Buf (1 .. 6) = "ollama";
 
@@ -578,6 +582,7 @@ is
             when others => null;
          end case;
       end if;
+      Put_Line ("  " & Terminal.Style.Check & " Channel: " & Channel_Buf (1 .. CL));
 
       TL := 0;
       if CL >= 8 and then Channel_Buf (1 .. 8) = "telegram" then
@@ -664,19 +669,12 @@ is
 
 
       New_Line;
-      Put_Line ("Config written to: " & Path);
+      Put_Line (Terminal.Style.Check & " Config written to " & Terminal.Style.Brand (Path));
       New_Line;
-      if CL >= 8 and then Channel_Buf (1 .. 8) = "whatsapp" then
-         Put_Line ("Next steps:");
-         Put_Line ("  1. Start the WhatsApp bridge:");
-         Put_Line ("       docker compose up wa-bridge -d");
-         Put_Line ("  2. Pair your phone:");
-         Put_Line ("       vericlaw channels login --channel whatsapp");
-         Put_Line ("  3. Start the agent gateway:");
-         Put_Line ("       vericlaw gateway");
-      else
-         Put_Line ("Run ""vericlaw chat"" to start.");
-      end if;
+      Put_Line (Terminal.Style.Heading ("Next steps:"));
+      Put_Line ("  1. " & Terminal.Style.Cmd ("vericlaw doctor") & "   — verify your setup");
+      Put_Line ("  2. " & Terminal.Style.Cmd ("vericlaw chat") & "     — start chatting");
+      Put_Line ("  3. " & Terminal.Style.Cmd ("vericlaw gateway") & "  — run multi-channel daemon");
       New_Line;
    end Run_Onboard;
 

@@ -4,13 +4,21 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;       use type Agent.Context.Role;
 with Agent.Loop_Pkg;
 with Metrics;
+with Terminal.Style;
 
 package body Channels.CLI
   with SPARK_Mode => Off
 is
 
-   Prompt     : constant String := "you> ";
-   Agent_Name : constant String := "vericlaw> ";
+   function User_Prompt return String is
+   begin
+      return Terminal.Style.Brand ("you") & "> ";
+   end User_Prompt;
+
+   function Agent_Prompt return String is
+   begin
+      return Terminal.Style.Success ("vericlaw") & "> ";
+   end Agent_Prompt;
 
    procedure Run_Interactive
      (Cfg : Config.Schema.Agent_Config;
@@ -23,12 +31,15 @@ is
       Set_Unbounded_String (Conv.Session_ID, Agent.Context.Make_Session_ID);
       Set_Unbounded_String (Conv.Channel, "cli");
 
-      Put_Line ("VeriClaw v1.0  |  type 'exit' to quit");
-      Put_Line ("Provider: " & To_String (Cfg.Providers (1).Model));
+      Put_Line (Terminal.Style.Banner);
+      New_Line;
+      Put_Line ("  " & Terminal.Style.Muted ("provider") & "  " & To_String (Cfg.Providers (1).Model));
+      Put_Line ("  " & Terminal.Style.Muted ("session") & "   " & To_String (Conv.Session_ID));
+      Put_Line ("  " & Terminal.Style.Muted ("type /help for commands, exit to quit"));
       New_Line;
 
       loop
-         Put (Prompt);
+         Put (User_Prompt);
          begin
             Get_Line (Line, Last);
          exception
@@ -46,11 +57,19 @@ is
 
             elsif Input = "/clear" then
                Conv.Msg_Count := 0;
-               Put_Line ("Conversation cleared.");
+               Put_Line (Terminal.Style.Success ("Conversation cleared."));
 
             elsif Input = "/memory" then
-               Put_Line ("Session: " & To_String (Conv.Session_ID));
-               Put_Line ("Messages: " & Natural'Image (Conv.Msg_Count));
+               Put_Line (Terminal.Style.Muted ("Session:") & "  " & To_String (Conv.Session_ID));
+               Put_Line (Terminal.Style.Muted ("Messages:") & " " & Natural'Image (Conv.Msg_Count));
+
+            elsif Input = "/help" then
+               Put_Line ("Commands:");
+               Put_Line ("  " & Terminal.Style.Brand ("/help") & "     Show this help");
+               Put_Line ("  " & Terminal.Style.Brand ("/clear") & "    Clear conversation history");
+               Put_Line ("  " & Terminal.Style.Brand ("/memory") & "   Show session info");
+               Put_Line ("  " & Terminal.Style.Brand ("/edit N") & "   Fork conversation at message N");
+               Put_Line ("  " & Terminal.Style.Brand ("exit") & "      Quit VeriClaw");
 
             elsif Input'Length >= 6
               and then Input (Input'First .. Input'First + 4) = "/edit"
@@ -155,7 +174,7 @@ is
                                  Metrics.Increment
                                    ("requests_total", "cli");
                                  New_Line;
-                                 Put (Agent_Name);
+                                 Put (Agent_Prompt);
                                  Flush;
                                  if Reply.Success then
                                     New_Line;
@@ -250,7 +269,7 @@ is
                begin
                   Metrics.Increment ("requests_total", "cli");
                   New_Line;
-                  Put (Agent_Name);
+                  Put (Agent_Prompt);
                   Flush;
                   --  Tokens were already streamed to stdout by Chat_Streaming.
                   --  Print trailing newline; on error show the message.

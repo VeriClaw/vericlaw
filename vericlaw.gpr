@@ -18,11 +18,13 @@ project Vericlaw is
       when "x86_64-w64-mingw32" =>
          for Source_Dirs use ("src", "src/http", "src/config", "src/config_win",
                               "src/agent", "src/providers", "src/tools", "src/memory",
-                              "src/channels", "src/sandbox", "src/observability");
+                              "src/channels", "src/sandbox", "src/observability",
+                              "src/terminal");
       when others =>
          for Source_Dirs use ("src", "src/http", "src/config", "src/config_posix",
                               "src/agent", "src/providers", "src/tools", "src/memory",
-                              "src/channels", "src/sandbox", "src/observability");
+                              "src/channels", "src/sandbox", "src/observability",
+                              "src/terminal");
    end case;
    type Binder_Mode_Kind is ("portable", "minimal");
    Binder_Mode : Binder_Mode_Kind := external ("BINDER_MODE", "portable");
