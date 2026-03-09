@@ -67,9 +67,9 @@ is
       if Conv.Msg_Count < Natural (History_Cap) then
          Conv.Msg_Count := Conv.Msg_Count + 1;
          Conv.Messages (Conv.Msg_Count) := New_Msg;
-       else
-          --  Evict oldest non-system message (shift left from index 2).
-          --  Index 1 is always the system prompt if present; preserve it.
+      else
+         --  Evict oldest non-system message (shift left from index 2).
+         --  Index 1 is always the system prompt if present; preserve it.
          declare
             Start : constant Positive :=
                (if Conv.Messages (1).Role = System_Role then 2 else 1);
