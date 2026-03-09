@@ -356,70 +356,70 @@ is
       else
          Put_Line ("  workspace   : FAIL (missing: "
            & Workspace_Path & ")");
-       end if;
-       New_Line;
+      end if;
+      New_Line;
 
-       declare
-          Registry   : constant Plugins.Loader.Plugin_Registry :=
-            Plugins.Loader.Runtime_Registry;
-          Plugin_Dir : constant String :=
-            Plugins.Loader.Runtime_Plugin_Directory;
-       begin
-          Put_Line ("Extensibility:");
-          Put_Line ("  model       : MCP-first");
-          Put_Line ("  mcp bridge  : "
-            & (if Length (Cfg.Tools.MCP_Bridge_URL) > 0
-               then "configured"
-               else "disabled"));
-          Put_Line ("  local mode  : manifest discovery only");
-          Put_Line ("  load policy : "
-            & Plugins.Loader.Local_Load_Policy);
-          Put_Line ("  plugins dir : "
-            & Plugin_Dir
-            & (if Ada.Directories.Exists (Plugin_Dir)
-               then ""
-               else " (missing; discovery idle)"));
-          Put_Line ("  plugins     : "
-            & Natural'Image (Registry.Num_Loaded) & " discovered /"
-            & Natural'Image (Plugins.Loader.Loaded_Plugin_Count (Registry))
-            & " loaded /"
-            & Natural'Image (Plugins.Loader.Denied_Plugin_Count (Registry))
-            & " denied /"
-            & Natural'Image (Plugins.Loader.Error_Plugin_Count (Registry))
-            & " errors");
-          for I in 1 .. Registry.Num_Loaded loop
-             declare
-                Info : constant Plugins.Loader.Plugin_Info :=
-                  Registry.Plugins (I);
-                Name : constant String :=
-                  (if Length (Info.Name) > 0
-                   then To_String (Info.Name)
-                   else "<unnamed>");
-             begin
-                Put_Line
-                  ("    - " & Name
-                   & " [" & Plugins.Loader.Plugin_Status_Name (Info.Status) & "]"
-                   & " signature="
-                   & Plugins.Loader.Signature_State_Name
-                       (Info.Manifest.Signature)
-                   & " tools=" & Plugin_Tool_List (Info));
-                if Length (Info.Version) > 0 then
-                   Put_Line ("      version: " & To_String (Info.Version));
-                end if;
-                if Length (Info.Entry_Point) > 0 then
-                   Put_Line ("      entry  : " & To_String (Info.Entry_Point));
-                end if;
-                if Length (Info.Deny_Reason) > 0 then
-                   Put_Line ("      reason : " & To_String (Info.Deny_Reason));
-                end if;
-             end;
-          end loop;
-          New_Line;
-       end;
+      declare
+         Registry   : constant Plugins.Loader.Plugin_Registry :=
+           Plugins.Loader.Runtime_Registry;
+         Plugin_Dir : constant String :=
+           Plugins.Loader.Runtime_Plugin_Directory;
+      begin
+         Put_Line ("Extensibility:");
+         Put_Line ("  model       : MCP-first");
+         Put_Line ("  mcp bridge  : "
+           & (if Length (Cfg.Tools.MCP_Bridge_URL) > 0
+              then "configured"
+              else "disabled"));
+         Put_Line ("  local mode  : manifest discovery only");
+         Put_Line ("  load policy : "
+           & Plugins.Loader.Local_Load_Policy);
+         Put_Line ("  plugins dir : "
+           & Plugin_Dir
+           & (if Ada.Directories.Exists (Plugin_Dir)
+              then ""
+              else " (missing; discovery idle)"));
+         Put_Line ("  plugins     : "
+           & Natural'Image (Registry.Num_Loaded) & " discovered /"
+           & Natural'Image (Plugins.Loader.Loaded_Plugin_Count (Registry))
+           & " loaded /"
+           & Natural'Image (Plugins.Loader.Denied_Plugin_Count (Registry))
+           & " denied /"
+           & Natural'Image (Plugins.Loader.Error_Plugin_Count (Registry))
+           & " errors");
+         for I in 1 .. Registry.Num_Loaded loop
+            declare
+               Info : constant Plugins.Loader.Plugin_Info :=
+                 Registry.Plugins (I);
+               Name : constant String :=
+                 (if Length (Info.Name) > 0
+                  then To_String (Info.Name)
+                  else "<unnamed>");
+            begin
+               Put_Line
+                 ("    - " & Name
+                  & " [" & Plugins.Loader.Plugin_Status_Name (Info.Status) & "]"
+                  & " signature="
+                  & Plugins.Loader.Signature_State_Name
+                      (Info.Manifest.Signature)
+                  & " tools=" & Plugin_Tool_List (Info));
+               if Length (Info.Version) > 0 then
+                  Put_Line ("      version: " & To_String (Info.Version));
+               end if;
+               if Length (Info.Entry_Point) > 0 then
+                  Put_Line ("      entry  : " & To_String (Info.Entry_Point));
+               end if;
+               if Length (Info.Deny_Reason) > 0 then
+                  Put_Line ("      reason : " & To_String (Info.Deny_Reason));
+               end if;
+            end;
+         end loop;
+         New_Line;
+      end;
 
-       --  Summary
-       Put_Line ("Summary: " & Natural'Image (Passed) & " /"
-         & Natural'Image (Total) & " checks passed");
+      --  Summary
+      Put_Line ("Summary: " & Natural'Image (Passed) & " /"
+        & Natural'Image (Total) & " checks passed");
       if Passed < Total then
          Ada.Command_Line.Set_Exit_Status (1);
       end if;
