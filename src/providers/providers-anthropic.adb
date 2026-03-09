@@ -4,11 +4,11 @@ with HTTP.Client;
 with Logging;
 with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Agent.Context;
 
 package body Providers.Anthropic
   with SPARK_Mode => Off
 is
+   use Agent.Context;
 
    Anthropic_API_URL : constant String := "https://api.anthropic.com";
    Anthropic_Version : constant String := "2023-06-01";

@@ -3,7 +3,6 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Strings.Fixed;   use Ada.Strings.Fixed;
 with HTTP.Client;
 with Config.JSON_Parser;  use Config.JSON_Parser;
-use Config.Schema;
 with Config.Loader;
 with Config.Reload;
 with Agent.Context;
@@ -15,6 +14,7 @@ with Audit.Syslog;
 package body Channels.Telegram
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    Telegram_API : constant String := "https://api.telegram.org/bot";
 

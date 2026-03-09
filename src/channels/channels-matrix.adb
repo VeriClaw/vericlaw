@@ -3,7 +3,6 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Config.Schema;
 with Config.Loader;
 with Config.Reload;
 with Agent.Context;
@@ -17,6 +16,7 @@ with Channels.Message_Dedup;
 package body Channels.Matrix
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    Seen : Channels.Message_Dedup.Dedup_Buffer;
 

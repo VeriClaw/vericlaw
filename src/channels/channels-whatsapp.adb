@@ -3,7 +3,6 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Config.Schema;
 with Config.Loader;
 with Config.Reload;
 with Agent.Context;
@@ -17,6 +16,7 @@ with Metrics;
 package body Channels.WhatsApp
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    Default_Session : constant String := "vericlaw";
 

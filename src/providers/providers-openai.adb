@@ -4,11 +4,11 @@ with HTTP.Client;
 with Logging;
 with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Agent.Context;
 
 package body Providers.OpenAI
   with SPARK_Mode => Off
 is
+   use Agent.Context;
 
    OpenAI_Default_URL : constant String := "https://api.openai.com";
 

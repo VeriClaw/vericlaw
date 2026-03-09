@@ -1,6 +1,5 @@
 with Ada.Strings.Unbounded;
 with Agent.Context;
-use Config.Schema;
 with Providers.Interface_Pkg;  use Providers.Interface_Pkg;
 with Providers.OpenAI;
 with Providers.Anthropic;
@@ -10,6 +9,7 @@ with Providers.Gemini;
 package body Tools.Spawn
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    Spawn_Depth : Natural := 0;
 

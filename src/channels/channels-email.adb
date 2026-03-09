@@ -3,7 +3,6 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Config.Schema;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
@@ -15,6 +14,7 @@ with Channels.Message_Dedup;
 package body Channels.Email
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    Seen : Channels.Message_Dedup.Dedup_Buffer;
 

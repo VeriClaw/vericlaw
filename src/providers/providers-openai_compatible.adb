@@ -1,13 +1,13 @@
 with Ada.Exceptions;     use Ada.Exceptions;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Agent.Context;
 with Ada.Text_IO;
 with Logging;
 
 package body Providers.OpenAI_Compatible
   with SPARK_Mode => Off
 is
+   use Agent.Context;
 
    --  -----------------------------------------------------------------------
    --  Streaming accumulation state (package-level; CLI-only, non-concurrent).

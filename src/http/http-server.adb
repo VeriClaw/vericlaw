@@ -10,7 +10,6 @@ with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Build_Info;
 with Config.JSON_Parser;    use Config.JSON_Parser;
-use Config.Schema;
 with Channels.Telegram;
 with Channels.Signal;
 with Agent.Context;
@@ -21,6 +20,7 @@ with Plugins.Loader;
 package body HTTP.Server
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    WS : AWS.Server.HTTP;
 

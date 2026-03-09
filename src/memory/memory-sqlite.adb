@@ -4,7 +4,6 @@
 
 with Interfaces.C;            use Interfaces.C;
 with Interfaces.C.Strings;    use Interfaces.C.Strings;
-use System;
 with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
@@ -13,6 +12,7 @@ with Observability.Tracing;
 package body Memory.SQLite
   with SPARK_Mode => Off
 is
+   use System;
 
    --  SQLite3 return codes
    SQLITE_OK   : constant int := 0;

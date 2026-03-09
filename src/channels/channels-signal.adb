@@ -2,7 +2,6 @@ with Logging;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with HTTP.Client;
 with Config.JSON_Parser; use Config.JSON_Parser;
-use Config.Schema;
 with Config.Loader;
 with Config.Reload;
 with Agent.Context;
@@ -14,6 +13,7 @@ with Metrics;
 package body Channels.Signal
   with SPARK_Mode => Off
 is
+   use Config.Schema;
 
    function Send_Message
      (Bridge_URL  : String;

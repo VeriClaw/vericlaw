@@ -4,8 +4,6 @@ with Providers.OpenAI;
 with Providers.Anthropic;
 with Providers.OpenAI_Compatible;
 with Providers.Gemini;
-use Config.Schema;
-use Agent.Context;
 with Agent.Tools;
 with Gateway.Provider.Routing;
 with Gateway.Provider.Runtime_Routing;
@@ -16,6 +14,8 @@ with Observability.Tracing;
 package body Agent.Loop_Pkg
   with SPARK_Mode => Off
 is
+   use Config.Schema;
+   use Agent.Context;
 
    Max_Schema_Count : constant := Max_Tool_Schemas;
 
