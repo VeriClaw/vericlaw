@@ -1,6 +1,6 @@
 name = "vericlaw"
 description = "Ada/SPARK AI agent runtime with formally verified security core"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["VeriClaw Team"]
 licenses = "MIT"
 website = "https://github.com/vericlaw"

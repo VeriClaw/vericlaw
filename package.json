@@ -1,8 +1,8 @@
 {
   "name": "vericlaw",
-  "version": "0.1.1",
-  "description": "> **Active development — `test` branch has all the latest features. `main` is an empty stub.**",
-  "main": "index.js",
+  "version": "0.2.0",
+  "description": "Security-first Ada/SPARK AI assistant runtime (active development; see README for verified release channels).",
+  "private": true,
   "directories": {
     "doc": "docs",
     "test": "tests"
@@ -16,7 +16,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/VeriClaw/vericlaw/issues"

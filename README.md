@@ -5,13 +5,13 @@
 >
 > **VeriClaw is not yet production-ready.** The project is actively under development and in its final stages before a stable public release. Expect breaking changes, incomplete features, and rough edges.
 >
-> **Current status (v0.1.1):**
+> **Current status (release line v0.2.0; local source builds report `0.2.0-dev` until CI stamps release metadata):**
 > - ✅ Core runtime, CLI, and multi-platform builds are functional
-> - ✅ Release pipeline is operational (Linux, macOS, Windows binaries + DEB/RPM packages)
-> - ⚠️ **Docker image** — GHCR publish not yet active (TBC)
-> - ⚠️ **Winget** — Windows Package Manager submission not yet submitted (TBC)
-> - ⚠️ **`get.vericlaw.dev`** — one-line installer not yet live (TBC)
-> - ⚠️ **Homebrew / Scoop** — tap/bucket infrastructure in place but not publicly verified (TBC)
+> - ✅ Tagged binaries and DEB/RPM release assets exist; GitHub Releases and source builds are the safest current install paths
+> - ⚠️ **Docker image** — GHCR publish is not yet active (TBC)
+> - ⚠️ **Winget** — manifest templates exist, but public registry submission is still pending (TBC)
+> - ⚠️ **`get.vericlaw.dev`** — one-line installer is not yet live (TBC)
+> - ⚠️ **Homebrew / Scoop / APT repo** — metadata exists, but public availability is not yet verified (TBC)
 >
 > **Do not use in production.** APIs and configuration formats may change without notice.
 
@@ -93,7 +93,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 - `--no-color` flag — disable ANSI colors (auto-detected for pipes, respects `NO_COLOR`)
 - Plugin loader — discover and load plugins with SPARK-verified capability policy
 - Systemd / launchd / Windows service packaging
-- Multi-arch Docker images (amd64 / arm64 / arm/v7)
+- Dockerfiles and publish scaffolding for multi-arch images (amd64 / arm64 / arm/v7; GHCR publish TBC)
 
 **Multimodal input**
 - `[IMAGE:path]` markers in user messages — base64-encode local images for vision APIs
@@ -110,18 +110,20 @@ curl -fsSL https://get.vericlaw.dev | sh
 ```
 
 ### Homebrew (macOS / Linux)
+> **Tap metadata exists, but this channel is not yet a verified public install path.** Prefer GitHub Releases or building from source for now.
 ```bash
 brew install vericlaw/tap/vericlaw
 ```
 
 ### Scoop (Windows)
+> **Bucket metadata exists, but this channel is not yet a verified public install path.** Prefer GitHub Releases or building from source for now.
 ```powershell
 scoop bucket add vericlaw https://github.com/vericlaw/scoop-vericlaw
 scoop install vericlaw
 ```
 
 ### APT (Debian/Ubuntu) ⚠️ Coming Soon
-> **The `apt.vericlaw.dev` repository is not yet live.** Install via direct `.deb` download instead (see Raspberry Pi section for example, or the [Releases page](https://github.com/VeriClaw/vericlaw/releases)).
+> **The `apt.vericlaw.dev` repository is not yet live.** Use direct `.deb` assets from [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases) for now. When the repo is live, installation will look like:
 ```bash
 # Add repository (one-time)
 curl -fsSL https://apt.vericlaw.dev/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/vericlaw.gpg
@@ -130,7 +132,7 @@ sudo apt update && sudo apt install vericlaw
 ```
 
 ### Winget (Windows Package Manager) ⚠️ Coming Soon
-> **Winget submission is in progress — not yet available in the public registry.** Use Scoop or download the binary directly from [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases) in the meantime.
+> **Winget manifest templates exist, but the package is not yet available in the public registry.** Use GitHub Releases in the meantime.
 ```powershell
 winget install VeriClaw.VeriClaw
 ```
@@ -145,13 +147,14 @@ alr build -- -XBUILD_PROFILE=release
 ```
 
 ### Docker
+> **GHCR publish is not yet active.** Treat the image names below as the planned naming scheme once registry publishing is enabled.
 ```bash
 # Multi-arch image (linux/amd64, linux/arm64, linux/arm/v7)
 docker pull ghcr.io/vericlaw/vericlaw:latest
 docker run --rm -it ghcr.io/vericlaw/vericlaw
 
 # Specific version
-docker pull ghcr.io/vericlaw/vericlaw:v0.1.0
+docker pull ghcr.io/vericlaw/vericlaw:<release-tag>
 ```
 
 ### Raspberry Pi
@@ -160,7 +163,7 @@ VeriClaw ships native ARM binaries for Raspberry Pi:
 
 | Model | OS | Binary | Install Method |
 |-------|-----|--------|---------------|
-| RPi 5 / RPi 4 | Raspberry Pi OS (64-bit) | `linux-aarch64` | `.deb`, apt (TBC), Homebrew |
+| RPi 5 / RPi 4 | Raspberry Pi OS (64-bit) | `linux-aarch64` | `.deb`, apt (TBC), Homebrew (TBC) |
 | RPi 4 / RPi 3 | Raspberry Pi OS (32-bit) | `linux-armv7` | `.deb`, apt (TBC) |
 | RPi 2 | Raspberry Pi OS (32-bit) | `linux-armv7` | `.deb`, apt (TBC) |
 | RPi Zero 2 W | Raspberry Pi OS (64-bit) | `linux-aarch64` | `.deb`, apt (TBC) |
@@ -173,12 +176,13 @@ curl -fsSL https://get.vericlaw.dev | sh
 
 The installer auto-detects your architecture. For `.deb` package:
 ```bash
+# Replace <tag> / <version> with the release you want, e.g. v0.2.0 / 0.2.0
 # 64-bit (aarch64)
-curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_0.1.0_arm64.deb
+curl -fsSLO https://github.com/VeriClaw/vericlaw/releases/download/<tag>/vericlaw_<version>_arm64.deb
 sudo dpkg -i vericlaw_*.deb
 
 # 32-bit (armv7)
-curl -fsSLO https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw_0.1.0_armhf.deb
+curl -fsSLO https://github.com/VeriClaw/vericlaw/releases/download/<tag>/vericlaw_<version>_armhf.deb
 sudo dpkg -i vericlaw_*.deb
 ```
 
@@ -198,14 +202,14 @@ vericlaw update-check
 
 ### Supported Platforms
 
-| OS | Architecture | Binary | Homebrew | Scoop | APT (.deb) | RPM | install.sh |
+| OS | Architecture | Binary | Homebrew | Scoop | DEB packages | RPM | install.sh |
 |----|-------------|--------|----------|-------|------------|-----|------------|
-| Linux | x86_64 | ✅ | ✅ | — | ✅ | ✅ | 🔜 TBC |
-| Linux | aarch64 (ARM64) | ✅ | ✅ | — | ✅ | ✅ | 🔜 TBC |
+| Linux | x86_64 | ✅ | ⚠️ TBC | — | ✅ | ✅ | 🔜 TBC |
+| Linux | aarch64 (ARM64) | ✅ | ⚠️ TBC | — | ✅ | ✅ | 🔜 TBC |
 | Linux | armv7 (RPi) | ✅ | — | — | ✅ | ✅ | 🔜 TBC |
-| macOS | Apple Silicon | ✅ (universal) | ✅ | — | — | — | 🔜 TBC |
-| macOS | Intel | ✅ (universal) | ✅ | — | — | — | 🔜 TBC |
-| Windows | x86_64 | ✅ | — | ✅ | — | — | 🔜 TBC |
+| macOS | Apple Silicon | ✅ (universal) | ⚠️ TBC | — | — | — | 🔜 TBC |
+| macOS | Intel | ✅ (universal) | ⚠️ TBC | — | — | — | 🔜 TBC |
+| Windows | x86_64 | ✅ | — | ⚠️ TBC | — | — | 🔜 TBC |
 
 ## Project Structure
 
@@ -707,7 +711,7 @@ When `vericlaw gateway` is running, a local-only REST API is available on the bi
 
 ```bash
 curl http://127.0.0.1:8787/api/status
-# {"status":"running","version":"0.2.0","uptime_s":120,"channels_active":3}
+# {"status":"running","version":"<build version>","uptime_s":120,"channels_active":3}
 
 curl http://127.0.0.1:8787/api/channels
 # {"channels":[{"kind":"telegram","enabled":true,"max_rps":5},{"kind":"slack","enabled":true,"max_rps":5},...]}
@@ -728,6 +732,8 @@ curl -X POST http://127.0.0.1:8787/api/chat/stream \
 # data: {"content":"Hi! How can I help?"}
 # data: [DONE]
 ```
+
+The `version` field mirrors `Build_Info.Version` embedded in the binary you are running.
 
 All API endpoints are restricted to `127.0.0.1` — `403 Forbidden` for any other source address.
 
@@ -968,40 +974,56 @@ The `make competitive-regression-gate` gate **fails** if any VeriClaw metric reg
 | Windows service | `deploy/windows/install-vericlaw-service.ps1` |
 | Operator runbook | `docs/runbooks/operator-runbook.md` |
 
-## What works today
+## Capability inventory (v0.2.0)
 
-**All commands:**
+This section is the authoritative list of implemented, tested capabilities as of the current release.
+
+**CLI commands:**
 - `vericlaw onboard` — interactive wizard (provider, API key, model, agent name, channel)
 - `vericlaw chat` — interactive CLI with streaming token output
 - `vericlaw agent "..."` — one-shot mode with streaming output
 - `vericlaw gateway` — runs all enabled channels concurrently via Ada tasks
+- `vericlaw config validate` — validates config file without starting the agent
 - `vericlaw doctor` — config check, connectivity, health status
+- `vericlaw status [--json]` — runtime status summary
+- `vericlaw export --session <id> --format md|json` — export conversation history
 - `vericlaw version` / `vericlaw help`
 
-**All 5 providers:** OpenAI, Anthropic, Azure AI Foundry, Google Gemini, any OpenAI-compatible (Groq, Ollama, OpenRouter, LiteLLM)
+**LLM providers (5):** OpenAI, Anthropic, Azure AI Foundry, Google Gemini, any OpenAI-compatible (Groq, Ollama, OpenRouter, LiteLLM)
 
-**All 9 channels (concurrently in gateway mode):** CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix
+**Channels (9, concurrently in gateway mode):** CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email, IRC, Matrix
 
-**All 13 built-in tools + unlimited MCP tools:**
+**Built-in tools (13) + unlimited via MCP:**
 `file`, `shell`, `web_fetch`, `brave_search`, `git_operations`, `cron_add/list/remove`, `spawn`, `browser_browse`, `browser_screenshot`, `memory_search`
 
-**Infrastructure:**
-- Streaming SSE output (OpenAI + Anthropic)
-- Multi-provider failover
-- Session expiry auto-prune (configurable)
-- Prometheus `/metrics` endpoint
-- `SIGHUP` hot config reload
+**Runtime and infrastructure:**
+- Streaming SSE token output (OpenAI + Anthropic providers)
+- Runtime provider routing (`Gateway.Provider.Runtime_Routing`): stateful primary/failover/long-tail loop with `Next_Attempt` / `Mark_Failed`
+- Multi-provider failover with automatic fallback
+- Session expiry auto-prune (configurable, default 30 days)
+- Prometheus `/metrics` endpoint — per-channel, per-provider, per-tool counters
+- `SIGHUP` hot config reload — update tokens/allowlists without restart
 - Multi-user gateway (operator vs guest memory isolation)
-- Parallel tool execution (Ada task pool)
+- Parallel tool execution (Ada task pool; ordering-sensitive tools run sequentially)
 - Cron heartbeat background task
-- Syslog audit forwarding
-- Structured JSON logging to stderr
-- Live gateway API (`/api/status`, `/api/channels`, `/api/metrics/summary`)
-- Operator web console
-- Vector RAG memory (sqlite-vec + embeddings)
-- Browser/screenshot tool (Puppeteer headless Chromium)
-- SPARK Silver proofs on security core
-- SQLite WAL mode for safe concurrent channel writes
-- Multi-arch Docker images on GHCR (`ghcr.io/vericlaw/vericlaw`) — linux/amd64, linux/arm64, linux/arm/v7
+- Syslog audit forwarding (POSIX `openlog`/`syslog`)
+- Structured JSON logging to stderr (`VERICLAW_LOG_LEVEL` filter, `req_id` correlation)
+- Live gateway REST API (`/api/status`, `/api/channels`, `/api/metrics/summary`, `POST /api/chat`, `POST /api/chat/stream`)
+- Operator web console (`operator-console/index.html`) — security defaults, active channels, Prometheus metric totals, local browser chat panel
+  - ⚠️ Chat uses `POST /api/chat/stream` but the current AWS gateway buffers the full reply before flushing; token-by-token streaming is pending a gateway update
+- Vector RAG memory via `sqlite-vec` + OpenAI `text-embedding-3-small` (or Ollama `nomic-embed-text`)
+- Browser/screenshot tool via Puppeteer headless Chromium (port 3007)
+- SPARK Silver proofs on security core (GNATprove `--level=2`)
+- SQLite WAL mode for safe concurrent multi-channel writes
+- Context compaction (`memory.compact_at_pct`): replaces oldest User+Assistant pair with a stub when fill ratio reaches the configured threshold (0 = off, 80 = compact at 80 % full)
+- Config input validation: all URLs, strings, and API keys are checked for control characters and unsafe URI schemes on load
+- Multimodal image input via `[IMAGE:path]` / `[IMAGE:url]` markers (OpenAI, Anthropic, Gemini)
+- Multi-agent orchestration: role-based delegation (Researcher/Coder/Reviewer/General) with SPARK-proved depth limit
+- Conversation branching: `/edit N`, `/branch`, `/branch switch <id>` REPL commands
+- Database schema versioning with sequential migration framework
+- Plugin loader with SPARK-verified capability policy
+- OpenTelemetry OTLP tracing (optional, zero overhead when off)
+- LLM cost tracking per provider with token budget enforcement
+- Multi-arch Docker publish scaffolding for GHCR (`ghcr.io/vericlaw/vericlaw`) — activation pending
 - Winget manifest templates published (registry submission in progress)
 - Systemd / launchd / Windows service packaging

@@ -21,7 +21,18 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - install.sh: detects `armv7l`/`armhf` architectures
 - vericlaw.gpr: added `arm-linux-gnueabihf` to Target_Kind
 
-## [Unreleased]
+## [0.2.0] - 2026-03-09
+
+### Added
+- Deterministic context compaction for long sessions: `Compact_Oldest_Turn` / `Compaction_Needed` in `Agent.Context`; `memory.compact_at_pct` config key (0 = off, 80 = compact at 80 % full)
+- Runtime provider routing module `Gateway.Provider.Runtime_Routing`: `Next_Attempt` / `Mark_Failed` stateful failover loop with primary/failover/long-tail tracking
+- Operator console local browser chat panel: sends to `POST /api/chat/stream`, renders full reply on completion
+- Operator console transport status pill ("Buffered SSE chat") — honest label noting current AWS gateway buffers the full reply before flushing; UI is ready for chunked SSE once the gateway is updated
+- Config input validation: `Validate_String_Field` and `Validate_URL_Field` helpers in `Config.Loader` reject control characters and unsafe URI schemes
+
+### Changed
+- `memory.compact_at_pct` defaults to `0` (disabled); set to `80` for long-running sessions to keep context within bounds without losing assistant turns
+- Operator console description updated to reflect live chat capability
 
 ## [0.1.0] - 2026-03-01
 
