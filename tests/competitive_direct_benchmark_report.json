@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-03-09T22:33:01Z",
+  "methodology": "VeriClaw measured via Docker container (QEMU x86_64 on ARM). Competitors from README/CI self-reported numbers (native).",
+  "fairness_note": "Direct comparison is NOT apples-to-apples due to QEMU overhead. Binary size and container size are comparable.",
+  "metrics": {
+    "startup_ms": {
+      "vericlaw": 139.441,
+      "zeroclaw": 10.0,
+      "nullclaw": 8.0,
+      "vericlaw_vs_zeroclaw": "13.94x",
+      "vericlaw_vs_nullclaw": "17.43x"
+    },
+    "dispatch_latency_p95_ms": {
+      "vericlaw": 192.204,
+      "zeroclaw": 13.4,
+      "nullclaw": 14.0,
+      "vericlaw_vs_zeroclaw": "14.34x",
+      "vericlaw_vs_nullclaw": "13.73x"
+    },
+    "throughput_ops_per_sec": {
+      "vericlaw": 7.17,
+      "zeroclaw": 80.0,
+      "nullclaw": 78.0,
+      "vericlaw_vs_zeroclaw": "0.09x",
+      "vericlaw_vs_nullclaw": "0.09x"
+    },
+    "binary_size_mb": {
+      "vericlaw": 5.312,
+      "zeroclaw": 8.8,
+      "nullclaw": 0.662,
+      "vericlaw_vs_zeroclaw": "0.60x",
+      "vericlaw_vs_nullclaw": "8.02x"
+    },
+    "container_size_mb": {
+      "vericlaw": 37.102,
+      "zeroclaw": 42.0,
+      "nullclaw": 48.0,
+      "vericlaw_vs_zeroclaw": "0.88x",
+      "vericlaw_vs_nullclaw": "0.77x"
+    }
+  }
+}

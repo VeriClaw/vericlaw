@@ -1,81 +1,57 @@
 {
-  "competitors": {
-    "nullclaw": {
-      "deployment_maturity": {
-        "multi_arch_image": true,
-        "signed_artifacts": true,
-        "smoke_matrix": 4
-      },
-      "execution_feasibility": {
-        "benchmark_execution_feasible": false,
-        "reason": "zig 0.15.2 unavailable on host; ingested best-available local artifacts",
-        "zig_status": "missing",
-        "zig_version": null
-      },
-      "feature_parity": {
-        "channels": 3,
-        "providers": 3,
-        "tools": 10
-      },
-      "generated_at": "2026-02-26T18:32:52Z",
-      "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
-      "ingest_source": {
-        "nullclaw_ci_workflow": "/Users/eugene/apps/demo/claw-mania/nullclaw/.github/workflows/ci.yml",
-        "nullclaw_readme": "/Users/eugene/apps/demo/claw-mania/nullclaw/README.md",
-        "source_scorecard": "/Users/eugene/apps/demo/claw-mania/vericlaw/config/competitive_scorecards/nullclaw_v2_scorecard.json"
-      },
-      "performance": {
-        "binary_size_mb": 0.662,
-        "container_size_mb": 48.0,
-        "dispatch_latency_p95_ms": 14.0,
-        "idle_rss_mb": 1.0,
-        "startup_ms": 8.0,
-        "throughput_ops_per_sec": 78.0
-      },
-      "performance_metric_sources": {
-        "binary_size_mb": "nullclaw README benchmark snapshot (binary row: 678 KB)",
-        "container_size_mb": "fallback from source scorecard due missing local benchmark artifact",
-        "dispatch_latency_p95_ms": "fallback from source scorecard due missing local benchmark artifact",
-        "idle_rss_mb": "nullclaw README benchmark snapshot (RAM row: ~1 MB)",
-        "startup_ms": "nullclaw README benchmark snapshot (startup row: <8 ms at 0.8 GHz)",
-        "throughput_ops_per_sec": "fallback from source scorecard due missing local benchmark artifact"
-      },
-      "project": "nullclaw",
-      "security_non_regression": {
-        "allow_public_bind_default": false,
-        "deny_private_and_local_egress": true,
-        "empty_allowlist_denies_all": true,
-        "encrypt_secrets_at_rest": true,
-        "require_pairing_default": true,
-        "workspace_scope_default": true
-      },
-      "snapshot_id": "competitive-v2-nullclaw-local-ingest"
+  "generated_at": "2026-03-09T22:33:01Z",
+  "measurement_platform": {
+    "host": "macOS ARM64 (Apple Silicon)",
+    "container_runtime": "Docker Desktop with QEMU x86_64 emulation",
+    "target_arch": "linux/amd64",
+    "image": "vericlaw-bench:amd64",
+    "method": "docker exec in persistent container (50 iterations)",
+    "note": "QEMU emulation adds ~3-5x overhead vs native x86_64. Competitor numbers are self-reported from README/CI (native builds)."
+  },
+  "vericlaw": {
+    "performance": {
+      "startup_ms": 139.441,
+      "dispatch_latency_p95_ms": 192.204,
+      "throughput_ops_per_sec": 7.17,
+      "binary_size_mb": 5.312,
+      "container_size_mb": 37.102,
+      "idle_rss_mb": 0.0
     },
+    "performance_docker_run": {
+      "startup_ms": 270.594,
+      "dispatch_latency_p95_ms": 398.49,
+      "throughput_ops_per_sec": 3.7
+    },
+    "slo_results": {
+      "startup_ms": {
+        "value": 139.441,
+        "threshold": 120,
+        "type": "max",
+        "passed": false
+      },
+      "dispatch_latency_p95_ms": {
+        "value": 192.204,
+        "threshold": 75,
+        "type": "max",
+        "passed": false
+      },
+      "throughput_ops_per_sec": {
+        "value": 7.17,
+        "threshold": 15,
+        "type": "min",
+        "passed": false
+      },
+      "binary_size_mb": {
+        "value": 5.312,
+        "threshold": 8,
+        "type": "max",
+        "passed": true
+      }
+    },
+    "slo_overall_pass": false
+  },
+  "competitors": {
     "zeroclaw": {
-      "deployment_maturity": {
-        "multi_arch_image": true,
-        "signed_artifacts": true,
-        "smoke_matrix": 5
-      },
-      "execution_feasibility": {
-        "attempted_command": "cargo bench --locked",
-        "benchmark_execution_feasible": false,
-        "cargo_status": "missing",
-        "cargo_version": null,
-        "reason": "cargo unavailable on host; ingested best-available local artifacts"
-      },
-      "feature_parity": {
-        "channels": 3,
-        "providers": 3,
-        "tools": 11
-      },
-      "generated_at": "2026-02-26T18:32:52Z",
-      "ingest_method": "local_readme_benchmark_snapshot_with_scorecard_fallback",
-      "ingest_source": {
-        "source_scorecard": "/Users/eugene/apps/demo/claw-mania/vericlaw/config/competitive_scorecards/zeroclaw_v2_scorecard.json",
-        "zeroclaw_benchmark_workflow": "/Users/eugene/apps/demo/claw-mania/zeroclaw/.github/workflows/test-benchmarks.yml",
-        "zeroclaw_readme": "/Users/eugene/apps/demo/claw-mania/zeroclaw/README.md"
-      },
       "performance": {
         "binary_size_mb": 8.8,
         "container_size_mb": 42.0,
@@ -84,49 +60,76 @@
         "startup_ms": 10.0,
         "throughput_ops_per_sec": 80.0
       },
-      "performance_metric_sources": {
-        "binary_size_mb": "zeroclaw README benchmark snapshot/sample (release binary size: ~8.8MB)",
-        "container_size_mb": "fallback from source scorecard due missing local benchmark artifact",
-        "dispatch_latency_p95_ms": "fallback from source scorecard due missing local benchmark artifact",
-        "idle_rss_mb": "zeroclaw README reproducible sample (peak memory footprint from `zeroclaw --help`/`status`)",
-        "startup_ms": "zeroclaw README benchmark snapshot (startup row: <10ms at 0.8GHz core)",
-        "throughput_ops_per_sec": "fallback from source scorecard due missing local benchmark artifact"
+      "feature_parity": {
+        "channels": 17,
+        "providers": 12,
+        "tools": 11
       },
-      "project": "zeroclaw",
-      "security_non_regression": {
-        "allow_public_bind_default": false,
-        "deny_private_and_local_egress": true,
-        "empty_allowlist_denies_all": true,
-        "encrypt_secrets_at_rest": true,
-        "require_pairing_default": true,
-        "workspace_scope_default": true
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 5
       },
-      "snapshot_id": "competitive-v2-zeroclaw-local-ingest"
+      "source": "local_readme_benchmark_snapshot_with_scorecard_fallback"
+    },
+    "nullclaw": {
+      "performance": {
+        "binary_size_mb": 0.662,
+        "container_size_mb": 48.0,
+        "dispatch_latency_p95_ms": 14.0,
+        "idle_rss_mb": 1.0,
+        "startup_ms": 8.0,
+        "throughput_ops_per_sec": 78.0
+      },
+      "feature_parity": {
+        "channels": 17,
+        "providers": 22,
+        "tools": 18
+      },
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 4
+      },
+      "source": "local_readme_benchmark_snapshot_with_scorecard_fallback"
     }
   },
-  "generated_at": "2026-02-26T18:40:26Z",
-  "vericlaw": {
-    "benchmark_runs": 50,
-    "binary_bytes": 7170120,
-    "binary_size_mb": 6.838,
-    "binder_mode": "portable",
-    "build_profile": "edge-speed",
-    "container_size_mb": null,
-    "dispatch_latency_avg_ms": 48.824,
-    "dispatch_latency_p95_ms": 56.911,
-    "host_platform": "darwin/arm64",
-    "idle_rss_mb": null,
-    "measurement_mode": "container",
-    "measurement_note": "QEMU x86_64 on Apple Silicon (~30x timing overhead vs native x86_64); native estimates: startup ~1.6 ms, dispatch_p95 ~1.9 ms",
-    "metric_availability": {
-      "idle_rss_mb": {
-        "collector": "unsupported_container_rss_telemetry",
-        "supported": false
-      }
+  "comparison_table": {
+    "startup_ms": {
+      "vericlaw": 139.441,
+      "zeroclaw": 10.0,
+      "nullclaw": 8.0,
+      "leader": "nullclaw"
     },
-    "platform_mismatch": true,
-    "startup_ms": 88.509,
-    "target_platform": "linux/amd64",
-    "throughput_ops_per_sec": 20.482
+    "dispatch_latency_p95_ms": {
+      "vericlaw": 192.204,
+      "zeroclaw": 13.4,
+      "nullclaw": 14.0,
+      "leader": "zeroclaw"
+    },
+    "throughput_ops_per_sec": {
+      "vericlaw": 7.17,
+      "zeroclaw": 80.0,
+      "nullclaw": 78.0,
+      "leader": "zeroclaw"
+    },
+    "binary_size_mb": {
+      "vericlaw": 5.312,
+      "zeroclaw": 8.8,
+      "nullclaw": 0.662,
+      "leader": "nullclaw"
+    },
+    "container_size_mb": {
+      "vericlaw": 37.102,
+      "zeroclaw": 42.0,
+      "nullclaw": 48.0,
+      "leader": "vericlaw"
+    },
+    "idle_rss_mb": {
+      "vericlaw": 0.0,
+      "zeroclaw": 4.1,
+      "nullclaw": 1.0,
+      "leader": "nullclaw"
+    }
   }
 }

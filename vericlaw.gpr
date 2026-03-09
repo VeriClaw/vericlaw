@@ -37,23 +37,23 @@ project Vericlaw is
             case Warn_Errors is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwe",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatwe",
                      "-gnatyaAbcefhiklmnprtM120", "-gnato");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ",
                      "-gnatyaAbcefhiklmnprtM120", "-gnato");
             end case;
          when "release" =>
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
                      "-O2", "-flto",
                      "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                      "-O2", "-flto",
                      "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
             end case;
@@ -61,37 +61,37 @@ project Vericlaw is
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
             end case;
          when "edge-size" =>
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
             end case;
          when "edge-speed" =>
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatyy", "-gnato", "-O2");
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato", "-O2");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato", "-O2");
+                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato", "-O2");
             end case;
          when "coverage" =>
             --  Debug build with GCOV instrumentation for LCOV reporting.
             for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnato",
+              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                "-O0", "-g", "--coverage", "-fprofile-arcs", "-ftest-coverage");
       end case;
    end Compiler;

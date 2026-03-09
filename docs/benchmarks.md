@@ -110,21 +110,32 @@ instead of hard-failing on unsupported telemetry.
 
 ## Current Local Reference Snapshot
 
-The latest checked-in raw VeriClaw report (`tests/competitive_benchmark_report.json`) currently
-shows:
+The latest raw VeriClaw report (`tests/competitive_benchmark_report.json`) was collected on
+2026-03-10 using `docker exec` in a persistent container (50 iterations, QEMU x86_64 on ARM host):
 
-- `startup_ms`: `88.509`
-- `dispatch_latency_p95_ms`: `56.911`
-- `throughput_ops_per_sec`: `20.482`
-- `binary_size_mb`: `6.838`
-- `measurement_mode`: `container`
+| Metric | VeriClaw | ZeroClaw | NullClaw | Leader |
+| --- | ---: | ---: | ---: | --- |
+| `startup_ms` | 139.44 | 10.00 | 8.00 | nullclaw |
+| `dispatch_latency_p95_ms` | 192.20 | 13.40 | 14.00 | zeroclaw |
+| `throughput_ops_per_sec` | 7.17 | 80.00 | 78.00 | zeroclaw |
+| `binary_size_mb` | **5.31** | 8.80 | **0.66** | nullclaw |
+| `container_size_mb` | **37.10** | 42.00 | 48.00 | **vericlaw** |
+
+**SLO gate status:** FAIL (expected under QEMU emulation — only `binary_size_mb` passes).
+
+**Key takeaways:**
+- VeriClaw has the **smallest container image** (37.1 MB) across all competitors.
+- Binary size (5.3 MB) beats zeroclaw/Rust (8.8 MB) but trails nullclaw/Zig (0.66 MB).
+- Latency and throughput numbers are **not directly comparable** — VeriClaw runs under QEMU
+  emulation while competitor numbers are self-reported native builds from README/CI.
+- Re-run on a native Linux x86_64 benchmark lane before using these numbers for public comparison.
+
+**Measurement details:**
+- `measurement_mode`: `docker_exec_persistent_container`
 - `host_platform`: `darwin/arm64`
-- `target_platform`: `linux/amd64`
-- `idle_rss_mb`: unsupported in that report
-
-That snapshot is useful for regression tracking, but it is **not** the final apples-to-apples claim
-we should publish externally. Re-run on a native Linux x86_64 benchmark lane before using the
-numbers for public marketing comparisons.
+- `target_platform`: `linux/amd64` (QEMU)
+- `idle_rss_mb`: not available (process exits before /proc capture)
+- `iterations`: 50
 
 ## Interpretation Guidance
 

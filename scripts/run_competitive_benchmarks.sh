@@ -246,6 +246,18 @@ run_container_measurement() {
         apt-get install --yes --no-install-recommends gnat gprbuild binutils python3 time >/dev/null
         rm -rf /var/lib/apt/lists/*
       fi
+      # Ensure C linker deps are present (same as Dockerfile.release)
+      if ! dpkg -s libsqlite3-dev >/dev/null 2>&1; then
+        apt-get update >/dev/null
+        apt-get install --yes --no-install-recommends libsqlite3-dev >/dev/null
+        rm -rf /var/lib/apt/lists/*
+      fi
+      # Create libcurl.so symlink if missing (Bullseye/alire images)
+      for dir in /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu; do
+        if [ -f "${dir}/libcurl.so.4" ] && [ ! -f "${dir}/libcurl.so" ]; then
+          ln -sf "${dir}/libcurl.so.4" "${dir}/libcurl.so"
+        fi
+      done
       if ! command -v gnatprove >/dev/null 2>&1; then
         shim_dir="$(mktemp -d)"
         cat >"${shim_dir}/gnatprove" <<'"'"'EOF'"'"'

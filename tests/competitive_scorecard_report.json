@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-03-09T22:33:01Z",
+  "projects": {
+    "vericlaw": {
+      "performance": {
+        "startup_ms": 139.441,
+        "dispatch_latency_p95_ms": 192.204,
+        "throughput_ops_per_sec": 7.17,
+        "binary_size_mb": 5.312,
+        "container_size_mb": 37.102,
+        "idle_rss_mb": 0.0
+      },
+      "feature_parity": {
+        "channels": 9,
+        "providers": 5,
+        "tools": 12
+      },
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": false,
+        "smoke_matrix": 3
+      },
+      "slo_pass": false
+    },
+    "zeroclaw": {
+      "performance": {
+        "binary_size_mb": 8.8,
+        "container_size_mb": 42.0,
+        "dispatch_latency_p95_ms": 13.4,
+        "idle_rss_mb": 4.1,
+        "startup_ms": 10.0,
+        "throughput_ops_per_sec": 80.0
+      },
+      "feature_parity": {
+        "channels": 17,
+        "providers": 12,
+        "tools": 11
+      },
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 5
+      }
+    },
+    "nullclaw": {
+      "performance": {
+        "binary_size_mb": 0.662,
+        "container_size_mb": 48.0,
+        "dispatch_latency_p95_ms": 14.0,
+        "idle_rss_mb": 1.0,
+        "startup_ms": 8.0,
+        "throughput_ops_per_sec": 78.0
+      },
+      "feature_parity": {
+        "channels": 17,
+        "providers": 22,
+        "tools": 18
+      },
+      "deployment_maturity": {
+        "multi_arch_image": true,
+        "signed_artifacts": true,
+        "smoke_matrix": 4
+      }
+    }
+  }
+}
