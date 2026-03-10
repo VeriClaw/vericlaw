@@ -53,7 +53,7 @@ VeriClaw follows the conventions in [`docs/ada-coding-practices.md`](docs/ada-co
 1. Fork the repository and branch from `test` (not `main`).
 2. Make your changes following the standards above.
 3. Run `make validate` — this is the preferred build + proof + test entrypoint (`make check` remains an alias).
-4. Run the smallest relevant targeted suites for your change, for example `make runtime-tests`, `make secrets-test`, `make operator-console-check`, or the affected bridge `node --test` command.
+4. Run the smallest relevant targeted suites for your change, for example `make runtime-tests`, `make secrets-test`, or `make tools-test`.
 5. Verify your diff does not contain:
    - `when others => null` exception handlers
    - Hardcoded secrets, API keys, or tokens
@@ -65,15 +65,15 @@ VeriClaw follows the conventions in [`docs/ada-coding-practices.md`](docs/ada-co
 
 ## Adding a New Channel
 
-Use the existing bridge pattern as your reference:
+> **Note:** Additional channel development in v0.3.0 targets the Signal integration wiring in `src/channels/channels-signal.adb` and `src/signal/`. Full multi-channel support (Telegram, WhatsApp, Discord, Slack, etc.) returns in v1.1 from `future/channels/`.
 
-- **Node.js sidecar**: copy `wa-bridge/index.js` as a template. The sidecar must expose a local HTTP REST API and forward messages to/from the Ada runtime.
-- **Ada channel package**: copy `src/channels/channels-whatsapp.adb` as a template. The package must call `Channels_Security.Check_Allowlist` and `Gateway_Auth.Validate_Token` before processing any message.
-- **SPARK adapter spec**: add a `channels-adapters-<name>.ads` in `src/` following the pattern in `channels-adapters-slack.ads`.
-- **`src/config/config-provider_aliases.ad[sb]`** — Provider alias registry (`Config.Provider_Aliases`): maps short names to OpenAI-compatible endpoint configurations.
-- **`src/terminal/`** — Terminal styling layer (`Terminal.Style`): ANSI colors, ASCII banner, themed output functions. All user-facing CLI output goes through this module so `--no-color` works consistently.
-- Add channel setup documentation in `docs/setup/<name>.md`.
-- Register the sidecar port in `docker-compose.yml`.
+For v0.3.0 channel work:
+
+- **Ada channel package**: use `src/channels/channels-signal.adb` as your template. The package must call `Channels_Security.Check_Allowlist` before processing any message.
+- **SPARK adapter spec**: add a `channels-adapters-<name>.ads` in `src/` following the pattern in existing SPARK adapter specs.
+- Add channel documentation in `docs/channels.md`.
+
+When working on future channel additions (Node.js bridge sidecars, multi-channel gateway), the templates are in `future/bridges/` and `future/channels/`. Register new work there until the v1.1 milestone.
 
 ---
 
@@ -96,7 +96,6 @@ VeriClaw uses a custom test harness (no AUnit dependency). Add tests to the rele
 - Unit tests for a new package go in `tests/<package-name>_test.adb`.
 - Run the full Ada runtime suite with `make runtime-tests`.
 - Use `make config-test`, `make context-test`, `make memory-test`, or `make tools-test` for faster targeted loops.
-- If you touch the operator console or a Node.js sidecar, also run `make operator-console-check` or the relevant bridge `node --test` command.
 - Do not call live AI APIs in tests — mock all provider HTTP responses.
 
 ---

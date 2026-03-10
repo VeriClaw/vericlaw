@@ -16,16 +16,16 @@
 |-------|-------------|
 | [Providers](providers.md) | LLM provider configuration and selection |
 | [Channels](channels.md) | Messaging channel setup and options |
-| [Tools](tools.md) | Tool reference — 13 built-in tools plus MCP integration |
+| [Tools](tools.md) | Tool reference — 3 built-in tools (file_io, shell, cron) |
 
 ## 📖 Reference
 
 | Guide | Description |
 |-------|-------------|
-| [API](api.md) | HTTP Gateway API reference |
-| [Operations](operations.md) | Monitoring, logging, deployment, and service packaging |
 | [Testing](testing.md) | Tests, build profiles, CI pipeline, and gate commands |
 | [Benchmarks](benchmarks.md) | Performance comparison and methodology |
+
+> **Gateway API** and **Operations** docs (Prometheus metrics, SIGHUP reload, docker-compose deployment) are in [`future/docs/`](../future/docs/) — these features return in v1.2–v1.3.
 
 ## 🏗️ Architecture & Design
 
@@ -45,18 +45,7 @@
 
 ## 📂 Channel Setup Guides
 
-Detailed per-channel configuration in [`setup/`](setup/):
-
-- [WhatsApp](setup/whatsapp.md)
-- [Slack](setup/slack.md)
-- [Discord](setup/discord.md)
-- [Email](setup/email.md)
-- [IRC](setup/irc.md)
-- [Matrix](setup/matrix.md)
-- [Mattermost](setup/mattermost.md)
-- [Browser](setup/browser.md)
-- [MCP](setup/mcp.md)
-- [RAG](setup/rag.md)
+Signal setup is covered in [Channels](channels.md). Additional channel setup guides (WhatsApp, Slack, Discord, Email, IRC, Matrix, Mattermost — returning in v1.1) are in [`future/docs/setup/`](../future/docs/setup/).
 
 ## 📂 Provider Guides
 

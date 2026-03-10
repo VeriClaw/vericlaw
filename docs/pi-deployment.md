@@ -14,21 +14,39 @@ VeriClaw runs on a Raspberry Pi 4 as a self-hosted, always-on AI assistant. The 
 
 ---
 
-## Step 1: Download and extract
+## Step 1: Get the binary
+
+**Option A — Cross-compile from x86_64 (recommended for development)**
+
+On your development machine, build an aarch64 binary and copy it to the Pi:
 
 ```bash
-wget https://github.com/vericlaw/vericlaw/releases/latest/download/vericlaw-linux-aarch64.tar.gz
-tar xf vericlaw-linux-aarch64.tar.gz
+# Install Alire and the cross toolchain (Ubuntu/Debian)
+curl -L https://alire.ada.dev/install.sh | bash
+sudo apt-get install -y gcc-aarch64-linux-gnu gnat-aarch64-linux-gnu
+
+# Clone and cross-compile
+git clone https://github.com/vericlaw/vericlaw
+cd vericlaw
+alr build -- -XBUILD_PROFILE=release -XBUILD_TARGET=aarch64-linux-gnu
+
+# Copy to Pi
+scp bin/vericlaw pi@<pi-ip>:/usr/local/bin/
 ```
 
-The archive contains two binaries: `vericlaw` (the Ada core) and `vericlaw-signal` (the Rust Signal bridge). Both are statically linked. There is nothing else to install.
-
-Optionally move the binary to a location on your `$PATH`:
+**Option B — Build directly on the Pi** (slower, ~20 min on RPi 4)
 
 ```bash
-sudo mv vericlaw /usr/local/bin/
-sudo mv vericlaw-signal /usr/local/bin/
+# On the Pi — install Alire first
+curl -L https://alire.ada.dev/install.sh | bash
+
+git clone https://github.com/vericlaw/vericlaw
+cd vericlaw
+alr build -- -XBUILD_PROFILE=release
+sudo cp bin/vericlaw /usr/local/bin/
 ```
+
+> **Pre-built aarch64 binaries** will be available from v1.0 onwards on [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases).
 
 ---
 
@@ -102,7 +120,7 @@ vericlaw doctor
 Expected output when everything is healthy:
 
 ```
-VeriClaw v1.0.0 — system check
+VeriClaw v0.3.0 — system check
 
   Config         ✓  ~/.vericlaw/config.json (valid)
   Provider       ✓  Anthropic — claude-sonnet-4 (responding)
@@ -150,9 +168,9 @@ Use Termius on iOS for SSH access to both the Azure VM and the Pi. The same term
 
 ---
 
-## Release archive contents
+## Release archive contents (from v1.0)
 
-The `vericlaw-linux-aarch64.tar.gz` archive contains:
+When GitHub Releases are published (v1.0+), the `vericlaw-linux-aarch64.tar.gz` archive will contain:
 
 ```
 vericlaw              — main binary (~5 MB, statically linked)
@@ -160,4 +178,4 @@ vericlaw-signal       — Signal bridge (~8 MB, statically linked Rust)
 README.txt            — quick-start: run ./vericlaw onboard
 ```
 
-Total size is under 15 MB. There are no shared library dependencies, no JVM, no Node.js runtime, no Docker required.
+Total size will be under 15 MB. There are no shared library dependencies, no JVM, no Node.js runtime, no Docker required.

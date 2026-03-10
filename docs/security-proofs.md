@@ -24,7 +24,7 @@ If GNATprove certifies a package at Silver level, none of these errors can occur
 
 ## The four must-prove packages
 
-These four packages must pass GNATprove before v1.0-minimal ships. They are VeriClaw's security core.
+These four packages must pass GNATprove before v0.3.0 ships. They are VeriClaw's security core.
 
 ### `security-policy`
 

@@ -2,7 +2,7 @@
 
 # Providers
 
-VeriClaw v1.0-minimal supports two provider families: **Anthropic** (native, first-class) and **OpenAI-compatible** (any endpoint following the OpenAI chat completions API format). Configure one in `~/.vericlaw/config.json`, or let `vericlaw onboard` write it for you.
+VeriClaw v0.3.0 supports two provider families: **Anthropic** (native, first-class) and **OpenAI-compatible** (any endpoint following the OpenAI chat completions API format). Configure one in `~/.vericlaw/config.json`, or let `vericlaw onboard` write it for you.
 
 ---
 

@@ -3,7 +3,7 @@
 # Installation
 
 > [!TIP]
-> The fastest path today is **From Source** or **GitHub Releases**. Package manager channels are being set up.
+> For **v0.3.0**, **building from source** is the only working install path. GitHub Releases, Homebrew, APT, and Docker images are planned from v1.0 onwards.
 
 ---
 
@@ -25,10 +25,10 @@ alr build -- -XBUILD_PROFILE=release
 
 ## GitHub Releases
 
-Download pre-built binaries for your platform from the
-[Releases page](https://github.com/VeriClaw/vericlaw/releases).
+> [!NOTE]
+> GitHub Releases are **not yet published** for v0.3.0. Pre-built binaries will be available from v1.0 onwards on the [Releases page](https://github.com/VeriClaw/vericlaw/releases).
 
-Each release includes binaries for Linux (x86_64, aarch64, armv7), macOS
+Each release will include binaries for Linux (x86_64, aarch64, armv7), macOS
 (universal), and Windows (x86_64), plus `.deb` and `.rpm` packages for Linux.
 
 ---
@@ -115,10 +115,10 @@ VeriClaw ships native ARM binaries for Raspberry Pi:
 | RPi 2 | Raspberry Pi OS (32-bit) | `linux-armv7` | `.deb`, apt (TBC) |
 | RPi Zero 2 W | Raspberry Pi OS (64-bit) | `linux-aarch64` | `.deb`, apt (TBC) |
 
-Install via `.deb` package:
+Install via `.deb` package (from v1.0 releases):
 
 ```bash
-# Replace <tag> / <version> with the release you want, e.g. v0.2.0 / 0.2.0
+# Replace <tag> / <version> with the release you want, e.g. v1.0.0 / 1.0.0
 
 # 64-bit (aarch64)
 curl -fsSLO https://github.com/VeriClaw/vericlaw/releases/download/<tag>/vericlaw_<version>_arm64.deb

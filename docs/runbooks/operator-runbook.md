@@ -1,5 +1,11 @@
 # VeriClaw Operator Runbook
 
+> **Scope note:** Most targets in this runbook require the v1.3 gateway release (multi-arch image signing, operator console, `docker-compose.secure.yml`, `gateway_doctor.sh`). For v0.3.0, the relevant operations are: **Service packaging** (systemd/launchd), `vericlaw doctor`, and `vericlaw status`.
+>
+> Gateway-related targets are preserved here for reference when the v1.3 gateway ships. They will not work against a v0.3.0 build.
+
+---
+
 ## Deploy (container-first)
 1. Build image:
    - `make image-build-local`

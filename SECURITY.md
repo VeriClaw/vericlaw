@@ -15,9 +15,9 @@ VeriClaw is deployed as an AI agent accessible over messaging channels. Every in
 
 ---
 
-## Security Controls (v1.0-minimal)
+## Security Controls (v0.3.0)
 
-The following controls are present in the v1.0-minimal release. Controls for future versions are listed in the roadmap section of [README.md](README.md) and are not yet implemented.
+The following controls are present in the v0.3.0 release. Controls for future versions are listed in the roadmap section of [README.md](README.md) and are not yet implemented.
 
 | Control | Implementation | Verification |
 |---|---|---|

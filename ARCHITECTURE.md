@@ -1,4 +1,4 @@
-# VeriClaw Architecture — v1.0-minimal
+# VeriClaw Architecture — v0.3.0
 
 ## Overview
 
@@ -162,7 +162,7 @@ path the request took to reach the agent.
 
 ---
 
-## What's Not in v1.0-minimal
+## What's Not in v0.3.0
 
 Telegram, Discord, Slack, WhatsApp, Email, IRC, Matrix, and Mattermost channels are not included, nor are the OpenAI direct and Gemini provider clients, or tools such as git, brave search, browser, spawn/delegate, and MCP. The operator console, gateway mode, and observability stack (OTLP tracing, Prometheus metrics) are also deferred. All of these are preserved in `future/` with documented return milestones for v1.1 and beyond.
 

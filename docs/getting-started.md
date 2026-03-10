@@ -8,11 +8,18 @@ Three steps from nothing to a working AI assistant in your terminal and on Signa
 
 ## Step 1: Install
 
-```bash
-curl -fsSL https://vericlaw.dev/install.sh | sh
-```
+VeriClaw v0.3.0 is installed by building from source. Pre-built binaries will be available on [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases) from v1.0 onwards.
 
-The script detects your OS and architecture, downloads the correct binary for your platform, and puts `vericlaw` on your `$PATH`. No package manager, no runtime, no dependencies.
+```bash
+# Install Alire (Ada package manager)
+curl -L https://alire.ada.dev/install.sh | bash
+
+# Clone and build
+git clone https://github.com/vericlaw/vericlaw
+cd vericlaw
+alr build -- -XBUILD_PROFILE=release
+sudo cp bin/vericlaw /usr/local/bin/
+```
 
 Verify:
 
@@ -23,7 +30,7 @@ vericlaw version
 Expected output:
 
 ```
-vericlaw 1.0.0 (abc1234 2026-01-01 aarch64-linux-gnu)
+vericlaw 0.3.0 (abc1234 2026-03-10 aarch64-linux-gnu)
 ```
 
 ---
@@ -93,7 +100,9 @@ VeriClaw — first-time setup
 Config saved to ~/.vericlaw/config.json
 ```
 
-API key validation happens immediately at step 1 — you won't get to step 6 with a bad key. Signal pairing happens at step 3 — you won't get to step 6 with a broken bridge.
+API key validation happens immediately at step 1 — you won't get to step 6 with a bad key.
+
+> **Note (v0.3.0):** Signal steps (2–3) are shown in the wizard but Signal messaging is not yet functional — `vericlaw-signal` builds cleanly as a Rust scaffold but presage device linking is not wired to the Ada runtime in v0.3.0. Full Signal integration ships in v1.1. Skip those steps or use `vericlaw chat --local` for CLI-only mode.
 
 ---
 
@@ -104,7 +113,7 @@ vericlaw chat
 ```
 
 ```
-VeriClaw v1.0.0 — type /help for commands, /exit to quit
+VeriClaw v0.3.0 — type /help for commands, /exit to quit
 
 you> Hello, what can you do?
 
@@ -117,7 +126,7 @@ like to work on?
 That's it. You now have:
 
 - **CLI chat** — interactive terminal session with streaming output
-- **Signal listening** — VeriClaw is monitoring your linked Signal account and will respond to messages you send it
+- **Signal** — not yet functional in v0.3.0; full integration in v1.1
 
 ---
 
@@ -127,13 +136,12 @@ That's it. You now have:
 |---|---|
 | CLI chat | `vericlaw chat` |
 | CLI chat without Signal | `vericlaw chat --local` |
-| Signal chat | Send a message to yourself on Signal |
-| Voice messages on Signal | Speak naturally — VeriClaw transcribes and responds |
-| Images on Signal | Send a photo — VeriClaw can describe and reason about it |
 | File operations | Ask VeriClaw to read or write files in your workspace |
-| Web search | Ask VeriClaw to fetch a URL |
+| Web fetch | Ask VeriClaw to fetch a URL |
 | Shell commands | Ask VeriClaw to run an allowlisted command |
 | Custom system prompt | Edit `~/.vericlaw/system.md` |
+
+> Signal chat (send/receive), voice messages, and image processing via Signal require v1.1. See [channels.md](channels.md) for Signal's current status.
 
 ---
 
@@ -155,7 +163,7 @@ Runs a health check and shows a scannable report:
 ```
 $ vericlaw doctor
 
-VeriClaw v1.0.0 — system check
+VeriClaw v0.3.0 — system check
 
   Config         ✓  ~/.vericlaw/config.json (valid)
   Provider       ✓  Anthropic — claude-sonnet-4 (responding)
