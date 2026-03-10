@@ -19,6 +19,8 @@ VeriClaw supports 10 messaging channels, all running concurrently in `vericlaw g
 | Matrix | `matrix` | Yes | — | [Setup](setup/matrix.md) |
 | Mattermost | `mattermost` | Yes (`mattermost-bridge`) | 3008 | [Inline below](#mattermost) |
 
+> **Tip:** Run `vericlaw channels login --channel <name>` to link any channel interactively (handles OAuth tokens, pairing codes, etc.).
+
 ---
 
 ## CLI
@@ -223,3 +225,12 @@ All output is color-coded: green for healthy systems, yellow for warnings,
 red for failures. Use `--no-color` to disable.
 
 The gateway multiplexes all channels in one process. Each channel's lifecycle is managed by its own Ada task, so a crash in one channel does not affect the others.
+
+---
+
+## Troubleshooting
+
+- **Can't connect to a channel?** Run `vericlaw doctor` to check connectivity.
+- **Need to reconfigure a channel?** Use `vericlaw config edit` → choose "channels" to update settings interactively.
+- **Want to start over?** Run `vericlaw reset` to delete config and re-run the setup wizard.
+- **Bridge not responding?** Check that the bridge container is running: `docker compose ps`.

@@ -34,8 +34,9 @@ Available counters:
 Update tokens, allowlists, or system prompts without restarting:
 
 ```bash
-# Edit config
-nano ~/.vericlaw/config.json
+# Edit config (interactive — validates on save)
+vericlaw config edit
+# For manual changes: nano ~/.vericlaw/config.json
 
 # Signal running process
 kill -HUP $(pidof vericlaw)
@@ -205,6 +206,10 @@ Run the installer in an elevated PowerShell prompt:
 
 See `docs/runbooks/operator-runbook.md` for the full operator runbook.
 
+### Troubleshooting
+
+- `vericlaw reset` — nuclear option to delete config and start fresh.
+
 ---
 
 ## Production Deployment
@@ -217,6 +222,13 @@ make image-build-local
 
 # Signed multi-arch build and push
 PUSH_IMAGE=true SIGN_IMAGE=true make image-build-multiarch
+```
+
+### Pre-Deployment Config Check
+
+```bash
+# Validate config before deploying
+vericlaw config validate
 ```
 
 ### Release Gates

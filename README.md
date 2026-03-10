@@ -97,12 +97,8 @@ path-traversal blocking proved in SPARK. → [SECURITY.md](SECURITY.md)
 OpenAI, Anthropic, Azure AI Foundry, Google Gemini, and any OpenAI-compatible
 endpoint (Ollama, Groq, OpenRouter, LiteLLM, LM Studio). Multi-provider routing
 with ordered primary → failover → long-tail fallback. Streaming always-on in CLI.
+9 presets (Groq, Mistral, DeepSeek, etc.) auto-fill in `onboard`.
 → [docs/providers.md](docs/providers.md)
-
-> [!TIP]
-> **Provider Aliases** — 9 OpenAI-compatible presets (Groq, Mistral, DeepSeek,
-> xAI, OpenRouter, Perplexity, Together, Fireworks, Cerebras) auto-fill base URL
-> and defaults in `vericlaw onboard`.
 
 ### 💬 Channels (10, Concurrent)
 CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email (IMAP/SMTP), IRC, Matrix,
@@ -116,29 +112,19 @@ spawn, role delegation, browser screenshot, vector RAG, plugin registry — plus
 unlimited tools via MCP. → [docs/tools.md](docs/tools.md)
 
 ### 🧠 Memory & State
-SQLite with FTS5 full-text search + persistent facts store. Vector RAG memory
-via sqlite-vec embeddings. Session auto-expiry. WAL mode for safe concurrent
-multi-channel writes. Context compaction for long sessions.
+SQLite with FTS5 full-text search, persistent facts, and vector RAG via
+sqlite-vec. WAL mode for concurrent multi-channel writes.
 
 ### 🖼️ Multimodal Input
-`[IMAGE:path]` and `[IMAGE:url]` markers for vision APIs (OpenAI, Anthropic,
-Gemini). Auto MIME detection. Up to 4 images per message.
+`[IMAGE:path]` and `[IMAGE:url]` markers for vision APIs. Auto MIME detection.
 
 ### 📊 Operations
-Prometheus `/metrics` endpoint. `SIGHUP` hot config reload. Structured JSON
-logging with request correlation. Live gateway REST API. Operator web console.
-Systemd / launchd / Windows service packaging.
-→ [docs/operations.md](docs/operations.md)
+Prometheus metrics, `SIGHUP` hot reload, structured JSON logging, REST API,
+and operator web console. → [docs/operations.md](docs/operations.md)
 
 ### 🎨 CLI Experience
-Styled terminal output with ANSI colors and ASCII banner. Interactive chat with
-`/help`, `/clear`, `/memory`, `/edit` commands. Gateway boot panel shows
-all-at-a-glance system status. First-run welcome guides new users to
-`vericlaw onboard`. Respects `--no-color` and `NO_COLOR` convention.
-
-> [!TIP]
-> `vericlaw doctor` runs a **connectivity test** for every configured provider
-> and channel — each check prints ✓ or ✗ with round-trip latency in ms.
+Color-coded output, interactive chat with `/help` commands, gateway boot panel,
+and first-run welcome. Respects `--no-color` and `NO_COLOR`.
 
 ---
 
@@ -222,17 +208,35 @@ Measured via Docker container on linux/amd64 (50 iterations):
 
 ## CLI Commands
 
-```bash
-vericlaw onboard                        # interactive setup wizard
-vericlaw doctor                         # connectivity checks (✓/✗ + latency)
-vericlaw chat                           # interactive CLI (/help for commands)
-vericlaw agent "..."                    # one-shot agent mode
-vericlaw gateway                        # multi-channel daemon (boot panel)
-vericlaw status [--json]                # runtime status summary
-vericlaw version | help                 # version info / all commands
-```
+> Use `--no-color` or `NO_COLOR=1` to disable ANSI colors. Run `vericlaw help` for full usage.
 
-> Use `--no-color` or `NO_COLOR=1` to disable ANSI colors.
+#### Getting Started
+
+| Command | Description |
+|---------|-------------|
+| `onboard` | Interactive setup wizard |
+| `doctor` | Check configuration and health |
+| `config validate` | Validate config without starting |
+| `config edit` ✨ | Edit configuration interactively |
+| `reset` ✨ | Reset config and re-run onboard |
+
+#### Runtime
+
+| Command | Description |
+|---------|-------------|
+| `chat` | Interactive CLI chat (default) |
+| `agent <message>` | Send a message and print reply |
+| `gateway` | Run HTTP gateway + all channels |
+
+#### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `channels login --channel <name>` | Link a messaging channel |
+| `status` | Show runtime status summary |
+| `export --session <id> [--format]` | Export conversation |
+| `update-check` | Check for new releases |
+| `version` | Print version information |
 
 ---
 

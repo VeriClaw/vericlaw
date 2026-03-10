@@ -45,6 +45,8 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Mattermost channel support with bridge adapter on port 3008
 - Expanded onboard wizard: 5 provider families + 10 channel options (up from 4+4)
 - Doctor provider connectivity test: sends minimal request, shows ✓/✗ with latency
+- `vericlaw config edit` — interactive configuration editor for changing provider, API key, model, channels, or agent name without a full reset
+- `vericlaw reset` — delete config file and re-run the onboard wizard from scratch
 
 ### Changed
 - `memory.compact_at_pct` defaults to `0` (disabled); set to `80` for long-running sessions to keep context within bounds without losing assistant turns

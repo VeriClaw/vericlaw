@@ -142,9 +142,17 @@ sudo dpkg -i vericlaw_*.deb
 ## Verify Installation
 
 ```bash
-vericlaw --version       # Print the installed version
-vericlaw doctor          # Check runtime dependencies and configuration
-vericlaw update-check    # See if a newer release is available
+# Check version
+vericlaw version
+
+# Run health check (validates config, tests provider connectivity)
+vericlaw doctor
+
+# Validate config file without starting the runtime
+vericlaw config validate
+
+# Check for updates
+vericlaw update-check
 ```
 
 ---
@@ -153,23 +161,11 @@ vericlaw update-check    # See if a newer release is available
 
 Once VeriClaw is installed and verified:
 
-1. **Run the setup wizard** to configure your LLM provider and channel:
-   ```bash
-   vericlaw onboard
-   ```
-   The wizard walks you through provider selection, API key entry, and channel
-   setup with colored confirmations at each step.
-
-2. **Check your setup** with the built-in doctor:
-   ```bash
-   vericlaw doctor
-   ```
-   Shows colored ✓/✗ health checks for config, database, bridges, and security.
-
-3. **Start chatting**:
-   ```bash
-   vericlaw chat
-   ```
+- **`vericlaw doctor`** — verify everything is healthy
+- **`vericlaw onboard`** — run the setup wizard (if not done yet)
+- **`vericlaw chat`** — start an interactive chat session
+- **`vericlaw config edit`** — change settings later without re-running onboard
+- **`vericlaw reset`** — start fresh if something went wrong
 
 > [!TIP]
 > See [getting-started.md](getting-started.md) for the full walkthrough with

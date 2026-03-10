@@ -103,7 +103,7 @@ Choose your primary channel:
 ```
 
 Start with **cli** if you just want to kick the tyres — you can add more
-channels later via `vericlaw onboard` or by editing `~/.vericlaw/config.json`.
+channels later via `vericlaw config edit`.
 
 Each step shows a **green ✓ confirmation**, and the wizard finishes with:
 
@@ -154,6 +154,49 @@ A green summary line at the end shows your pass count:
 
 > If any check fails, the doctor shows a red ✗ with the failure reason.
 > Fix the issue and re-run `vericlaw doctor`.
+
+---
+
+## Changing Your Configuration
+
+You don't need to re-run the full onboard wizard every time you want to tweak
+a setting. VeriClaw ships three handy commands for managing your config after
+the initial setup.
+
+### `vericlaw config edit`
+
+Opens an interactive menu that lets you change your provider, API key, model,
+channels, or agent name — one field at a time, without touching anything else.
+
+```bash
+# Switch to a different model without re-running onboard
+vericlaw config edit
+```
+
+### `vericlaw config validate`
+
+A quick sanity check that your `~/.vericlaw/config.json` is valid JSON and
+contains all the required fields. This is lighter and faster than
+`vericlaw doctor` — perfect for a quick smoke test after a manual edit.
+
+```bash
+# Verify your config is valid
+vericlaw config validate
+```
+
+### `vericlaw reset`
+
+Deletes your existing configuration and re-runs the onboard wizard from
+scratch. Useful if you want a completely fresh start.
+
+```bash
+# Start over from scratch
+vericlaw reset
+```
+
+> [!TIP]
+> Prefer `vericlaw config edit` for small tweaks and `vericlaw reset` only when
+> you truly want to wipe the slate clean.
 
 ---
 
