@@ -1,185 +1,181 @@
-# LLM Providers
-
 [← Back to README](../README.md)
 
-VeriClaw supports **5 provider families** — OpenAI, Anthropic, Google Gemini, Azure AI Foundry, and any OpenAI-compatible endpoint (Ollama, Groq, OpenRouter, LiteLLM, LM Studio). Configure one or many; VeriClaw routes requests across them automatically with ordered failover.
+# Providers
 
-## Provider Reference
+VeriClaw v1.0-minimal supports two provider families: **Anthropic** (native, first-class) and **OpenAI-compatible** (any endpoint following the OpenAI chat completions API format). Configure one in `~/.vericlaw/config.json`, or let `vericlaw onboard` write it for you.
 
-| Kind | `kind` in config | Models | Notes |
-|------|------------------|--------|-------|
-| OpenAI | `openai` | gpt-4o, gpt-4-turbo | First-party; streaming supported |
-| Anthropic | `anthropic` | claude-3-5-sonnet-20241022, claude-3-7-sonnet | First-party; streaming supported |
-| Google Gemini | `gemini` | gemini-2.0-flash (default), gemini-1.5-pro | Native integration |
-| Azure AI Foundry | `azure_foundry` | Any deployed model | Requires `base_url`, `deployment`, `api_version` |
-| OpenAI-compatible | `openai_compatible` | Anything behind an OpenAI-shaped API | `base_url` covers Ollama, Groq, OpenRouter, LiteLLM, LM Studio |
+---
 
-## Multi-Provider Routing
+## Anthropic
 
-Multi-provider routing is a key VeriClaw differentiator. Instead of hard-coding a single LLM, you list providers in priority order inside the `providers` array:
+Anthropic is the primary, most-tested path. It is the default recommended during `vericlaw onboard`.
 
-1. **`providers[0]` — Primary.** All requests go here first.
-2. **`providers[1]` — Dedicated failover.** Used when the primary returns an error or times out.
-3. **`providers[2..n]` — Long-tail fallbacks.** Tried in order if both primary and failover fail.
+### Recommended model
 
-This gives you automatic resilience across providers with zero application-level retry logic:
+```
+claude-sonnet-4-20250514
+```
+
+This is the model VeriClaw uses after a default `vericlaw onboard` run. It supports streaming, tool use, and vision (image inputs).
+
+### Config
 
 ```json
 {
-  "providers": [
-    { "kind": "openai", "api_key": "sk-...", "model": "gpt-4o" },
-    { "kind": "anthropic", "api_key": "sk-ant-...", "model": "claude-3-5-sonnet-20241022" },
-    { "kind": "openai_compatible", "base_url": "https://api.groq.com/openai/v1",
-      "token": "gsk_...", "model": "llama-3.3-70b-versatile" }
-  ]
+  "agent_name": "VeriClaw",
+  "provider": {
+    "kind": "anthropic",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "model": "claude-sonnet-4-20250514"
+  }
 }
 ```
 
-## Streaming
+`api_key_env` names an environment variable that holds your key. Alternatively, use `api_key` with the key value directly — but prefer the env var to keep keys out of the config file.
 
-- **CLI mode** — always-on. Tokens are printed as they arrive for OpenAI and Anthropic providers.
-- **Gateway mode** — SSE (Server-Sent Events) token output.
-- **Fallback** — providers that don't support streaming fall back gracefully to non-streaming responses. No flag needed.
+### Getting an API key
 
-## Configuration Examples
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Create an account or sign in
+3. Navigate to **API Keys** and create a new key
+4. The key starts with `sk-ant-`
 
-### OpenAI
+Set it as an environment variable:
 
-```json
-{
-  "providers": [
-    { "kind": "openai", "api_key": "sk-...", "model": "gpt-4o" }
-  ]
-}
+```bash
+export ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-### Anthropic
+Or add it to your shell profile (`~/.zshrc`, `~/.bashrc`) so it persists.
 
-```json
-{
-  "providers": [
-    { "kind": "anthropic", "api_key": "sk-ant-...", "model": "claude-3-5-sonnet-20241022" }
-  ]
-}
-```
+---
 
-### Google Gemini
+## OpenAI-compatible
 
-```json
-{
-  "providers": [
-    { "kind": "gemini", "api_key": "AIza...", "model": "gemini-2.0-flash" }
-  ]
-}
-```
+The `openai-compatible` kind works with any HTTP API that follows the OpenAI chat completions format. This covers hosted services, local models, and gateway proxies.
+
+### Config fields
+
+| Field | Required | Description |
+|---|---|---|
+| `kind` | Yes | Always `"openai-compatible"` |
+| `base_url` | Yes | The API endpoint (must include path prefix, e.g. `/v1`) |
+| `api_key_env` | Yes* | Environment variable holding the API key |
+| `api_key` | Yes* | API key value directly (prefer `api_key_env`) |
+| `model` | Yes | Model name as the endpoint expects it |
+| `extra_headers` | No | Additional HTTP headers (e.g. API version for Azure) |
+
+*One of `api_key_env` or `api_key` is required. For Ollama, use `"api_key": "ollama"` — any non-empty string works.
+
+### Vision support
+
+Both Anthropic and most OpenAI-compatible endpoints support image inputs. Send an image on Signal or attach one in a tool call and VeriClaw will pass it through to the provider. Check your provider's documentation to confirm vision support for the specific model you are using.
+
+---
+
+## OpenAI-compatible examples
 
 ### Azure AI Foundry
 
 ```json
 {
-  "providers": [
-    { "kind": "azure_foundry", "api_key": "AZURE_KEY",
-      "base_url": "https://YOUR-HUB.openai.azure.com",
-      "deployment": "gpt-4o", "api_version": "2024-02-15-preview" }
-  ]
+  "provider": {
+    "kind":        "openai-compatible",
+    "base_url":    "https://YOUR-RESOURCE.openai.azure.com/openai/deployments/gpt-4o",
+    "api_key_env": "AZURE_API_KEY",
+    "model":       "gpt-4o",
+    "extra_headers": {
+      "api-version": "2024-12-01-preview"
+    }
+  }
 }
 ```
 
-### OpenAI-Compatible
+Replace `YOUR-RESOURCE` with your Azure resource name and `gpt-4o` with your deployment name.
 
-All OpenAI-compatible providers use `kind: "openai_compatible"` with a `base_url` pointing at the target API.
-
-#### Groq (fastest inference)
+### Google Gemini
 
 ```json
 {
-  "providers": [
-    { "kind": "openai_compatible", "base_url": "https://api.groq.com/openai/v1",
-      "token": "gsk_...", "model": "llama-3.3-70b-versatile" }
-  ]
+  "provider": {
+    "kind":        "openai-compatible",
+    "base_url":    "https://generativelanguage.googleapis.com/v1beta/openai",
+    "api_key_env": "GEMINI_API_KEY",
+    "model":       "gemini-2.0-flash"
+  }
 }
 ```
 
-#### Ollama (local, no API key)
+Get a Gemini API key at [aistudio.google.com](https://aistudio.google.com).
+
+### Ollama (local, no API key)
 
 ```json
 {
-  "providers": [
-    { "kind": "openai_compatible", "base_url": "http://localhost:11434/v1",
-      "token": "ollama", "model": "llama3" }
-  ]
+  "provider": {
+    "kind":    "openai-compatible",
+    "base_url": "http://localhost:11434/v1",
+    "api_key":  "ollama",
+    "model":    "llama3.2:3b"
+  }
 }
 ```
 
-The `token` field is required by VeriClaw's schema but ignored by Ollama — any non-empty string works.
+Ollama must be running locally (`ollama serve`). The `api_key` value is ignored by Ollama but required by VeriClaw's config schema — any non-empty string works.
 
-#### OpenRouter (200+ models, one key)
+### OpenRouter
 
 ```json
 {
-  "providers": [
-    { "kind": "openai_compatible", "base_url": "https://openrouter.ai/api/v1",
-      "token": "sk-or-...", "model": "anthropic/claude-3.5-sonnet" }
-  ]
+  "provider": {
+    "kind":        "openai-compatible",
+    "base_url":    "https://openrouter.ai/api/v1",
+    "api_key_env": "OPENROUTER_API_KEY",
+    "model":       "anthropic/claude-sonnet-4"
+  }
 }
 ```
 
-#### LiteLLM
+OpenRouter gives you access to 200+ models under a single API key. Get a key at [openrouter.ai](https://openrouter.ai).
+
+### Groq
 
 ```json
 {
-  "providers": [
-    { "kind": "openai_compatible", "base_url": "http://localhost:4000/v1",
-      "token": "sk-litellm-...", "model": "gpt-4o" }
-  ]
+  "provider": {
+    "kind":        "openai-compatible",
+    "base_url":    "https://api.groq.com/openai/v1",
+    "api_key_env": "GROQ_API_KEY",
+    "model":       "llama-3.3-70b-versatile"
+  }
 }
 ```
 
-## Provider Aliases (OpenAI-Compatible Presets)
+Groq runs on LPU hardware and delivers very fast inference (~750 tok/s). Recommended as the voice transcription endpoint when using Whisper-compatible transcription. Get a key at [console.groq.com](https://console.groq.com).
 
-VeriClaw ships **9 built-in aliases** for popular OpenAI-compatible services. Each alias pre-fills the `base_url` and a sensible default model so you don't have to look them up.
-
-| Alias | Base URL | Default Model | API Key Required |
-|-------|----------|---------------|-----------------|
-| `groq` | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Yes |
-| `mistral` | `https://api.mistral.ai/v1` | `mistral-large-latest` | Yes |
-| `deepseek` | `https://api.deepseek.com/v1` | `deepseek-chat` | Yes |
-| `xai` | `https://api.x.ai/v1` | `grok-2` | Yes |
-| `openrouter` | `https://openrouter.ai/api/v1` | `auto` | Yes |
-| `perplexity` | `https://api.perplexity.ai` | `sonar-pro` | Yes |
-| `together` | `https://api.together.xyz/v1` | `meta-llama/Llama-3.3-70B-Instruct-Turbo` | Yes |
-| `fireworks` | `https://api.fireworks.ai/inference/v1` | `accounts/fireworks/models/llama-v3p3-70b-instruct` | Yes |
-| `cerebras` | `https://api.cerebras.ai/v1` | `llama-3.3-70b` | Yes |
-
-All aliases use the `openai_compatible` provider kind under the hood.
-
-### Using aliases via the onboard wizard
-
-Run `vericlaw onboard` and select **OpenAI-compatible** when prompted. The wizard shows a submenu listing every alias above; picking one auto-fills the base URL and default model so you only need to paste your API key.
-
-### Manual configuration
-
-Set `"kind": "openai_compatible"` and supply the `base_url` and `model` from the table. For example, Groq:
+### DeepSeek
 
 ```json
 {
-  "providers": [
-    { "kind": "openai_compatible",
-      "base_url": "https://api.groq.com/openai/v1",
-      "token": "gsk_...",
-      "model": "llama-3.3-70b-versatile" }
-  ]
+  "provider": {
+    "kind":        "openai-compatible",
+    "base_url":    "https://api.deepseek.com/v1",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "model":       "deepseek-chat"
+  }
 }
 ```
 
-You can override the default model with any model the service supports — the alias only pre-fills values, it doesn't lock them.
+Get a key at [platform.deepseek.com](https://platform.deepseek.com).
 
-### Adding new aliases (contributors)
+---
 
-Alias definitions live in the `Config.Provider_Aliases` Ada package. To add a new preset, create an entry with the alias name, base URL, and default model, then rebuild. The onboard wizard and config validation pick up new aliases automatically.
+## Choosing a provider
 
-## Detailed Guides
-
-- [Ollama (local, free)](providers/ollama.md) — air-gapped setup, available models, privacy benefits
-- [Groq (fastest inference)](providers/groq.md) — LPU hardware, ~750 tok/s, model list
-- [OpenRouter (200+ models)](providers/openrouter.md) — unified billing, model diversity, free tier
+| Situation | Recommendation |
+|---|---|
+| First-time setup, want the best results | Anthropic — `claude-sonnet-4-20250514` |
+| Want the fastest responses | Groq — `llama-3.3-70b-versatile` |
+| Want to run fully local, no API calls | Ollama — any model you have pulled |
+| Want access to many models with one key | OpenRouter |
+| Already have Azure credits | Azure AI Foundry |

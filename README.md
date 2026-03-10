@@ -1,249 +1,52 @@
 # VeriClaw
 
-**Formally verified AI runtime. 5 MB binary. 10 channels. Zero trust compromises.**
-
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml)
 [![Release](https://github.com/VeriClaw/vericlaw/actions/workflows/publish.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Ada/SPARK](https://img.shields.io/badge/Ada%2FSPARK-2022-orange.svg)](https://www.adacore.com/about-spark)
 
+**VeriClaw: the only AI agent runtime with formally verified security. Runs on a Pi. Talks over Signal.**
+
 > [!NOTE]
-> **VeriClaw is in active development (v0.2.0-dev).** Core runtime, CLI, and multi-platform
-> builds are functional. APIs and config formats may still change. See the
-> [changelog](CHANGELOG.md) for what shipped recently.
+> **VeriClaw is v1.0-minimal and in active development.** The CLI and Signal channel are functional. APIs and config formats may still change. See the [changelog](CHANGELOG.md) for what shipped recently.
 
-VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in
-Ada/SPARK — the only agent runtime in its class with **formally verified security
-policies**. It runs your AI assistant across 10 messaging channels simultaneously,
-routes between 5 LLM provider families with automatic failover, and ships as a
-single static binary under 6 MB with a **polished, colored CLI**.
+VeriClaw is an AI agent runtime written in Ada/SPARK — the only runtime in its class with formally verified security policies. It ships as a single static binary that runs on hardware as modest as a Raspberry Pi 4, and lets you talk to your AI assistant over Signal. Security is not a configuration option; it is proved at compile time using the SPARK theorem prover.
 
----
+## What makes VeriClaw different
 
-## Why VeriClaw?
+VeriClaw's security core is formally verified using SPARK 2022 at Silver level: GNATprove proves the absence of all runtime errors — overflow, buffer overrun, null dereference — in the policy, secrets, audit, and channel-security modules. Allowlist decisions are total functions with deny as the default; that property is not a unit test, it is a mathematical proof. Secret handles are proved to be zeroed after use, and the audit trail is proved to be undroppable. See [SECURITY.md](SECURITY.md) for the full list of proved invariants and instructions for re-running the proofs yourself.
 
-| Feature | **VeriClaw** | ZeroClaw | NullClaw | OpenClaw |
-|---|---|---|---|---|
-| Language | Ada/SPARK | Rust | Zig | TypeScript |
-| Formal verification | **✅ SPARK Silver** | ❌ | ❌ | ❌ |
-| Binary size | **5.3 MB** | 8.8 MB | 0.66 MB | N/A |
-| Container image | **37.1 MB** ✨ | 42 MB | 48 MB | — |
-| LLM providers | 5 families | 12+ | 22+ | 15+ |
-| Channels | 10 | 25+ | 17 | 40+ |
-| Streaming output | ✅ | ✅ | ✅ | ✅ |
-| MCP client | ✅ | ✅ | ❌ | ✅ |
-| Cron scheduler | ✅ | ❌ | ❌ | ✅ |
-| Parallel tool calls | ✅ Ada tasks | ✅ Tokio | ❌ | ✅ |
-| Provably correct security | **✅** | ❌ | ❌ | ❌ |
+## Quick start
 
-> VeriClaw's differentiator is **provable security**: SPARK Silver proofs guarantee absence of
-> runtime errors in the auth, secrets, audit, and policy modules. No other claw-type runtime
-> offers formal verification at this level.
-
----
-
-## Quick Start
-
-### 1. Install
-
-```bash
-# Requires Alire (Ada package manager)
-curl -L https://alire.ada.dev/install.sh | bash
-git clone https://github.com/vericlaw/vericlaw && cd vericlaw
-alr build -- -XBUILD_PROFILE=release
+```sh
+curl -fsSL https://vericlaw.dev/install.sh | sh
+vericlaw onboard
+vericlaw chat
 ```
 
-Or with Docker:
-```bash
-docker build -f Dockerfile.release -t vericlaw .
-```
+## Supported providers
 
-> 📦 See [docs/installation.md](docs/installation.md) for Homebrew, Scoop, APT,
-> Docker, Raspberry Pi, and all platform options.
+Anthropic (Claude) natively, plus any OpenAI-compatible endpoint
+(Azure AI Foundry, Google Gemini, Ollama, OpenRouter, Groq, DeepSeek, etc.)
 
-### 2. Configure
+## Deploy on Raspberry Pi 4
 
-```bash
-vericlaw onboard    # interactive wizard — asks for provider, API key, model, channel
-```
+VeriClaw ships as a single static binary under 6 MB and runs comfortably within the Pi 4's 1 GB RAM. See [docs/pi-deployment.md](docs/pi-deployment.md) for the full walkthrough: cross-compiling with Alire, systemd service setup, and Signal channel configuration.
 
-Or create `~/.vericlaw/config.json` manually
-([example](config/config.example.json)):
+## Security
 
-### 3. Run
+**What is proved (v1.0):** allowlist deny-by-default, secret zeroing after use, encrypted-at-rest invariant, undroppable audit trail, integer-overflow-free rate limiting, and monotonic channel state transitions — all verified by SPARK Silver proofs.
 
-```bash
-vericlaw chat                           # interactive CLI conversation
-vericlaw agent "Summarise today's news" # one-shot mode
-vericlaw gateway                        # start all channels concurrently
-vericlaw doctor                         # verify config and connectivity
-```
+**What is not yet proved:** token validation (`gateway-auth`), plaintext-secret scope (`security-secrets-crypto`), and Signal input sanitisation (`channels-adapters-signal`) — these are v1.1 targets.
 
-> [!TIP]
-> All CLI output is **color-coded** — green ✓ for success, red ✗ for failures.
-> Use `--no-color` to disable.
+See [SECURITY.md](SECURITY.md) for the full threat model, controls table, and instructions for running the proofs yourself (`make prove`).
 
----
+## Roadmap
 
-## Features
-
-### 🔒 Security (Formally Verified)
-SPARK Silver proofs on auth, secrets, audit, and channel policy. Fail-closed
-defaults — empty allowlist denies all. Encrypted secrets (ChaCha20-Poly1305).
-Tamper-evident audit log with syslog forwarding. Workspace isolation with
-path-traversal blocking proved in SPARK. → [SECURITY.md](SECURITY.md)
-
-### 🤖 LLM Providers (5 Families)
-OpenAI, Anthropic, Azure AI Foundry, Google Gemini, and any OpenAI-compatible
-endpoint (Ollama, Groq, OpenRouter, LiteLLM, LM Studio). Multi-provider routing
-with ordered primary → failover → long-tail fallback. Streaming always-on in CLI.
-9 presets (Groq, Mistral, DeepSeek, etc.) auto-fill in `onboard`.
-→ [docs/providers.md](docs/providers.md)
-
-### 💬 Channels (10, Concurrent)
-CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email (IMAP/SMTP), IRC, Matrix,
-and Mattermost — all run simultaneously in `gateway` mode via Ada tasks.
-Multi-user support with operator/guest memory isolation.
-→ [docs/channels.md](docs/channels.md)
-
-### 🛠️ Tools (13 Built-in + MCP)
-File I/O, shell, web fetch, Brave Search, git ops, cron scheduler, sub-agent
-spawn, role delegation, browser screenshot, vector RAG, plugin registry — plus
-unlimited tools via MCP. → [docs/tools.md](docs/tools.md)
-
-### 🧠 Memory & State
-SQLite with FTS5 full-text search, persistent facts, and vector RAG via
-sqlite-vec. WAL mode for concurrent multi-channel writes.
-
-### 🖼️ Multimodal Input
-`[IMAGE:path]` and `[IMAGE:url]` markers for vision APIs. Auto MIME detection.
-
-### 📊 Operations
-Prometheus metrics, `SIGHUP` hot reload, structured JSON logging, REST API,
-and operator web console. → [docs/operations.md](docs/operations.md)
-
-### 🎨 CLI Experience
-Color-coded output, interactive chat with `/help` commands, gateway boot panel,
-and first-run welcome. Respects `--no-color` and `NO_COLOR`.
-
----
-
-## Documentation
-
-| Guide | Description |
-|-------|-------------|
-| **[Getting Started](docs/getting-started.md)** | Install → onboard → doctor → chat journey |
-| **[Installation](docs/installation.md)** | All install methods — source, Docker, Homebrew, Scoop, RPi |
-| **[Providers](docs/providers.md)** | LLM provider setup and multi-provider routing |
-| **[Channels](docs/channels.md)** | Channel configuration and multi-user gateway |
-| **[Tools](docs/tools.md)** | Tool reference — built-in tools + MCP extensibility |
-| **[Operations](docs/operations.md)** | Monitoring, logging, deployment, service packaging |
-| **[Testing & CI](docs/testing.md)** | Tests, build profiles, CI pipeline, gate commands |
-| **[HTTP API](docs/api.md)** | Gateway REST API reference |
-| **[Benchmarks](docs/benchmarks.md)** | Performance comparison methodology and results |
-| **[Architecture](ARCHITECTURE.md)** | 3-layer system design |
-| **[Security](SECURITY.md)** | Threat model, controls, operator checklist |
-| **[Contributing](CONTRIBUTING.md)** | PR process, coding standards, SPARK requirements |
-| **[Changelog](CHANGELOG.md)** | Release notes |
-
-> 📚 Full documentation index: [docs/README.md](docs/README.md)
-
----
-
-## Project Structure
-
-```
-vericlaw/
-├── src/                          # Ada/SPARK source
-│   ├── security-*.ads/adb       #   SPARK-verified security core
-│   ├── agent/                   #   Reasoning loop, provider routing
-│   ├── channels/                #   10 channel implementations
-│   │   └── channels-mattermost.ads/adb
-│   ├── config/                  #   Configuration & onboard wizard
-│   │   └── config-provider_aliases.ads/adb
-│   ├── providers/               #   5 LLM provider families
-│   ├── memory/                  #   SQLite WAL + FTS5 + vector RAG
-│   ├── http/                    #   libcurl + gateway server
-│   ├── tools/                   #   13 built-in tools
-│   └── terminal/                #   ANSI colors, banner, themed output
-├── wa-bridge/                    # WhatsApp sidecar (Baileys)
-├── slack-bridge/                 # Slack Socket Mode sidecar
-├── discord-bridge/               # Discord Gateway sidecar
-├── email-bridge/                 # IMAP/SMTP sidecar
-├── mcp-bridge/                   # MCP client proxy
-├── irc-bridge/                   # IRC sidecar
-├── matrix-bridge/                # Matrix sidecar
-├── tests/                        # SPARK policy + runtime unit tests
-├── config/                       # Example configs for every channel
-├── docs/                         # Full documentation suite
-├── deploy/                       # systemd, launchd, Windows service
-├── operator-console/             # Local web dashboard
-├── docker-compose.yml            # Full stack
-└── Makefile                      # All build, test, and release targets
-```
-
-> See [ARCHITECTURE.md](ARCHITECTURE.md) for the 3-layer security model and data flow.
-
----
-
-## Benchmarks
-
-Measured via Docker container on linux/amd64 (50 iterations):
-
-| Metric | **VeriClaw** | ZeroClaw (Rust) | NullClaw (Zig) |
-|---|---:|---:|---:|
-| Binary size | **5.31 MB** | 8.80 MB | 0.66 MB |
-| Container image | **37.1 MB** ✨ | 42.0 MB | 48.0 MB |
-| Startup (QEMU)* | 139 ms | 10 ms | 8 ms |
-| Dispatch p95 (QEMU)* | 192 ms | 13.4 ms | 14 ms |
-| Throughput (QEMU)* | 7.2 ops/s | 80 ops/s | 78 ops/s |
-
-> \*QEMU x86_64 emulation on ARM host — binary/container sizes are
-> apples-to-apples. See [docs/benchmarks.md](docs/benchmarks.md).
-
-**VeriClaw wins on container footprint** (37.1 MB) and binary size (5.3 vs
-8.8 MB). See [docs/benchmarks.md](docs/benchmarks.md) for full methodology.
-
----
-
-## CLI Commands
-
-> Use `--no-color` or `NO_COLOR=1` to disable ANSI colors. Run `vericlaw help` for full usage.
-
-#### Getting Started
-
-| Command | Description |
-|---------|-------------|
-| `onboard` | Interactive setup wizard |
-| `doctor` | Check configuration and health |
-| `config validate` | Validate config without starting |
-| `config edit` ✨ | Edit configuration interactively |
-| `reset` ✨ | Reset config and re-run onboard |
-
-#### Runtime
-
-| Command | Description |
-|---------|-------------|
-| `chat` | Interactive CLI chat (default) |
-| `agent <message>` | Send a message and print reply |
-| `gateway` | Run HTTP gateway + all channels |
-
-#### Utilities
-
-| Command | Description |
-|---------|-------------|
-| `channels login --channel <name>` | Link a messaging channel |
-| `status` | Show runtime status summary |
-| `export --session <id> [--format]` | Export conversation |
-| `update-check` | Check for new releases |
-| `version` | Print version information |
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards, SPARK requirements,
-and PR process. Run `make validate` to build + prove + test.
+- **v1.1** — SPARK proofs for `gateway-auth`, `security-secrets-crypto`, and `channels-adapters-signal`; Telegram channel; improved onboarding
+- **v1.2** — WhatsApp channel; MCP client; cron scheduler
+- **v1.3** — Multi-provider routing with automatic failover; Prometheus metrics
+- **v2.0** — Multi-channel gateway (all channels concurrent); operator web console; REST API
 
 ## License
 

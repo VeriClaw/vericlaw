@@ -2,286 +2,225 @@
 
 # Getting Started
 
-This guide walks you through VeriClaw from first install to running your AI assistant.
+Three steps from nothing to a working AI assistant in your terminal and on Signal.
 
 ---
 
 ## Step 1: Install
 
-The fastest path is building from source:
-
 ```bash
-curl -L https://alire.ada.dev/install.sh | bash   # install Alire
-git clone https://github.com/vericlaw/vericlaw && cd vericlaw
-alr build -- -XBUILD_PROFILE=release
+curl -fsSL https://vericlaw.dev/install.sh | sh
 ```
 
-Or grab a pre-built binary from [GitHub Releases](https://github.com/VeriClaw/vericlaw/releases).
+The script detects your OS and architecture, downloads the correct binary for your platform, and puts `vericlaw` on your `$PATH`. No package manager, no runtime, no dependencies.
 
-> See [installation.md](installation.md) for Docker, Homebrew, Scoop, APT, and Raspberry Pi options.
-
-Verify your install:
+Verify:
 
 ```bash
 vericlaw version
 ```
 
-You should see something like:
+Expected output:
 
 ```
-vericlaw 0.2.0 (abc1234 2026-03-09 x86_64-linux-gnu)
-Built with Ada 2022 + GNAT  |  https://github.com/vericlaw
+vericlaw 1.0.0 (abc1234 2026-01-01 aarch64-linux-gnu)
 ```
 
 ---
 
 ## Step 2: Onboard
 
-Run the interactive setup wizard:
-
 ```bash
 vericlaw onboard
 ```
 
-The wizard displays a **styled banner** and walks you through each step.
-
-### Pick a provider
-
-First you'll choose an LLM backend:
+The wizard walks you through six steps and leaves you with a fully working product at the end. You do not need to run anything else.
 
 ```
-Choose your LLM provider:
-  1  openai            (OpenAI GPT-4o, requires API key)
-  2  anthropic         (Claude 3.5, requires API key)
-  3  ollama            (local LLM, no key needed)
-  4  openai_compatible (Azure, Groq, OpenRouter, etc.)
-  5  gemini            (Google Gemini 2.0 Flash, requires API key)
+$ vericlaw onboard
+
+VeriClaw — first-time setup
+
+[1/6] AI provider
+  Which provider would you like to use?
+  1. Anthropic (Claude) — recommended
+  2. OpenAI-compatible (Azure, Gemini, Ollama, OpenRouter, etc.)
+  > 1
+
+  Enter your Anthropic API key (starts with sk-ant-):
+  > sk-ant-api03-xxxxx
+  ✓ Key validated — connected to claude-sonnet-4
+
+[2/6] Signal phone number
+  Enter the phone number linked to your Signal account:
+  > +447700900000
+  ✓ Phone number saved
+
+[3/6] Signal pairing
+  Scan this QR code with Signal on your phone:
+  Signal → Settings → Linked Devices → +
+  ┌─────────────────────┐
+  │ ▄▄▄▄▄ █ █▄█ ▄▄▄▄▄  │
+  │ █   █ ██▄██ █   █  │
+  │ ...                 │
+  └─────────────────────┘
+  Waiting for pairing...
+  ✓ Signal linked successfully
+
+[4/6] Workspace
+  VeriClaw will store files in ~/vericlaw-workspace
+  Press Enter to accept, or type a different path:
+  > [Enter]
+  ✓ Workspace created
+
+[5/6] System check
+  Config         ✓  valid
+  Provider       ✓  Anthropic (responding)
+  Signal         ✓  linked and ready
+  Memory         ✓  SQLite (new database)
+  Workspace      ✓  writable
+  Security       ✓  4/4 SPARK packages verified
+
+  All checks passed.
+
+[6/6] Done
+
+✓ Setup complete. VeriClaw is ready to use.
+
+  vericlaw chat           Start VeriClaw (CLI + Signal)
+  vericlaw chat --local   Start without Signal
+
+Config saved to ~/.vericlaw/config.json
 ```
 
-Type a number or the provider name and press Enter.
-
-> [!TIP]
-> **Pick option 4?** You'll get a presets submenu that auto-fills the base URL
-> and default model so you don't have to look them up:
->
-> ```
-> Popular OpenAI-compatible providers:
->   1  groq        (Groq Cloud — fast inference)
->   2  mistral     (Mistral AI)
->   3  deepseek    (DeepSeek)
->   4  xai         (xAI / Grok)
->   5  openrouter  (OpenRouter — multi-model gateway)
->   6  perplexity  (Perplexity AI)
->   7  together    (Together AI)
->   8  fireworks   (Fireworks AI)
->   9  cerebras    (Cerebras)
->   0  custom      (Enter URL manually)
-> ```
->
-> Choose a preset or `0` to enter a custom endpoint.
-
-Next you'll **enter your API key** (skipped for Ollama), **pick a model**
-(sensible defaults are pre-filled), and **name your agent** (defaults to
-"VeriClaw").
-
-### Pick a channel
-
-Finally, choose where you'll talk to your agent:
-
-```
-Choose your primary channel:
-   1  cli         (interactive terminal — default)
-   2  telegram    (Telegram bot, requires bot token)
-   3  signal      (Signal via signal-cli bridge)
-   4  whatsapp    (WhatsApp via wa-bridge)
-   5  discord     (Discord bot, requires bot token)
-   6  slack       (Slack app, requires bot + app tokens)
-   7  email       (Email via IMAP/SMTP bridge)
-   8  irc         (IRC via irc-bridge)
-   9  matrix      (Matrix via matrix-bridge)
-  10  mattermost  (Mattermost via mattermost-bridge)
-```
-
-Start with **cli** if you just want to kick the tyres — you can add more
-channels later via `vericlaw config edit`.
-
-Each step shows a **green ✓ confirmation**, and the wizard finishes with:
-
-```
-✓ Config written to ~/.vericlaw/config.json
-
-Next steps:
-  1. vericlaw doctor   — verify your setup
-  2. vericlaw chat     — start chatting
-  3. vericlaw gateway  — run multi-channel daemon
-```
-
-> [!TIP]
-> If you skip `onboard` and just run `vericlaw`, it auto-creates a starter config
-> and shows a **welcome banner** suggesting you run `vericlaw onboard`.
+API key validation happens immediately at step 1 — you won't get to step 6 with a bad key. Signal pairing happens at step 3 — you won't get to step 6 with a broken bridge.
 
 ---
 
-## Step 3: Doctor
-
-Verify everything is working:
-
-```bash
-vericlaw doctor
-```
-
-The doctor runs through health checks with **colored ✓/✗ indicators**:
-
-- **Config** — validates your config file and shows provider/channel summary
-- **Provider** — connects to your LLM endpoint and reports latency
-- **Database** — tests SQLite memory connection
-- **Bridges** — pings each enabled channel bridge (WhatsApp, Signal, etc.)
-- **SPARK** — confirms security core is compile-time verified
-- **Workspace** — checks write permissions
-
-A green summary line at the end shows your pass count:
-
-```
-✓ Config:     ok (provider=openai, channel=cli)
-✓ Provider:   OpenAI (gpt-4o) — connected (120 ms)
-✓ Database:   ok (sqlite)
-✓ Bridges:    ok (cli)
-✓ SPARK:      verified
-✓ Workspace:  ok (/home/you/.vericlaw)
-
-✓ Summary:  6 / 6 checks passed
-```
-
-> If any check fails, the doctor shows a red ✗ with the failure reason.
-> Fix the issue and re-run `vericlaw doctor`.
-
----
-
-## Changing Your Configuration
-
-You don't need to re-run the full onboard wizard every time you want to tweak
-a setting. VeriClaw ships three handy commands for managing your config after
-the initial setup.
-
-### `vericlaw config edit`
-
-Opens an interactive menu that lets you change your provider, API key, model,
-channels, or agent name — one field at a time, without touching anything else.
-
-```bash
-# Switch to a different model without re-running onboard
-vericlaw config edit
-```
-
-### `vericlaw config validate`
-
-A quick sanity check that your `~/.vericlaw/config.json` is valid JSON and
-contains all the required fields. This is lighter and faster than
-`vericlaw doctor` — perfect for a quick smoke test after a manual edit.
-
-```bash
-# Verify your config is valid
-vericlaw config validate
-```
-
-### `vericlaw reset`
-
-Deletes your existing configuration and re-runs the onboard wizard from
-scratch. Useful if you want a completely fresh start.
-
-```bash
-# Start over from scratch
-vericlaw reset
-```
-
-> [!TIP]
-> Prefer `vericlaw config edit` for small tweaks and `vericlaw reset` only when
-> you truly want to wipe the slate clean.
-
----
-
-## Step 4: Chat
-
-Start an interactive conversation:
+## Step 3: Chat
 
 ```bash
 vericlaw chat
 ```
 
-You'll see the **VeriClaw banner**, your provider info, and session ID:
-
 ```
- __     __        _  ____ _
- \ \   / /__ _ __(_)/ ___| | __ ___      __
-  \ \ / / _ \ '__| | |   | |/ _` \ \ /\ / /
-   \ V /  __/ |  | | |___| | (_| |\ V  V /
-    \_/ \___|_|  |_|\____|_|\__,_| \_/\_/
+VeriClaw v1.0.0 — type /help for commands, /exit to quit
 
-  v0.2.0  —  formally verified AI runtime
+you> Hello, what can you do?
 
-  provider  gpt-4o
-  session   a1b2c3d4
-  type /help for commands, exit to quit
-
-you> Hello!
-vericlaw> Hi! I'm VeriClaw. How can I help?
+vericlaw> I'm VeriClaw, a security-first AI assistant. I can help you
+with questions, run commands in your workspace, fetch web content,
+set reminders, and process voice messages and images. What would you
+like to work on?
 ```
 
-### Chat Commands
+That's it. You now have:
 
-| Command | Description |
-|---------|-------------|
+- **CLI chat** — interactive terminal session with streaming output
+- **Signal listening** — VeriClaw is monitoring your linked Signal account and will respond to messages you send it
+
+---
+
+## What you get after the three steps
+
+| Capability | How to use it |
+|---|---|
+| CLI chat | `vericlaw chat` |
+| CLI chat without Signal | `vericlaw chat --local` |
+| Signal chat | Send a message to yourself on Signal |
+| Voice messages on Signal | Speak naturally — VeriClaw transcribes and responds |
+| Images on Signal | Send a photo — VeriClaw can describe and reason about it |
+| File operations | Ask VeriClaw to read or write files in your workspace |
+| Web search | Ask VeriClaw to fetch a URL |
+| Shell commands | Ask VeriClaw to run an allowlisted command |
+| Custom system prompt | Edit `~/.vericlaw/system.md` |
+
+---
+
+## CLI commands
+
+```
+vericlaw onboard          Set up VeriClaw for the first time
+vericlaw doctor           Check that everything is working
+vericlaw chat             Start VeriClaw (CLI + Signal)
+vericlaw chat --local     Start without Signal
+vericlaw status           Show current provider, Signal link status, memory stats
+vericlaw version          Show version and build info
+```
+
+### doctor
+
+Runs a health check and shows a scannable report:
+
+```
+$ vericlaw doctor
+
+VeriClaw v1.0.0 — system check
+
+  Config         ✓  ~/.vericlaw/config.json (valid)
+  Provider       ✓  Anthropic — claude-sonnet-4 (responding)
+  Signal         ✓  +447700900000 (linked, bridge running)
+  Memory         ✓  SQLite — ~/vericlaw-workspace/memory.db (12 sessions)
+  Workspace      ✓  ~/vericlaw-workspace (writable)
+  Security       ✓  SPARK proofs — 4/4 packages verified
+
+All checks passed.
+```
+
+If something is wrong, doctor shows the exact failure and a fix:
+
+```
+  Signal         ✗  Bridge not responding
+                    The Signal bridge process may have stopped.
+                    → Run: vericlaw onboard --repair-signal
+```
+
+---
+
+## Chat slash commands
+
+These work in `vericlaw chat` (CLI mode only). Signal uses natural language instead — see below.
+
+| Command | What it does |
+|---|---|
 | `/help` | Show available commands |
-| `/clear` | Clear conversation history |
-| `/memory` | Show session info and message count |
-| `/edit N` | Fork conversation at message N and re-prompt |
-| `exit` | Quit VeriClaw |
-
-### One-Shot Mode
-
-For scripting or quick questions:
-
-```bash
-vericlaw agent "Summarise the top 3 headlines today"
-```
-
-Add `--json` for machine-readable output.
+| `/clear` | Clear conversation history for this session |
+| `/memory` | Show what VeriClaw remembers from past sessions |
+| `/export` | Save this conversation to a markdown file in your workspace |
+| `/exit` | End the chat |
 
 ---
 
-## Step 5: Gateway (Multi-Channel)
+## Signal UX
 
-To run VeriClaw across multiple messaging channels simultaneously:
+Signal is not a CLI. There are no slash commands on Signal — use natural language:
 
-```bash
-vericlaw gateway
-```
-
-The gateway displays a **boot status panel** showing your configuration at a glance:
-
-```
-  model     gpt-4o (OPENAI)
-  memory    ok (sqlite)
-  channels  cli, telegram, whatsapp (3 active)
-  gateway   http://127.0.0.1:8787
-
-  Press Ctrl+C to stop.
-```
-
-Each enabled channel runs concurrently via Ada tasks. See [channels.md](channels.md) for setup guides.
-
-For Docker deployments, copy the environment template first:
-
-```bash
-cp .env.example .env    # fill in your API keys and channel tokens
-docker compose up
-```
+- **"What do you remember about me?"** → equivalent to `/memory`
+- **"Start fresh"** or **"Forget what we were talking about"** → equivalent to `/clear`
+- **Voice messages** — speak naturally; VeriClaw transcribes and responds to the content
+- **Images** — send a photo; VeriClaw can describe it, answer questions about it, or act on it
+- **Short messages work best** — VeriClaw defaults to concise responses on Signal; ask for more detail if you need it
 
 ---
 
-## What's Next?
+## Customising the system prompt
 
-- **[Providers](providers.md)** — Configure multi-provider routing with failover
-- **[Channels](channels.md)** — Set up Telegram, WhatsApp, Slack, Discord, and more
-- **[Tools](tools.md)** — Enable file I/O, shell, web search, and MCP tools
-- **[Operations](operations.md)** — Monitoring, logging, and production deployment
+VeriClaw loads `~/.vericlaw/system.md` as the system prompt if it exists. Create it to change how VeriClaw behaves:
+
+```bash
+cat > ~/.vericlaw/system.md << 'EOF'
+You are a personal assistant helping me manage my projects and to-do list.
+Keep responses short and actionable.
+EOF
+```
+
+Changes take effect the next time you run `vericlaw chat` or restart the service.
+
+---
+
+## What's next?
+
+- **[Providers](providers.md)** — Configure Anthropic, OpenAI-compatible endpoints, Ollama
+- **[Troubleshooting](troubleshooting.md)** — Fix common setup issues
+- **[Security Proofs](security-proofs.md)** — How VeriClaw's SPARK proofs work
+- **[Pi Deployment](pi-deployment.md)** — Run VeriClaw on a Raspberry Pi 4

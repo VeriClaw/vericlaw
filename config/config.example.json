@@ -1,0 +1,49 @@
+{
+  "_comment": "VeriClaw v1.0-minimal — Anthropic + Signal configuration example",
+  "_comment2": "Copy to ~/.vericlaw/config.json and replace placeholder values",
+
+  "agent_name": "VeriClaw",
+  "system_prompt": "You are VeriClaw, a security-first AI assistant.",
+
+  "provider": {
+    "kind": "anthropic",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "model": "claude-sonnet-4-20250514"
+  },
+
+  "channels": [
+    { "kind": "cli",    "enabled": true },
+    { "kind": "signal", "enabled": true, "phone": "+447700900000" }
+  ],
+
+  "tools": {
+    "file":      true,
+    "web_fetch": true,
+    "shell":     true,
+    "cron":      true
+  },
+
+  "memory": {
+    "max_history":   50,
+    "facts_enabled": true
+  },
+
+  "voice": {
+    "_comment": "Optional. Remove this block if you don't need voice message transcription.",
+    "transcription_url":         "https://api.groq.com/openai/v1/audio/transcriptions",
+    "transcription_api_key_env": "GROQ_API_KEY",
+    "transcription_model":       "whisper-large-v3-turbo"
+  },
+
+  "security": {
+    "allowlist":             ["+447700900000"],
+    "rate_limit_per_minute": 10,
+    "workspace":             "~/vericlaw-workspace",
+    "shell_allowlist": [
+      "ls", "cat", "grep", "head", "tail", "wc", "find",
+      "sort", "diff", "echo", "date", "python3", "git"
+    ],
+    "shell_timeout_seconds":   30,
+    "shell_max_output_chars":  10000
+  }
+}

@@ -2,6 +2,57 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.3.0] — 2026-03-10
+
+### Changed — Re-engineering pivot to v1.0-minimal
+
+This release is the planned re-engineering pivot. The project is slimmed to its
+core value proposition and everything else is preserved in `future/` for a
+scheduled return.
+
+**Scope reduction (moved to `future/`, not deleted):**
+- Channels: Telegram, Discord, Slack, WhatsApp, Email, IRC, Matrix, Mattermost
+  removed from active `src/`; preserved in `future/channels/`
+- Providers: standalone OpenAI and Gemini Ada adapters moved to `future/providers/`;
+  generic `openai-compatible` implementation stays
+- Tools: git, brave_search, browser, spawn, MCP moved to `future/tools/`
+- Subsystems: HTTP gateway server, gateway routing, observability/tracing,
+  sandbox, metrics, memory vector, plugins, runtime-executor moved to `future/`
+- Bridges: all 9 Node.js bridge sidecars moved to `future/bridges/`
+- Operator console (React UI) moved to `future/operator-console/`
+- Packaging: Homebrew, Scoop, winget, APT/nfpm moved to `future/packaging/`
+- Deploy artefacts: launchd, Windows service, full Docker Compose moved to `future/deploy/`
+- CI: fuzzing, CodeQL, Trivy, supply-chain workflows moved to `future/ci/`
+
+**New artifacts:**
+- `vericlaw-signal/` — Rust companion binary scaffold (presage-based Signal bridge,
+  JSON-over-stdin/stdout IPC protocol defined)
+- `src/signal/signal-manager.ads/adb` — Ada process lifecycle manager for the
+  Signal bridge subprocess
+- `install.sh` — POSIX sh curl-friendly installer (OS/arch detection, SHA256 verify)
+- `config/config.example.json` — v1.0-minimal config (Anthropic + Signal + 5 tools)
+- `config/openai-compatible.example.json` — OpenAI-compatible examples (6 providers)
+
+**Documentation:**
+- `README.md` rewritten: honest v1.0-minimal scope, no phantom features
+- `ARCHITECTURE.md` rewritten: 3-layer diagram with Signal IPC data flow
+- `SECURITY.md` rewritten: 4 must-prove packages with honest pass/fail status
+- New: `docs/getting-started.md`, `docs/troubleshooting.md`,
+  `docs/security-proofs.md`, `docs/pi-deployment.md`, `docs/providers.md`
+
+**Build hygiene:**
+- `vericlaw.gpr`: `src/sandbox` and `src/observability` removed from Source_Dirs;
+  `src/signal` added
+- `Makefile` `prove-host`: now targets exactly 4 SPARK packages with explicit `-u` flags
+- `.github/workflows/ci.yml`: slimmed to 5-job pipeline
+  (build-ada, build-rust, prove, test, lint-rust)
+- `.github/workflows/publish.yml`: 4-target release matrix
+  (linux-x86_64, linux-aarch64, macos-arm64, macos-x86_64)
+
+**Config schema change (breaking):**
+- `config.json` `provider` is now a singular object (`"provider": {}`) instead of
+  an array (`"providers": []`). Any existing configs must be migrated manually.
+
 ## [0.1.0-rc4] — 2026-02-27
 
 ### Added

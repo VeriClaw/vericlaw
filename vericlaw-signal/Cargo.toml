@@ -1,0 +1,55 @@
+[package]
+name = "vericlaw-signal"
+version = "0.1.0"
+edition = "2021"
+description = "VeriClaw Signal companion binary — presage-based Signal bridge with JSON-over-stdin/stdout IPC"
+license = "MIT"
+
+[[bin]]
+name = "vericlaw-signal"
+path = "src/main.rs"
+
+# ---------------------------------------------------------------------------
+# Features
+# ---------------------------------------------------------------------------
+# `signal` feature will gate presage once the bridge is implemented (v1.1).
+# For v0.3.0 the scaffold compiles and runs the IPC loop without presage.
+[features]
+default = []
+signal = []   # reserved — presage dependency added when bridge is implemented
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# JSON serialization/deserialization for the IPC protocol
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# QR code generation for terminal display (UTF-8 block characters, works over SSH/Termius)
+# Used now so the provisioning flow renders correctly once presage is wired up.
+qrcode = "0.14"
+
+# ---------------------------------------------------------------------------
+# presage (Signal protocol) — added at v1.1 when the bridge is implemented.
+# Pin to a verified commit; the presage API is explicitly marked unstable.
+# https://github.com/whisperfish/presage
+#
+# [target.'cfg(feature = "signal")'.dependencies]
+# presage = { git = "https://github.com/whisperfish/presage", rev = "REAL_COMMIT" }
+# presage-store-sled = { git = "https://github.com/whisperfish/presage", rev = "REAL_COMMIT" }
+# ---------------------------------------------------------------------------
+
+[profile.release]
+# Optimize for size — binary should stay under 10 MB
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

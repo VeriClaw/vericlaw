@@ -1,13 +1,9 @@
 name = "vericlaw"
 description = "Ada/SPARK AI agent runtime with formally verified security core"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["VeriClaw Team"]
 licenses = "MIT"
 website = "https://github.com/vericlaw"
-
-[[depends-on]]
-gnatcoll = "^24.0.0"
-aws = "^24.0.0"
 
 [gpr-externals]
 BUILD_PROFILE = ["dev", "release", "small", "edge-size", "edge-speed", "coverage"]

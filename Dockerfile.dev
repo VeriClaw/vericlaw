@@ -1,18 +1,22 @@
 # syntax=docker/dockerfile:1.7
 # Development build environment for VeriClaw.
-# Matches the CI toolchain: Ubuntu 24.04 + GNAT 14 + Alire.
+# Uses Ubuntu 22.04 (glibc 2.35) with system GNAT 12.
+# - Ubuntu 24.04 (glibc 2.39) triggers a time_t build failure in aws 24.x.
+# - GNAT 14.2.1 enforces stricter access discriminant rules that aws 24.x fails.
+# System GNAT 12 (apt) matches the ubuntu-22.04 GitHub Actions runner used in CI.
+#
 # Build the image once: make docker-dev-image
 # Then compile with source volume-mounted: make docker-dev-build
 #
 # Note: this image is linux/amd64. On Apple Silicon Docker runs it
 # via QEMU emulation -- builds work, just ~2x slower.
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
-       gnat-14 \
+       gnat \
        gprbuild \
        libsqlite3-dev \
        libcurl4-openssl-dev \
@@ -24,7 +28,7 @@ RUN apt-get update \
        unzip \
     && rm -rf /var/lib/apt/lists/* \
     && for t in gnatbind gnatlink gnatls; do \
-         [ -f "/usr/bin/${t}-14" ] && ln -sf "/usr/bin/${t}-14" "/usr/bin/x86_64-linux-gnu-${t}" || true; \
+         [ -f "/usr/bin/${t}-12" ] && ln -sf "/usr/bin/${t}-12" "/usr/bin/x86_64-linux-gnu-${t}" || true; \
        done
 
 # Install Alire (Ada package manager) — manages gnatcoll + aws dependencies.
@@ -42,9 +46,6 @@ RUN alr settings --global --set user.email="dev@vericlaw.dev" \
     && alr settings --global --set user.name="VeriClaw Dev" \
     && alr settings --global --set distribution.unknown_os=false 2>/dev/null || true
 
-# Disable the toolchain assistant so `alr build` doesn't prompt to download GNAT.
-# The apt-installed gnat-14 and gprbuild are available in PATH and will be used.
 ENV ALIRE_NONINTERACTIVE=true
-RUN alr toolchain --disable-assistant 2>/dev/null || true
 
 WORKDIR /workspace

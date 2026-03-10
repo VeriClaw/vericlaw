@@ -552,9 +552,6 @@ is
       end if;
    end Cmd_Doctor;
 
-   --  Graceful shutdown flag (placeholder for future signal handling).
-   Shutdown_Requested : constant Boolean := False;
-
    --  Entry point
    Cmd    : Unbounded_String := To_Unbounded_String ("chat");
    CR     : Config.Loader.Load_Result;

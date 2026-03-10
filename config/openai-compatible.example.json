@@ -1,0 +1,68 @@
+{
+  "_comment": "VeriClaw v1.0-minimal — OpenAI-compatible provider examples",
+  "_comment2": "This single provider implementation covers: Azure AI Foundry, Google Gemini,",
+  "_comment3": "Ollama, OpenRouter, Groq, DeepSeek, Mistral, and any OpenAI-format endpoint.",
+
+  "agent_name": "VeriClaw",
+  "system_prompt": "You are VeriClaw, a security-first AI assistant.",
+
+  "_examples": {
+
+    "ollama_local": {
+      "provider": {
+        "kind":     "openai-compatible",
+        "base_url": "http://localhost:11434/v1",
+        "api_key":  "ollama",
+        "model":    "llama3.2:3b"
+      }
+    },
+
+    "azure_ai_foundry": {
+      "provider": {
+        "kind":         "openai-compatible",
+        "base_url":     "https://YOUR-RESOURCE.openai.azure.com/openai/deployments/gpt-4o",
+        "api_key_env":  "AZURE_API_KEY",
+        "model":        "gpt-4o",
+        "extra_headers": {
+          "api-version": "2024-12-01-preview"
+        }
+      }
+    },
+
+    "google_gemini": {
+      "provider": {
+        "kind":        "openai-compatible",
+        "base_url":    "https://generativelanguage.googleapis.com/v1beta/openai",
+        "api_key_env": "GEMINI_API_KEY",
+        "model":       "gemini-2.0-flash"
+      }
+    },
+
+    "openrouter": {
+      "provider": {
+        "kind":        "openai-compatible",
+        "base_url":    "https://openrouter.ai/api/v1",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "model":       "anthropic/claude-sonnet-4"
+      }
+    },
+
+    "groq": {
+      "provider": {
+        "kind":        "openai-compatible",
+        "base_url":    "https://api.groq.com/openai/v1",
+        "api_key_env": "GROQ_API_KEY",
+        "model":       "llama-3.3-70b-versatile"
+      }
+    },
+
+    "deepseek": {
+      "provider": {
+        "kind":        "openai-compatible",
+        "base_url":    "https://api.deepseek.com/v1",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "model":       "deepseek-chat"
+      }
+    }
+  }
+}

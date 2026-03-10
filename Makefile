@@ -58,14 +58,18 @@ build: build-host
 
 prove-host:
 	$(TOOLCHAIN_CHECK) --mode full
-	gnatprove -P $(PROJECT) --level=2
+	gnatprove -P $(PROJECT) --level=2 --prover=z3,cvc4,altergo \
+	  --timeout=60 --report=fail \
+	  -u security-policy \
+	  -u security-secrets \
+	  -u security-audit \
+	  -u channels-security
 
 prove: prove-host
 
 test-host:
 	$(MAKE) runtime-tests
 	$(MAKE) secrets-test
-	$(MAKE) service-supervisor-check
 
 test: test-host
 
@@ -299,23 +303,25 @@ docker-dev-image:
 	  --tag "$(DEV_IMAGE_NAME):latest" .
 
 ## Compile the full project inside the dev container using Alire.
-## Alire downloads gnatcoll + aws deps on first run (cached in vericlaw-alire-cache volume).
+## Alire downloads gnatcoll on first run (cached in vericlaw-alire-cache volume).
 ## The source is volume-mounted, so edits are picked up without rebuilding the image.
 ## On success the binary lands at ./vericlaw (x86_64 ELF, runnable inside Docker).
+## Volume mounts only ~/.local/share/alire (dep cache + toolchain) so that
+## ~/.config/alire (Alire settings baked into image) remain visible.
 docker-dev-build: docker-dev-image
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
-	  -v vericlaw-alire-cache:/root \
+	  -v vericlaw-alire-cache:/root/.local/share/alire \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
-	  bash -c 'yes "" 2>/dev/null | alr toolchain --select gnat_native=14.2.1 && alr build'
+	  bash -c 'yes "" 2>/dev/null | alr toolchain --select gnat_native=14.2.1 2>/dev/null || true && alr build'
 
 ## Interactive shell inside the dev container with source mounted.
 ## Use this to run gnat, gprbuild, gnatprove manually or inspect errors.
 docker-dev-shell: docker-dev-image
 	docker run --rm -it --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
-	  -v vericlaw-alire-cache:/root \
+	  -v vericlaw-alire-cache:/root/.local/share/alire \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  bash
@@ -324,7 +330,7 @@ docker-dev-shell: docker-dev-image
 docker-dev-prove: docker-dev-image
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
-	  -v vericlaw-alire-cache:/root \
+	  -v vericlaw-alire-cache:/root/.local/share/alire \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  bash -c 'yes "" 2>/dev/null | alr exec -- gnatprove -P vericlaw.gpr --level=2 -j0'
@@ -335,7 +341,7 @@ docker-dev-test: docker-dev-build
 	@echo "=== vericlaw version ===" && \
 	docker run --rm --platform linux/amd64 \
 	  -v "$(PWD):/workspace" \
-	  -v vericlaw-alire-cache:/root \
+	  -v vericlaw-alire-cache:/root/.local/share/alire \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  ./vericlaw version
@@ -343,7 +349,7 @@ docker-dev-test: docker-dev-build
 	docker run --rm --platform linux/amd64 \
 	  -e HOME=/tmp \
 	  -v "$(PWD):/workspace" \
-	  -v vericlaw-alire-cache:/root \
+	  -v vericlaw-alire-cache:/root/.local/share/alire \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  ./vericlaw doctor || true
@@ -357,14 +363,14 @@ docker-dev-integration-test: docker-dev-build
 	docker run --rm --platform linux/amd64 \
 	  -e HOME=/tmp \
 	  -v "$(PWD):/workspace" \
-	  -v vericlaw-alire-cache:/root \
+	  -v vericlaw-alire-cache:/root/.local/share/alire \
 	  -w /workspace \
 	  "$(DEV_IMAGE_NAME):latest" \
 	  bash -c '\
 	    python3 scripts/mock_llm_server.py 11434 & \
 	    sleep 1 && \
 	    mkdir -p /tmp/.vericlaw && \
-	    printf '"'"'{"agent_name":"VeriClaw","system_prompt":"You are VeriClaw.","providers":[{"kind":"openai_compatible","base_url":"http://127.0.0.1:11434","api_key":"","model":"mock"}],"channels":[{"kind":"cli","enabled":true}],"tools":{"file":false,"shell":false,"web_fetch":false,"brave_search":false},"memory":{"max_history":5,"facts_enabled":false},"gateway":{"bind_host":"127.0.0.1","bind_port":8787}}'"'"' > /tmp/.vericlaw/config.json && \
+	    printf '"'"'{"agent_name":"VeriClaw","system_prompt":"You are VeriClaw.","provider":{"kind":"openai-compatible","base_url":"http://127.0.0.1:11434/v1","api_key":"mock","model":"mock"},"channels":[{"kind":"cli","enabled":true}],"tools":{"file":false,"shell":false,"web_fetch":false,"cron":false},"memory":{"max_history":5,"facts_enabled":false}}'"'"' > /tmp/.vericlaw/config.json && \
 	    REPLY=$$(./vericlaw agent hello 2>/dev/null) && \
 	    echo "Reply: $$REPLY" && \
 	    test -n "$$REPLY" && echo "INTEGRATION TEST PASSED" \

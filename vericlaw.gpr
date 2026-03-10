@@ -1,5 +1,3 @@
-with "gnatcoll";
-with "aws";
 
 project Vericlaw is
    for Languages use ("Ada", "C");
@@ -14,16 +12,18 @@ project Vericlaw is
    Build_Target : Target_Kind := external ("BUILD_TARGET", "native");
    --  config-reload body differs per OS: Windows stub (no SIGHUP) vs POSIX handler.
    --  The spec (config-reload.ads) lives in src/config on all platforms.
+   --  v1.0-minimal: src/sandbox and src/observability moved to future/
+   --  src/signal is the new Signal bridge lifecycle manager (JSON IPC with vericlaw-signal)
    case Build_Target is
       when "x86_64-w64-mingw32" =>
          for Source_Dirs use ("src", "src/http", "src/config", "src/config_win",
                               "src/agent", "src/providers", "src/tools", "src/memory",
-                              "src/channels", "src/sandbox", "src/observability",
+                              "src/channels", "src/signal",
                               "src/terminal");
       when others =>
          for Source_Dirs use ("src", "src/http", "src/config", "src/config_posix",
                               "src/agent", "src/providers", "src/tools", "src/memory",
-                              "src/channels", "src/sandbox", "src/observability",
+                              "src/channels", "src/signal",
                               "src/terminal");
    end case;
    type Binder_Mode_Kind is ("portable", "minimal");
@@ -39,23 +39,23 @@ project Vericlaw is
             case Warn_Errors is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatwe",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatwe",
                      "-gnatyaAbcefhiklmnprtM120", "-gnato");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ",
                      "-gnatyaAbcefhiklmnprtM120", "-gnato");
             end case;
          when "release" =>
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
                      "-O2", "-flto",
                      "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                      "-O2", "-flto",
                      "-fstack-protector-strong", "-ffunction-sections", "-fdata-sections");
             end case;
@@ -63,37 +63,37 @@ project Vericlaw is
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
             end case;
          when "edge-size" =>
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                      "-Os", "-ffunction-sections", "-fdata-sections");
             end case;
          when "edge-speed" =>
             case Style_Checks is
                when "on" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato", "-O2");
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnatyy", "-gnato", "-O2");
                when "off" =>
                   for Default_Switches ("Ada") use
-                    ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato", "-O2");
+                    ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato", "-O2");
             end case;
          when "coverage" =>
             --  Debug build with GCOV instrumentation for LCOV reporting.
             for Default_Switches ("Ada") use
-              ("-gnat2022", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
+              ("-gnat2012", "-gnata", "-gnatVa", "-gnatwa", "-gnatwJ", "-gnato",
                "-O0", "-g", "--coverage", "-fprofile-arcs", "-ftest-coverage");
       end case;
    end Compiler;
@@ -133,7 +133,7 @@ project Vericlaw is
                      "-Wl,-dead_strip", "-flto",
                      "-fstack-protector-strong");
                when others =>
-                  --  Linux: -no-pie required (aws 24.0.0 static lib lacks fPIC)
+                  --  Linux: -no-pie for fully static link compatibility
                   for Default_Switches ("Ada") use
                     ("-lcurl", "-lsqlite3",
                      "-no-pie",

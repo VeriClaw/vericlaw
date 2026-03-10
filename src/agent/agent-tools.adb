@@ -106,14 +106,6 @@ is
          Parameters  => To_Unbounded_String (P));
    end Make_Schema;
 
-   function JSON_Bool (Value : Boolean) return String is
-   begin
-      if Value then
-         return "true";
-      end if;
-      return "false";
-   end JSON_Bool;
-
    function Is_Allowed_Tool_Name (Name : String) return Boolean is
    begin
       --  Accept any MCP-bridged tool (dynamically discovered at runtime).
