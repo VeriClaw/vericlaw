@@ -862,11 +862,10 @@ is
    -----------------------------------------------------------------------
 
    procedure Run_Config_Edit
-     (Path   : String;
-      Config : Config.Schema.Agent_Config)
+     (Path : String;
+      Cfg  : Config.Schema.Agent_Config)
    is
       use Ada.Text_IO;
-      use Config.Schema;
 
       procedure Prompt
         (Label    : String;
@@ -894,8 +893,8 @@ is
          end if;
       end Prompt;
 
-      P            : Provider_Config renames Config.Providers (1);
-      Ch           : Channel_Config  renames Config.Channels (1);
+      P            : Provider_Config renames Cfg.Providers (1);
+      Ch           : Channel_Config  renames Cfg.Channels (1);
       Kind_Img     : constant String :=
         Provider_Kind'Image (P.Kind);
       Model_Str    : constant String :=
@@ -905,7 +904,7 @@ is
       Chan_Img     : constant String :=
         Channel_Kind'Image (Ch.Kind);
       Agent_Str    : constant String :=
-        To_String (Config.Agent_Name);
+        To_String (Cfg.Agent_Name);
 
       --  Mutable copies used while editing.
       Provider_Buf   : String (1 .. 256);
@@ -985,7 +984,7 @@ is
         & Provider_Buf (1 .. PL)
         & " (" & Model_Buf (1 .. ML) & ")");
       Put_Line ("  channels : "
-        & Channel_Index'Image (Config.Num_Channels)
+        & Channel_Index'Image (Cfg.Num_Channels)
         & " (" & Channel_Buf (1 .. CL) & ")");
       Put_Line ("  agent    : "
         & Agent_Name_Buf (1 .. NL));

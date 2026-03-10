@@ -36,7 +36,7 @@ is
    --  Interactive config editor: show current settings, let the user
    --  change individual fields, then regenerate and write the JSON.
    procedure Run_Config_Edit
-     (Path   : String;
-      Config : Config.Schema.Agent_Config);
+     (Path : String;
+      Cfg  : Config.Schema.Agent_Config);
 
 end Config.Loader;
