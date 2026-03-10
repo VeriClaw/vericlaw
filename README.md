@@ -5,12 +5,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Ada/SPARK](https://img.shields.io/badge/Ada%2FSPARK-2022-orange.svg)](https://www.adacore.com/about-spark)
 
-**VeriClaw: the only AI agent runtime with formally verified security. Runs on a Pi. Talks over Signal.**
+**VeriClaw: the only AI agent runtime with a formally verified security core. Runs on a Pi. Talks over Signal.**
 
 > [!NOTE]
 > **VeriClaw is v1.0-minimal and in active development.** The CLI and Signal channel are functional. APIs and config formats may still change. See the [changelog](CHANGELOG.md) for what shipped recently.
 
-VeriClaw is an AI agent runtime written in Ada/SPARK — the only runtime in its class with formally verified security policies. It ships as a single static binary that runs on hardware as modest as a Raspberry Pi 4, and lets you talk to your AI assistant over Signal. Security is not a configuration option; it is proved at compile time using the SPARK theorem prover.
+VeriClaw is an AI agent runtime written in Ada/SPARK — the only runtime in its class with a formally verified security core. It ships as a single static binary that runs on hardware as modest as a Raspberry Pi 4, and lets you talk to your AI assistant over Signal. The security core (policy enforcement, secret management, audit logging, channel access control) is proved at compile time using the SPARK theorem prover. The agent loop, tool dispatch, and provider routing are not proven — see [docs/security-proofs.md](docs/security-proofs.md) for exactly what is and isn't covered.
 
 ## What makes VeriClaw different
 

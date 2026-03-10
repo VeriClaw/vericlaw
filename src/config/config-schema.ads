@@ -38,10 +38,10 @@ is
    --  -----------------------------------------------------------------------
 
    type Provider_Kind is
-     (OpenAI, Anthropic, Azure_Foundry, OpenAI_Compatible, Gemini);
+     (Anthropic, Azure_Foundry, OpenAI_Compatible);
 
    type Provider_Config is record
-      Kind        : Provider_Kind   := OpenAI;
+      Kind        : Provider_Kind   := Anthropic;
       API_Key     : Unbounded_String;              -- never logged
       Base_URL    : Unbounded_String;              -- for Azure/Compat overrides
       Model       : Unbounded_String;
@@ -62,8 +62,7 @@ is
    --  -----------------------------------------------------------------------
 
    type Channel_Kind is
-     (CLI, Telegram, Signal, WhatsApp, Discord, Slack,
-      Email, IRC, Matrix, Mattermost);
+     (CLI, Signal);
 
    type Channel_Config is record
       Kind       : Channel_Kind    := CLI;

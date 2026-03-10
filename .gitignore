@@ -109,3 +109,8 @@ cross_platform_strategy.txt
 # Alire build artifacts
 alire/
 config/vericlaw_config.*
+
+# Internal planning docs (never public)
+VERICLAW_DEEP_DIVE.md
+VERICLAW_REENGINEERING_PLAN.md
+docs/internal/

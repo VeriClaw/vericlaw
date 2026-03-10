@@ -1,9 +1,15 @@
 name = "vericlaw"
 description = "Ada/SPARK AI agent runtime with formally verified security core"
+long-description = """
+VeriClaw is an Ada/SPARK AI agent runtime that connects LLMs (Anthropic Claude, OpenAI-compatible) to CLI and Signal channels. The security-critical packages (policy enforcement, secret management, audit logging, and channel access control) are formally verified using GNATprove/SPARK 2014, giving VeriClaw a level of safety assurance unique among open-source AI agent runtimes. Designed for embedded, edge, and regulated-industry deployments where correctness is not optional.
+"""
 version = "0.3.0"
 authors = ["VeriClaw Team"]
+maintainers = ["VeriClaw Team <team@vericlaw.dev>"]
+maintainers-logins = ["vericlaw"]
 licenses = "MIT"
-website = "https://github.com/vericlaw"
+website = "https://github.com/vericlaw/vericlaw"
+tags = ["ada", "spark", "ai", "agent", "llm", "security", "verified", "runtime", "anthropic", "signal"]
 
 [gpr-externals]
 BUILD_PROFILE = ["dev", "release", "small", "edge-size", "edge-speed", "coverage"]

@@ -30,7 +30,7 @@ is
          when Anthropic =>
             return new Providers.Anthropic.Anthropic_Provider'
               (Providers.Anthropic.Create (Cfg));
-         when OpenAI | Azure_Foundry | OpenAI_Compatible | Gemini =>
+         when Azure_Foundry | OpenAI_Compatible =>
             return new Providers.OpenAI_Compatible.OpenAI_Compat_Provider'
               (Providers.OpenAI_Compatible.Create (Cfg));
       end case;

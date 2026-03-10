@@ -112,6 +112,22 @@ GNATprove must be installed (part of GNAT Pro or the community edition). A clean
 
 ## Vulnerability Reporting
 
-To report a security vulnerability, open a GitHub issue with the title prefix **`[SECURITY]`**. Include a description of the vulnerability, steps to reproduce, and potential impact. Do not include active exploit code in the public issue.
+**Please do not file public GitHub issues for security vulnerabilities.**
 
-For sensitive disclosures, email the maintainer directly (address in the GitHub profile) before opening a public issue.
+Use GitHub's private security advisory feature instead:
+
+👉 **[Report a Vulnerability](https://github.com/vericlaw/vericlaw/security/advisories/new)**
+
+### Response SLA
+
+| Severity | Acknowledgement | Patch Target |
+|----------|----------------|--------------|
+| Critical (CVSS ≥ 9.0) | Within 24 hours | Within 7 days |
+| High (CVSS 7.0–8.9) | Within 48 hours | Within 14 days |
+| Medium / Low | Within 72 hours | Next scheduled release |
+
+We will coordinate disclosure timing with you. We follow [responsible disclosure](https://en.wikipedia.org/wiki/Responsible_disclosure) — please give us a reasonable fix window before publishing.
+
+### Scope
+
+In scope: VeriClaw Ada runtime, `vericlaw-signal` Rust binary, the config loader, HTTP client, and all SPARK security packages. Out of scope: third-party LLM providers, Signal protocol itself, user-written shell allowlists.

@@ -416,24 +416,11 @@ is
          begin
             --  Build URL, headers, and body per provider kind
             case P.Kind is
-               when Config.Schema.OpenAI =>
+               when Config.Schema.OpenAI_Compatible =>
                   URL := To_Unbounded_String
                     ((if Length (P.Base_URL) > 0
                       then To_String (P.Base_URL)
                       else "https://api.openai.com")
-                     & "/v1/chat/completions");
-                  Hdrs := To_Unbounded_String
-                    ("Authorization=Bearer "
-                     & To_String (P.API_Key));
-                  Req_Body := To_Unbounded_String
-                    ("{""model"":""" & Model
-                     & """,""messages"":[{""role"":"
-                     & """user"",""content"":""hi""}]"
-                     & ",""max_tokens"":1}");
-
-               when Config.Schema.OpenAI_Compatible =>
-                  URL := To_Unbounded_String
-                    (To_String (P.Base_URL)
                      & "/v1/chat/completions");
                   Hdrs := To_Unbounded_String
                     ("Authorization=Bearer "
@@ -473,21 +460,6 @@ is
                      & """,""messages"":[{""role"":"
                      & """user"",""content"":""hi""}]"
                      & ",""max_tokens"":1}");
-
-               when Config.Schema.Gemini =>
-                  URL := To_Unbounded_String
-                    ("https://generativelanguage"
-                     & ".googleapis.com/v1beta"
-                     & "/models/" & Model
-                     & ":generateContent?key="
-                     & To_String (P.API_Key));
-                  --  Gemini uses query-param auth
-                  Hdrs := Null_Unbounded_String;
-                  Req_Body := To_Unbounded_String
-                    ("{""contents"":[{""parts"":"
-                     & "[{""text"":""hi""}]}]"
-                     & ",""generationConfig"":"
-                     & "{""maxOutputTokens"":1}}");
             end case;
 
             T0 := Ada.Calendar.Clock;
