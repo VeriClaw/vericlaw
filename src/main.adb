@@ -31,6 +31,7 @@ with Channels.Slack;
 with Channels.Email;
 with Channels.IRC;
 with Channels.Matrix;
+with Channels.Mattermost;
 with HTTP.Server;
 with Tools.Cron;
 with Audit.Syslog;
@@ -451,6 +452,200 @@ is
          end loop;
          New_Line;
       end;
+
+      --  6. Provider connectivity
+      Put_Line (Terminal.Style.Brand ("Provider:"));
+      for I in 1 .. Cfg.Num_Providers loop
+         Total := Total + 1;
+         declare
+            use Ada.Calendar;
+            P     : Config.Schema.Provider_Config renames
+              Cfg.Providers (I);
+            Kind  : constant String :=
+              Config.Schema.Provider_Kind'Image (P.Kind);
+            Model : constant String := To_String (P.Model);
+            URL   : Unbounded_String;
+            Hdrs  : Unbounded_String;
+            Req_Body : Unbounded_String;
+            T0    : Ada.Calendar.Time;
+            T1    : Ada.Calendar.Time;
+            Ms    : Natural;
+            Resp  : HTTP.Client.Response;
+
+            function Hdr_Arr
+              return HTTP.Client.Header_Array
+            is
+               S : constant String := To_String (Hdrs);
+            begin
+               if S = "" then
+                  return HTTP.Client.Header_Array'
+                    (1 .. 0 => <>);
+               end if;
+               declare
+                  Sep : constant Natural :=
+                    Ada.Strings.Fixed.Index (S, "|");
+               begin
+                  if Sep = 0 then
+                     declare
+                        Eq : constant Natural :=
+                          Ada.Strings.Fixed.Index (S, "=");
+                     begin
+                        return (1 =>
+                          (Name => To_Unbounded_String
+                             (S (S'First .. Eq - 1)),
+                           Value => To_Unbounded_String
+                             (S (Eq + 1 .. S'Last))));
+                     end;
+                  else
+                     declare
+                        H1 : constant String :=
+                          S (S'First .. Sep - 1);
+                        H2 : constant String :=
+                          S (Sep + 1 .. S'Last);
+                        E1 : constant Natural :=
+                          Ada.Strings.Fixed.Index (H1, "=");
+                        E2 : constant Natural :=
+                          Ada.Strings.Fixed.Index (H2, "=");
+                     begin
+                        return
+                          (1 => (Name => To_Unbounded_String
+                             (H1 (H1'First .. E1 - 1)),
+                             Value => To_Unbounded_String
+                               (H1 (E1 + 1 .. H1'Last))),
+                           2 => (Name => To_Unbounded_String
+                             (H2 (H2'First .. E2 - 1)),
+                             Value => To_Unbounded_String
+                               (H2 (E2 + 1 .. H2'Last))));
+                     end;
+                  end if;
+               end;
+            end Hdr_Arr;
+
+         begin
+            --  Build URL, headers, and body per provider kind
+            case P.Kind is
+               when Config.Schema.OpenAI =>
+                  URL := To_Unbounded_String
+                    ((if Length (P.Base_URL) > 0
+                      then To_String (P.Base_URL)
+                      else "https://api.openai.com")
+                     & "/v1/chat/completions");
+                  Hdrs := To_Unbounded_String
+                    ("Authorization=Bearer "
+                     & To_String (P.API_Key));
+                  Req_Body := To_Unbounded_String
+                    ("{""model"":""" & Model
+                     & """,""messages"":[{""role"":"
+                     & """user"",""content"":""hi""}]"
+                     & ",""max_tokens"":1}");
+
+               when Config.Schema.OpenAI_Compatible =>
+                  URL := To_Unbounded_String
+                    (To_String (P.Base_URL)
+                     & "/v1/chat/completions");
+                  Hdrs := To_Unbounded_String
+                    ("Authorization=Bearer "
+                     & To_String (P.API_Key));
+                  Req_Body := To_Unbounded_String
+                    ("{""model"":""" & Model
+                     & """,""messages"":[{""role"":"
+                     & """user"",""content"":""hi""}]"
+                     & ",""max_tokens"":1}");
+
+               when Config.Schema.Azure_Foundry =>
+                  URL := To_Unbounded_String
+                    (To_String (P.Base_URL)
+                     & "/openai/deployments/"
+                     & To_String (P.Deployment)
+                     & "/chat/completions"
+                     & "?api-version="
+                     & To_String (P.API_Version));
+                  Hdrs := To_Unbounded_String
+                    ("api-key=" & To_String (P.API_Key));
+                  Req_Body := To_Unbounded_String
+                    ("{""messages"":[{""role"":"
+                     & """user"",""content"":""hi""}]"
+                     & ",""max_tokens"":1}");
+
+               when Config.Schema.Anthropic =>
+                  URL := To_Unbounded_String
+                    ("https://api.anthropic.com"
+                     & "/v1/messages");
+                  Hdrs := To_Unbounded_String
+                    ("x-api-key="
+                     & To_String (P.API_Key)
+                     & "|anthropic-version="
+                     & "2023-06-01");
+                  Req_Body := To_Unbounded_String
+                    ("{""model"":""" & Model
+                     & """,""messages"":[{""role"":"
+                     & """user"",""content"":""hi""}]"
+                     & ",""max_tokens"":1}");
+
+               when Config.Schema.Gemini =>
+                  URL := To_Unbounded_String
+                    ("https://generativelanguage"
+                     & ".googleapis.com/v1beta"
+                     & "/models/" & Model
+                     & ":generateContent?key="
+                     & To_String (P.API_Key));
+                  --  Gemini uses query-param auth
+                  Hdrs := Null_Unbounded_String;
+                  Req_Body := To_Unbounded_String
+                    ("{""contents"":[{""parts"":"
+                     & "[{""text"":""hi""}]}]"
+                     & ",""generationConfig"":"
+                     & "{""maxOutputTokens"":1}}");
+            end case;
+
+            T0 := Ada.Calendar.Clock;
+            Resp := HTTP.Client.Post_JSON
+              (URL        => To_String (URL),
+               Headers    => Hdr_Arr,
+               Body_JSON  => To_String (Req_Body),
+               Timeout_Ms => 10_000);
+            T1 := Ada.Calendar.Clock;
+            Ms := Natural (Duration'(T1 - T0) * 1000.0);
+
+            if HTTP.Client.Is_Success (Resp) then
+               Put_Line
+                 ("  " & Terminal.Style.Check & " "
+                  & Kind & " (" & Model & ") "
+                  & Terminal.Style.Muted ("— ")
+                  & Terminal.Style.Success ("connected")
+                  & " " & Terminal.Style.Muted
+                      ("(" & Natural'Image (Ms)
+                       & " ms)"));
+               Passed := Passed + 1;
+            else
+               declare
+                  Detail : constant String :=
+                    (if Length (Resp.Error) > 0
+                     then To_String (Resp.Error)
+                     else "HTTP"
+                       & Natural'Image
+                           (Resp.Status_Code));
+               begin
+                  Put_Line
+                    ("  " & Terminal.Style.Cross & " "
+                     & Kind & " (" & Model & ") "
+                     & Terminal.Style.Muted ("— ")
+                     & Terminal.Style.Error
+                         ("connection failed: "
+                          & Detail));
+               end;
+            end if;
+         exception
+            when others =>
+               Put_Line
+                 ("  " & Terminal.Style.Cross & " "
+                  & Kind & " (" & Model & ") "
+                  & Terminal.Style.Muted ("— ")
+                  & Terminal.Style.Error
+                      ("unexpected error"));
+         end;
+      end loop;
+      New_Line;
 
       --  Summary
       if Passed = Total then
@@ -996,6 +1191,26 @@ begin
                                   & To_String (T_Err));
                      end if;
                   end Matrix_Poller;
+
+                  task Mattermost_Poller;
+                  task body Mattermost_Poller is
+                     T_Mem : Memory.SQLite.Memory_Handle;
+                     T_Err : Unbounded_String;
+                     T_OK  : Boolean;
+                  begin
+                     T_OK := Memory.SQLite.Open
+                       (T_Mem, DB_Path, T_Err,
+                        CR.Config.Memory.Session_Retention_Days);
+                     if T_OK then
+                        Channels.Mattermost.Run_Polling
+                          (CR.Config, T_Mem);
+                        Memory.SQLite.Close (T_Mem);
+                     else
+                        Put_Line
+                          ("Gateway[Mattermost]: memory open failed: "
+                           & To_String (T_Err));
+                     end if;
+                  end Mattermost_Poller;
 
                   --  Background task: fire due cron jobs every 60 seconds.
                   task Cron_Heartbeat;

@@ -55,6 +55,7 @@ is
          when Email    => return "email";
          when IRC      => return "irc";
          when Matrix   => return "matrix";
+         when Mattermost => return "mattermost";
       end case;
    end Kind_To_String;
 

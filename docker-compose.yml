@@ -21,12 +21,15 @@
 # For Matrix: set MATRIX_HOMESERVER, MATRIX_TOKEN, MATRIX_USER_ID env vars and run:
 #   docker compose up matrix-bridge vericlaw
 #
+# For Mattermost: set MATTERMOST_URL and MATTERMOST_TOKEN env vars and run:
+#   docker compose up mattermost-bridge vericlaw
+#
 # For Browser tool: run:
 #   docker compose up browser-bridge vericlaw
 #
 # See docs/setup/whatsapp.md, docs/setup/discord.md, docs/setup/slack.md,
-# docs/setup/email.md, docs/setup/irc.md, docs/setup/matrix.md, and
-# docs/setup/browser.md for details.
+# docs/setup/email.md, docs/setup/irc.md, docs/setup/matrix.md,
+# docs/setup/mattermost.md, and docs/setup/browser.md for details.
 
 services:
   discord-bridge:
@@ -143,6 +146,18 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+  mattermost-bridge:
+    image: ghcr.io/vericlaw/mattermost-bridge:latest
+    ports:
+      - "3008:3008"
+    environment:
+      - MATTERMOST_URL=${MATTERMOST_URL}
+      - MATTERMOST_TOKEN=${MATTERMOST_TOKEN}
+      - MATTERMOST_TEAM=${MATTERMOST_TEAM:-}
+      - MATTERMOST_CHANNEL=${MATTERMOST_CHANNEL:-town-square}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: unless-stopped
 
   vericlaw:
     build:

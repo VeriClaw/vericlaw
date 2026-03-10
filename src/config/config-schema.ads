@@ -62,7 +62,8 @@ is
    --  -----------------------------------------------------------------------
 
    type Channel_Kind is
-     (CLI, Telegram, Signal, WhatsApp, Discord, Slack, Email, IRC, Matrix);
+     (CLI, Telegram, Signal, WhatsApp, Discord, Slack,
+      Email, IRC, Matrix, Mattermost);
 
    type Channel_Config is record
       Kind       : Channel_Kind    := CLI;

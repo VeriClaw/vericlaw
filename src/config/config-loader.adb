@@ -2,6 +2,7 @@ with Ada.Environment_Variables;
 with Ada.Directories;
 with Ada.Text_IO;
 with Config.JSON_Parser;    use Config.JSON_Parser;
+with Config.Provider_Aliases;
 with Terminal.Style;
 
 package body Config.Loader
@@ -107,6 +108,8 @@ is
          Dest.Kind := IRC;
       elsif Kind_Str = "matrix" then
          Dest.Kind := Matrix;
+      elsif Kind_Str = "mattermost" then
+         Dest.Kind := Mattermost;
       else
          Dest.Kind := CLI;
       end if;
@@ -512,7 +515,12 @@ is
       Agent_Name_Buf : String (1 .. 256);
       Channel_Buf    : String (1 .. 256);
       Token_Buf      : String (1 .. 256);
+      Bridge_Buf     : String (1 .. 256);
+      Extra_Buf      : String (1 .. 256);
+      Base_URL_Buf   : String (1 .. 256);
       PL, KL, ML, NL, CL, TL : Natural;
+      BL, EL         : Natural;
+      UL             : Natural := 0;
       Is_Ollama : Boolean := False;
    begin
       New_Line;
@@ -525,6 +533,9 @@ is
       Put_Line ("  2  anthropic         (Claude 3.5, requires API key)");
       Put_Line ("  3  ollama            (local LLM, no key needed)");
       Put_Line ("  4  openai_compatible (Azure, Groq, OpenRouter, etc.)");
+      Put_Line
+        ("  5  gemini            (Google Gemini 2.0 Flash,"
+         & " requires API key)");
       New_Line;
       Prompt ("Provider", "openai", Provider_Buf, PL);
 
@@ -537,6 +548,8 @@ is
          Provider_Buf (1 .. 6) := "ollama"; PL := 6;
       elsif PL = 1 and then Provider_Buf (1) = '4' then
          Provider_Buf (1 .. 17) := "openai_compatible"; PL := 17;
+      elsif PL = 1 and then Provider_Buf (1) = '5' then
+         Provider_Buf (1 .. 6) := "gemini"; PL := 6;
       end if;
       Put_Line ("  " & Terminal.Style.Check & " Provider: " & Provider_Buf (1 .. PL));
 
@@ -549,12 +562,107 @@ is
          if PL >= 9 and then Provider_Buf (1 .. 9) = "anthropic" then
             Prompt ("Anthropic API key", "", API_Key_Buf, KL);
             Prompt ("Model", "claude-3-5-sonnet-20241022", Model_Buf, ML);
+         elsif PL >= 6 and then Provider_Buf (1 .. 6) = "gemini" then
+            Prompt ("Gemini API key", "", API_Key_Buf, KL);
+            Prompt ("Model", "gemini-2.0-flash", Model_Buf, ML);
          elsif PL >= 17
            and then Provider_Buf (1 .. 17) = "openai_compatible"
          then
-            Prompt ("API key (or leave blank)", "", API_Key_Buf, KL);
-            Prompt ("Base URL", "http://localhost:8080", Model_Buf, ML);
-            --  Model_Buf is reused for base_url here; handled below
+            New_Line;
+            Put_Line ("  Popular OpenAI-compatible providers:");
+            Put_Line ("    1  "
+              & Terminal.Style.Cmd ("groq") & "        "
+              & Terminal.Style.Muted
+                  ("(Groq Cloud — fast inference)"));
+            Put_Line ("    2  "
+              & Terminal.Style.Cmd ("mistral") & "     "
+              & Terminal.Style.Muted ("(Mistral AI)"));
+            Put_Line ("    3  "
+              & Terminal.Style.Cmd ("deepseek") & "    "
+              & Terminal.Style.Muted ("(DeepSeek)"));
+            Put_Line ("    4  "
+              & Terminal.Style.Cmd ("xai") & "         "
+              & Terminal.Style.Muted ("(xAI / Grok)"));
+            Put_Line ("    5  "
+              & Terminal.Style.Cmd ("openrouter") & "  "
+              & Terminal.Style.Muted
+                  ("(OpenRouter — multi-model gateway)"));
+            Put_Line ("    6  "
+              & Terminal.Style.Cmd ("perplexity") & "  "
+              & Terminal.Style.Muted ("(Perplexity AI)"));
+            Put_Line ("    7  "
+              & Terminal.Style.Cmd ("together") & "    "
+              & Terminal.Style.Muted ("(Together AI)"));
+            Put_Line ("    8  "
+              & Terminal.Style.Cmd ("fireworks") & "   "
+              & Terminal.Style.Muted ("(Fireworks AI)"));
+            Put_Line ("    9  "
+              & Terminal.Style.Cmd ("cerebras") & "    "
+              & Terminal.Style.Muted ("(Cerebras)"));
+            Put_Line ("    0  "
+              & Terminal.Style.Cmd ("custom") & "      "
+              & Terminal.Style.Muted ("(Enter URL manually)"));
+            New_Line;
+            Prompt ("Choice", "1", Extra_Buf, EL);
+
+            if EL = 1
+              and then Extra_Buf (1) in '1' .. '9'
+            then
+               declare
+                  use Config.Provider_Aliases;
+                  Idx   : constant Alias_Index :=
+                    Alias_Index
+                      (Character'Pos (Extra_Buf (1))
+                       - Character'Pos ('0'));
+                  A     : constant Alias_Info := Get_Alias (Idx);
+                  Info  : Alias_Info;
+                  Found : Boolean;
+               begin
+                  Lookup
+                    (A.Name (1 .. A.Name_Length),
+                     Info, Found);
+                  if Found then
+                     Base_URL_Buf (1 .. Info.URL_Length) :=
+                       Info.Base_URL (1 .. Info.URL_Length);
+                     UL := Info.URL_Length;
+                     Model_Buf (1 .. Info.Model_Length) :=
+                       Info.Default_Model
+                         (1 .. Info.Model_Length);
+                     ML := Info.Model_Length;
+                     if Info.Needs_Key then
+                        Prompt ("API key", "",
+                                API_Key_Buf, KL);
+                     else
+                        KL := 0;
+                     end if;
+                     Put_Line
+                       ("  " & Terminal.Style.Check
+                        & " Provider: "
+                        & Info.Name
+                            (1 .. Info.Name_Length)
+                        & " ("
+                        & Info.Base_URL
+                            (1 .. Info.URL_Length)
+                        & ")");
+                  else
+                     Prompt ("API key (or leave blank)",
+                             "", API_Key_Buf, KL);
+                     Prompt ("Base URL",
+                             "http://localhost:8080",
+                             Base_URL_Buf, UL);
+                     Prompt ("Model", "default",
+                             Model_Buf, ML);
+                  end if;
+               end;
+            else
+               Prompt ("API key (or leave blank)", "",
+                       API_Key_Buf, KL);
+               Prompt ("Base URL",
+                       "http://localhost:8080",
+                       Base_URL_Buf, UL);
+               Prompt ("Model", "default",
+                       Model_Buf, ML);
+            end if;
          else
             Prompt ("OpenAI API key", "", API_Key_Buf, KL);
             Prompt ("Model", "gpt-4o", Model_Buf, ML);
@@ -566,31 +674,94 @@ is
 
       New_Line;
       Put_Line ("Choose your primary channel:");
-      Put_Line ("  1  cli      (interactive terminal — default)");
-      Put_Line ("  2  telegram (Telegram bot, requires bot token)");
-      Put_Line ("  3  signal   (Signal via signal-cli bridge)");
-      Put_Line ("  4  whatsapp (WhatsApp via wa-bridge)");
+      Put_Line ("  1  cli       (interactive terminal — default)");
+      Put_Line ("  2  telegram  (Telegram bot, requires bot token)");
+      Put_Line ("  3  signal    (Signal via signal-cli bridge)");
+      Put_Line ("  4  whatsapp  (WhatsApp via wa-bridge)");
+      Put_Line ("  5  discord   (Discord bot, requires bot token)");
+      Put_Line ("  6  slack     (Slack app, requires bot + app tokens)");
+      Put_Line ("  7  email     (Email via IMAP/SMTP bridge)");
+      Put_Line ("  8  irc       (IRC via irc-bridge)");
+      Put_Line ("  9  matrix    (Matrix via matrix-bridge)");
+      Put_Line ("  10 mattermost (Mattermost via mattermost-bridge)");
       New_Line;
       Prompt ("Channel", "cli", Channel_Buf, CL);
 
-      if CL = 1 and then Channel_Buf (1) in '1' .. '4' then
+      if CL = 1 and then Channel_Buf (1) in '1' .. '9' then
          case Channel_Buf (1) is
             when '1' => Channel_Buf (1 .. 3) := "cli"; CL := 3;
             when '2' => Channel_Buf (1 .. 8) := "telegram"; CL := 8;
             when '3' => Channel_Buf (1 .. 6) := "signal"; CL := 6;
             when '4' => Channel_Buf (1 .. 8) := "whatsapp"; CL := 8;
+            when '5' => Channel_Buf (1 .. 7) := "discord"; CL := 7;
+            when '6' => Channel_Buf (1 .. 5) := "slack"; CL := 5;
+            when '7' => Channel_Buf (1 .. 5) := "email"; CL := 5;
+            when '8' => Channel_Buf (1 .. 3) := "irc"; CL := 3;
+            when '9' => Channel_Buf (1 .. 6) := "matrix"; CL := 6;
             when others => null;
          end case;
+      elsif CL = 2
+        and then Channel_Buf (1) = '1'
+        and then Channel_Buf (2) = '0'
+      then
+         Channel_Buf (1 .. 10) := "mattermost"; CL := 10;
       end if;
       Put_Line ("  " & Terminal.Style.Check & " Channel: " & Channel_Buf (1 .. CL));
 
       TL := 0;
+      BL := 0;
       if CL >= 8 and then Channel_Buf (1 .. 8) = "telegram" then
          Prompt ("Telegram bot token", "", Token_Buf, TL);
       elsif CL >= 8 and then Channel_Buf (1 .. 8) = "whatsapp" then
-         Prompt ("Bridge URL", "http://localhost:3000", Token_Buf, TL);
+         Prompt ("Bridge URL", "http://localhost:3000", Bridge_Buf, BL);
       elsif CL >= 6 and then Channel_Buf (1 .. 6) = "signal" then
-         Prompt ("Signal bridge URL", "http://localhost:8080", Token_Buf, TL);
+         Prompt ("Signal bridge URL", "http://localhost:8080",
+           Bridge_Buf, BL);
+      elsif CL >= 7 and then Channel_Buf (1 .. 7) = "discord" then
+         Prompt ("Discord bot token", "", Token_Buf, TL);
+      elsif CL >= 5 and then Channel_Buf (1 .. 5) = "slack" then
+         Prompt ("Slack bot token", "", Token_Buf, TL);
+         Prompt ("Slack app token", "", Bridge_Buf, BL);
+      elsif CL >= 5 and then Channel_Buf (1 .. 5) = "email" then
+         Prompt ("IMAP host", "", Extra_Buf, EL);
+         Prompt ("SMTP host", "", Bridge_Buf, BL);
+         Prompt ("Email user", "", Token_Buf, TL);
+         --  Combine IMAP/SMTP hosts into a single bridge_url value.
+         if EL > 0 and BL > 0 then
+            declare
+               Combined : constant String :=
+                 "imap://" & Extra_Buf (1 .. EL)
+                 & ";smtp://" & Bridge_Buf (1 .. BL);
+            begin
+               Bridge_Buf (1 .. Combined'Length) := Combined;
+               BL := Combined'Length;
+            end;
+         end if;
+      elsif CL >= 3 and then Channel_Buf (1 .. 3) = "irc" then
+         Prompt ("IRC server", "", Extra_Buf, EL);
+         Prompt ("Nick", "", Token_Buf, TL);
+         Prompt ("Channel", "#general", Bridge_Buf, BL);
+         --  Combine server and channel into bridge_url.
+         if EL > 0 then
+            declare
+               URL : constant String :=
+                 "irc://" & Extra_Buf (1 .. EL)
+                 & "/" & Bridge_Buf (1 .. BL);
+            begin
+               Bridge_Buf (1 .. URL'Length) := URL;
+               BL := URL'Length;
+            end;
+         end if;
+      elsif CL >= 6 and then Channel_Buf (1 .. 6) = "matrix" then
+         Prompt ("Homeserver URL", "https://matrix.org",
+           Bridge_Buf, BL);
+         Prompt ("Access token", "", Token_Buf, TL);
+      elsif CL >= 10
+        and then Channel_Buf (1 .. 10) = "mattermost"
+      then
+         Prompt ("Bridge URL", "http://localhost:3008",
+           Bridge_Buf, BL);
+         Prompt ("Bot token", "", Token_Buf, TL);
       end if;
 
       --  Create directory if needed.
@@ -616,15 +787,20 @@ is
             Put_Line (File, "      ""base_url"": ""http://localhost:11434"",");
             Put_Line (File, "      ""api_key"": """",");
             Put_Line (File, "      ""model"": " & Q (Model_Buf, ML));
-         elsif CL <= PL and then PL >= 18 and then
+         elsif PL >= 17 and then
            Provider_Buf (1 .. 17) = "openai_compatible"
          then
             Put_Line (File, "      ""kind"": ""openai_compatible"",");
-            Put_Line (File, "      ""base_url"": " & Q (Model_Buf, ML) & ",");
-            if KL > 0 then
-               Put_Line (File, "      ""api_key"": " & Q (API_Key_Buf, KL) & ",");
+            if UL > 0 then
+               Put_Line (File, "      ""base_url"": "
+                 & Q (Base_URL_Buf, UL) & ",");
             end if;
-            Put_Line (File, "      ""model"": ""default""");
+            if KL > 0 then
+               Put_Line (File, "      ""api_key"": "
+                 & Q (API_Key_Buf, KL) & ",");
+            end if;
+            Put_Line (File, "      ""model"": "
+              & Q (Model_Buf, ML));
          else
             Put_Line (File, "      ""kind"": """ & Provider_Buf (1 .. PL) & """,");
             Put_Line (File, "      ""api_key"": " & Q (API_Key_Buf, KL) & ",");
@@ -635,17 +811,20 @@ is
          Put_Line (File, "  ""channels"": [");
          Put_Line (File, "    {");
          Put_Line (File, "      ""kind"": """ & Channel_Buf (1 .. CL) & """,");
-         Put_Line (File, "      ""enabled"": true" &
-           (if TL > 0 then "," else ""));
-         if TL > 0 then
-            if (CL >= 6 and then Channel_Buf (1 .. 6) = "signal") or else
-               (CL >= 8 and then Channel_Buf (1 .. 8) = "whatsapp")
-            then
-               Put_Line (File, "      ""bridge_url"": " & Q (Token_Buf, TL));
-            else
-               Put_Line (File, "      ""token"": " & Q (Token_Buf, TL));
+         declare
+            Has_Fields : constant Boolean := TL > 0 or BL > 0;
+         begin
+            Put_Line (File, "      ""enabled"": true"
+              & (if Has_Fields then "," else ""));
+            if TL > 0 then
+               Put_Line (File, "      ""token"": " & Q (Token_Buf, TL)
+                 & (if BL > 0 then "," else ""));
             end if;
-         end if;
+            if BL > 0 then
+               Put_Line (File, "      ""bridge_url"": "
+                 & Q (Bridge_Buf, BL));
+            end if;
+         end;
          Put_Line (File, "    }");
          Put_Line (File, "  ],");
          Put_Line (File, "  ""tools"": {");
