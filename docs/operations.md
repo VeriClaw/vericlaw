@@ -275,6 +275,7 @@ The file includes commented defaults for:
 - Channel tokens (Discord, Slack, Telegram)
 - Email bridge credentials (IMAP/SMTP)
 - IRC and Matrix configuration
+- Mattermost bridge credentials (`MATTERMOST_URL`, `MATTERMOST_TOKEN`, `MATTERMOST_TEAM`, `MATTERMOST_CHANNEL`)
 - MCP bridge URL
 - Logging level
 

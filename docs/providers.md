@@ -135,6 +135,49 @@ The `token` field is required by VeriClaw's schema but ignored by Ollama — any
 }
 ```
 
+## Provider Aliases (OpenAI-Compatible Presets)
+
+VeriClaw ships **9 built-in aliases** for popular OpenAI-compatible services. Each alias pre-fills the `base_url` and a sensible default model so you don't have to look them up.
+
+| Alias | Base URL | Default Model | API Key Required |
+|-------|----------|---------------|-----------------|
+| `groq` | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Yes |
+| `mistral` | `https://api.mistral.ai/v1` | `mistral-large-latest` | Yes |
+| `deepseek` | `https://api.deepseek.com/v1` | `deepseek-chat` | Yes |
+| `xai` | `https://api.x.ai/v1` | `grok-2` | Yes |
+| `openrouter` | `https://openrouter.ai/api/v1` | `auto` | Yes |
+| `perplexity` | `https://api.perplexity.ai` | `sonar-pro` | Yes |
+| `together` | `https://api.together.xyz/v1` | `meta-llama/Llama-3.3-70B-Instruct-Turbo` | Yes |
+| `fireworks` | `https://api.fireworks.ai/inference/v1` | `accounts/fireworks/models/llama-v3p3-70b-instruct` | Yes |
+| `cerebras` | `https://api.cerebras.ai/v1` | `llama-3.3-70b` | Yes |
+
+All aliases use the `openai_compatible` provider kind under the hood.
+
+### Using aliases via the onboard wizard
+
+Run `vericlaw onboard` and select **OpenAI-compatible** when prompted. The wizard shows a submenu listing every alias above; picking one auto-fills the base URL and default model so you only need to paste your API key.
+
+### Manual configuration
+
+Set `"kind": "openai_compatible"` and supply the `base_url` and `model` from the table. For example, Groq:
+
+```json
+{
+  "providers": [
+    { "kind": "openai_compatible",
+      "base_url": "https://api.groq.com/openai/v1",
+      "token": "gsk_...",
+      "model": "llama-3.3-70b-versatile" }
+  ]
+}
+```
+
+You can override the default model with any model the service supports — the alias only pre-fills values, it doesn't lock them.
+
+### Adding new aliases (contributors)
+
+Alias definitions live in the `Config.Provider_Aliases` Ada package. To add a new preset, create an entry with the alias name, base URL, and default model, then rebuild. The onboard wizard and config validation pick up new aliases automatically.
+
 ## Detailed Guides
 
 - [Ollama (local, free)](providers/ollama.md) — air-gapped setup, available models, privacy benefits

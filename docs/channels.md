@@ -2,7 +2,7 @@
 
 [← Back to README](../README.md)
 
-VeriClaw supports 9 messaging channels, all running concurrently in `vericlaw gateway` mode via Ada tasks. Each channel gets its own memory handle backed by SQLite in WAL mode.
+VeriClaw supports 10 messaging channels, all running concurrently in `vericlaw gateway` mode via Ada tasks. Each channel gets its own memory handle backed by SQLite in WAL mode.
 
 ## Quick Reference
 
@@ -17,6 +17,7 @@ VeriClaw supports 9 messaging channels, all running concurrently in `vericlaw ga
 | Email | `email` | Yes (IMAP/SMTP) | — | [Setup](setup/email.md) |
 | IRC | `irc` | Yes | — | [Setup](setup/irc.md) |
 | Matrix | `matrix` | Yes | — | [Setup](setup/matrix.md) |
+| Mattermost | `mattermost` | Yes (`mattermost-bridge`) | 3008 | [Inline below](#mattermost) |
 
 ---
 
@@ -140,6 +141,46 @@ docker compose up matrix-bridge vericlaw
 ```
 
 Supports both encrypted and unencrypted rooms.
+
+---
+
+## Mattermost
+
+Enterprise Slack alternative — self-hosted. Requires a bot account and personal access token on your Mattermost instance.
+
+```bash
+export MATTERMOST_URL=https://mattermost.example.com
+export MATTERMOST_TOKEN=your-bot-token
+export MATTERMOST_TEAM=my-team
+export MATTERMOST_CHANNEL=town-square
+docker compose up mattermost-bridge vericlaw
+```
+
+The bridge container (`mattermost-bridge`) listens on port 3008 and relays messages between VeriClaw and Mattermost via the bot token.
+
+```jsonc
+// channels.json
+{
+  "kind": "mattermost",
+  "url": "https://mattermost.example.com",
+  "token": "your-bot-token",
+  "team": "my-team",
+  "channel": "town-square"
+}
+```
+
+```yaml
+# docker-compose.yml (excerpt)
+mattermost-bridge:
+  image: vericlaw/mattermost-bridge:latest
+  ports:
+    - "3008:3008"
+  environment:
+    - MATTERMOST_URL=${MATTERMOST_URL}
+    - MATTERMOST_TOKEN=${MATTERMOST_TOKEN}
+    - MATTERMOST_TEAM=${MATTERMOST_TEAM}
+    - MATTERMOST_CHANNEL=${MATTERMOST_CHANNEL}
+```
 
 ---
 

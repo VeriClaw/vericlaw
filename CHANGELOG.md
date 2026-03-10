@@ -40,6 +40,11 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 - Onboard wizard confirmations: step-by-step ✓ markers and "Next steps" guidance (doctor → chat → gateway)
 - First-run welcome banner with automatic `vericlaw onboard` suggestion when no config exists
 - `.env.example` file documenting all Docker Compose environment variables
+- Provider aliases: 9 OpenAI-compatible presets (Groq, Mistral, DeepSeek, xAI, OpenRouter, Perplexity, Together, Fireworks, Cerebras) with auto-filled base URL and default model in the onboard wizard
+- `Config.Provider_Aliases` Ada package for managing provider presets
+- Mattermost channel support with bridge adapter on port 3008
+- Expanded onboard wizard: 5 provider families + 10 channel options (up from 4+4)
+- Doctor provider connectivity test: sends minimal request, shows ✓/✗ with latency
 
 ### Changed
 - `memory.compact_at_pct` defaults to `0` (disabled); set to `80` for long-running sessions to keep context within bounds without losing assistant turns

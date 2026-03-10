@@ -53,6 +53,7 @@ Detailed per-channel configuration in [`setup/`](setup/):
 - [Email](setup/email.md)
 - [IRC](setup/irc.md)
 - [Matrix](setup/matrix.md)
+- [Mattermost](setup/mattermost.md)
 - [Browser](setup/browser.md)
 - [MCP](setup/mcp.md)
 - [RAG](setup/rag.md)

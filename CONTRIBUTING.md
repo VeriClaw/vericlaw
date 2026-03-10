@@ -70,6 +70,7 @@ Use the existing bridge pattern as your reference:
 - **Node.js sidecar**: copy `wa-bridge/index.js` as a template. The sidecar must expose a local HTTP REST API and forward messages to/from the Ada runtime.
 - **Ada channel package**: copy `src/channels/channels-whatsapp.adb` as a template. The package must call `Channels_Security.Check_Allowlist` and `Gateway_Auth.Validate_Token` before processing any message.
 - **SPARK adapter spec**: add a `channels-adapters-<name>.ads` in `src/` following the pattern in `channels-adapters-slack.ads`.
+- **`src/config/config-provider_aliases.ad[sb]`** — Provider alias registry (`Config.Provider_Aliases`): maps short names to OpenAI-compatible endpoint configurations.
 - **`src/terminal/`** — Terminal styling layer (`Terminal.Style`): ANSI colors, ASCII banner, themed output functions. All user-facing CLI output goes through this module so `--no-color` works consistently.
 - Add channel setup documentation in `docs/setup/<name>.md`.
 - Register the sidecar port in `docker-compose.yml`.
@@ -84,6 +85,7 @@ Use `src/providers/providers-openai.adb` as your template:
 - Use the `http-client` package for all outbound requests (do not call libcurl directly).
 - Support streaming SSE where the provider offers it.
 - Add a provider guide in `docs/providers/<name>.md`.
+- **Shortcut for OpenAI-compatible providers:** If the new provider exposes an OpenAI-compatible API, you can register it as an alias in `src/config/config-provider_aliases.ad[sb]` instead of writing a full provider package. See the existing entries in `Config.Provider_Aliases` for examples.
 
 ---
 

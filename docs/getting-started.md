@@ -43,13 +43,67 @@ Run the interactive setup wizard:
 vericlaw onboard
 ```
 
-The wizard displays a **styled banner** and walks you through:
+The wizard displays a **styled banner** and walks you through each step.
 
-1. **Choose an LLM provider** — OpenAI, Anthropic, Ollama (local), or any OpenAI-compatible endpoint
-2. **Enter your API key** (skipped for Ollama)
-3. **Pick a model** — defaults to `gpt-4o` / `claude-3-5-sonnet` / `llama3.2`
-4. **Name your agent** — defaults to "VeriClaw"
-5. **Choose a channel** — CLI (terminal), Telegram, Signal, or WhatsApp
+### Pick a provider
+
+First you'll choose an LLM backend:
+
+```
+Choose your LLM provider:
+  1  openai            (OpenAI GPT-4o, requires API key)
+  2  anthropic         (Claude 3.5, requires API key)
+  3  ollama            (local LLM, no key needed)
+  4  openai_compatible (Azure, Groq, OpenRouter, etc.)
+  5  gemini            (Google Gemini 2.0 Flash, requires API key)
+```
+
+Type a number or the provider name and press Enter.
+
+> [!TIP]
+> **Pick option 4?** You'll get a presets submenu that auto-fills the base URL
+> and default model so you don't have to look them up:
+>
+> ```
+> Popular OpenAI-compatible providers:
+>   1  groq        (Groq Cloud — fast inference)
+>   2  mistral     (Mistral AI)
+>   3  deepseek    (DeepSeek)
+>   4  xai         (xAI / Grok)
+>   5  openrouter  (OpenRouter — multi-model gateway)
+>   6  perplexity  (Perplexity AI)
+>   7  together    (Together AI)
+>   8  fireworks   (Fireworks AI)
+>   9  cerebras    (Cerebras)
+>   0  custom      (Enter URL manually)
+> ```
+>
+> Choose a preset or `0` to enter a custom endpoint.
+
+Next you'll **enter your API key** (skipped for Ollama), **pick a model**
+(sensible defaults are pre-filled), and **name your agent** (defaults to
+"VeriClaw").
+
+### Pick a channel
+
+Finally, choose where you'll talk to your agent:
+
+```
+Choose your primary channel:
+   1  cli         (interactive terminal — default)
+   2  telegram    (Telegram bot, requires bot token)
+   3  signal      (Signal via signal-cli bridge)
+   4  whatsapp    (WhatsApp via wa-bridge)
+   5  discord     (Discord bot, requires bot token)
+   6  slack       (Slack app, requires bot + app tokens)
+   7  email       (Email via IMAP/SMTP bridge)
+   8  irc         (IRC via irc-bridge)
+   9  matrix      (Matrix via matrix-bridge)
+  10  mattermost  (Mattermost via mattermost-bridge)
+```
+
+Start with **cli** if you just want to kick the tyres — you can add more
+channels later via `vericlaw onboard` or by editing `~/.vericlaw/config.json`.
 
 Each step shows a **green ✓ confirmation**, and the wizard finishes with:
 
@@ -79,6 +133,7 @@ vericlaw doctor
 The doctor runs through health checks with **colored ✓/✗ indicators**:
 
 - **Config** — validates your config file and shows provider/channel summary
+- **Provider** — connects to your LLM endpoint and reports latency
 - **Database** — tests SQLite memory connection
 - **Bridges** — pings each enabled channel bridge (WhatsApp, Signal, etc.)
 - **SPARK** — confirms security core is compile-time verified
@@ -87,7 +142,14 @@ The doctor runs through health checks with **colored ✓/✗ indicators**:
 A green summary line at the end shows your pass count:
 
 ```
-✓ Summary:  5 / 5 checks passed
+✓ Config:     ok (provider=openai, channel=cli)
+✓ Provider:   OpenAI (gpt-4o) — connected (120 ms)
+✓ Database:   ok (sqlite)
+✓ Bridges:    ok (cli)
+✓ SPARK:      verified
+✓ Workspace:  ok (/home/you/.vericlaw)
+
+✓ Summary:  6 / 6 checks passed
 ```
 
 > If any check fails, the doctor shows a red ✗ with the failure reason.

@@ -1,6 +1,6 @@
 # VeriClaw
 
-**Formally verified AI runtime. 5 MB binary. 9 channels. Zero trust compromises.**
+**Formally verified AI runtime. 5 MB binary. 10 channels. Zero trust compromises.**
 
 [![CI](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/ci.yml)
 [![Release](https://github.com/VeriClaw/vericlaw/actions/workflows/publish.yml/badge.svg)](https://github.com/VeriClaw/vericlaw/actions/workflows/publish.yml)
@@ -12,7 +12,11 @@
 > builds are functional. APIs and config formats may still change. See the
 > [changelog](CHANGELOG.md) for what shipped recently.
 
-VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in Ada/SPARK — the only agent runtime in its class with **formally verified security policies**. It runs your AI assistant across 9 messaging channels simultaneously, routes between 5 LLM provider families with automatic failover, and ships as a single static binary under 6 MB with a **polished, colored CLI**.
+VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in
+Ada/SPARK — the only agent runtime in its class with **formally verified security
+policies**. It runs your AI assistant across 10 messaging channels simultaneously,
+routes between 5 LLM provider families with automatic failover, and ships as a
+single static binary under 6 MB with a **polished, colored CLI**.
 
 ---
 
@@ -25,7 +29,7 @@ VeriClaw is a **security-first, edge-friendly AI assistant runtime** written in 
 | Binary size | **5.3 MB** | 8.8 MB | 0.66 MB | N/A |
 | Container image | **37.1 MB** ✨ | 42 MB | 48 MB | — |
 | LLM providers | 5 families | 12+ | 22+ | 15+ |
-| Channels | 9 | 25+ | 17 | 40+ |
+| Channels | 10 | 25+ | 17 | 40+ |
 | Streaming output | ✅ | ✅ | ✅ | ✅ |
 | MCP client | ✅ | ✅ | ❌ | ✅ |
 | Cron scheduler | ✅ | ❌ | ❌ | ✅ |
@@ -54,7 +58,8 @@ Or with Docker:
 docker build -f Dockerfile.release -t vericlaw .
 ```
 
-> 📦 See [docs/installation.md](docs/installation.md) for Homebrew, Scoop, APT, Docker, Raspberry Pi, and all platform options.
+> 📦 See [docs/installation.md](docs/installation.md) for Homebrew, Scoop, APT,
+> Docker, Raspberry Pi, and all platform options.
 
 ### 2. Configure
 
@@ -62,23 +67,8 @@ docker build -f Dockerfile.release -t vericlaw .
 vericlaw onboard    # interactive wizard — asks for provider, API key, model, channel
 ```
 
-Or create `~/.vericlaw/config.json` manually:
-
-```json
-{
-  "agent_name": "VeriClaw",
-  "system_prompt": "You are VeriClaw, a helpful AI assistant.",
-  "providers": [
-    { "kind": "openai", "api_key": "sk-...", "model": "gpt-4o" }
-  ],
-  "channels": [
-    { "kind": "cli", "enabled": true }
-  ],
-  "tools": { "file": true, "git": true },
-  "memory": { "max_history": 50, "facts_enabled": true },
-  "gateway": { "bind_host": "127.0.0.1", "bind_port": 8787 }
-}
-```
+Or create `~/.vericlaw/config.json` manually
+([example](config/config.example.json)):
 
 ### 3. Run
 
@@ -98,28 +88,57 @@ vericlaw doctor                         # verify config and connectivity
 ## Features
 
 ### 🔒 Security (Formally Verified)
-SPARK Silver proofs on auth, secrets, audit, and channel policy. Fail-closed defaults — empty allowlist denies all. Encrypted secrets (ChaCha20-Poly1305). Tamper-evident audit log with syslog forwarding. Workspace isolation with path-traversal blocking proved in SPARK. → [SECURITY.md](SECURITY.md)
+SPARK Silver proofs on auth, secrets, audit, and channel policy. Fail-closed
+defaults — empty allowlist denies all. Encrypted secrets (ChaCha20-Poly1305).
+Tamper-evident audit log with syslog forwarding. Workspace isolation with
+path-traversal blocking proved in SPARK. → [SECURITY.md](SECURITY.md)
 
 ### 🤖 LLM Providers (5 Families)
-OpenAI, Anthropic, Azure AI Foundry, Google Gemini, and any OpenAI-compatible endpoint (Ollama, Groq, OpenRouter, LiteLLM, LM Studio). Multi-provider routing with ordered primary → failover → long-tail fallback. Streaming always-on in CLI. → [docs/providers.md](docs/providers.md)
+OpenAI, Anthropic, Azure AI Foundry, Google Gemini, and any OpenAI-compatible
+endpoint (Ollama, Groq, OpenRouter, LiteLLM, LM Studio). Multi-provider routing
+with ordered primary → failover → long-tail fallback. Streaming always-on in CLI.
+→ [docs/providers.md](docs/providers.md)
 
-### 💬 Channels (9, Concurrent)
-CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email (IMAP/SMTP), IRC, Matrix — all run simultaneously in `gateway` mode via Ada tasks. Multi-user support with operator/guest memory isolation. → [docs/channels.md](docs/channels.md)
+> [!TIP]
+> **Provider Aliases** — 9 OpenAI-compatible presets (Groq, Mistral, DeepSeek,
+> xAI, OpenRouter, Perplexity, Together, Fireworks, Cerebras) auto-fill base URL
+> and defaults in `vericlaw onboard`.
+
+### 💬 Channels (10, Concurrent)
+CLI, Telegram, Signal, WhatsApp, Slack, Discord, Email (IMAP/SMTP), IRC, Matrix,
+and Mattermost — all run simultaneously in `gateway` mode via Ada tasks.
+Multi-user support with operator/guest memory isolation.
+→ [docs/channels.md](docs/channels.md)
 
 ### 🛠️ Tools (13 Built-in + MCP)
-File I/O, shell, web fetch, Brave Search, git operations, cron scheduler, sub-agent spawn, role-based delegation, browser browse/screenshot, vector RAG memory, plugin registry — plus unlimited tools via MCP (Model Context Protocol). → [docs/tools.md](docs/tools.md)
+File I/O, shell, web fetch, Brave Search, git ops, cron scheduler, sub-agent
+spawn, role delegation, browser screenshot, vector RAG, plugin registry — plus
+unlimited tools via MCP. → [docs/tools.md](docs/tools.md)
 
 ### 🧠 Memory & State
-SQLite with FTS5 full-text search + persistent facts store. Vector RAG memory via sqlite-vec embeddings. Session auto-expiry. WAL mode for safe concurrent multi-channel writes. Context compaction for long sessions.
+SQLite with FTS5 full-text search + persistent facts store. Vector RAG memory
+via sqlite-vec embeddings. Session auto-expiry. WAL mode for safe concurrent
+multi-channel writes. Context compaction for long sessions.
 
 ### 🖼️ Multimodal Input
-`[IMAGE:path]` and `[IMAGE:url]` markers for vision APIs (OpenAI, Anthropic, Gemini). Auto MIME detection. Up to 4 images per message.
+`[IMAGE:path]` and `[IMAGE:url]` markers for vision APIs (OpenAI, Anthropic,
+Gemini). Auto MIME detection. Up to 4 images per message.
 
 ### 📊 Operations
-Prometheus `/metrics` endpoint. `SIGHUP` hot config reload. Structured JSON logging with request correlation. Live gateway REST API. Operator web console. Systemd / launchd / Windows service packaging. → [docs/operations.md](docs/operations.md)
+Prometheus `/metrics` endpoint. `SIGHUP` hot config reload. Structured JSON
+logging with request correlation. Live gateway REST API. Operator web console.
+Systemd / launchd / Windows service packaging.
+→ [docs/operations.md](docs/operations.md)
 
 ### 🎨 CLI Experience
-Styled terminal output with ANSI colors and ASCII banner. Colored health checks (`✓`/`✗`) in `doctor`. Interactive chat with `/help`, `/clear`, `/memory`, `/edit` commands. Gateway boot panel shows all-at-a-glance system status. First-run welcome guides new users to `vericlaw onboard`. Respects `--no-color` and `NO_COLOR` convention.
+Styled terminal output with ANSI colors and ASCII banner. Interactive chat with
+`/help`, `/clear`, `/memory`, `/edit` commands. Gateway boot panel shows
+all-at-a-glance system status. First-run welcome guides new users to
+`vericlaw onboard`. Respects `--no-color` and `NO_COLOR` convention.
+
+> [!TIP]
+> `vericlaw doctor` runs a **connectivity test** for every configured provider
+> and channel — each check prints ✓ or ✗ with round-trip latency in ms.
 
 ---
 
@@ -151,8 +170,11 @@ Styled terminal output with ANSI colors and ASCII banner. Colored health checks 
 vericlaw/
 ├── src/                          # Ada/SPARK source
 │   ├── security-*.ads/adb       #   SPARK-verified security core
-│   ├── agent/                   #   Reasoning loop, provider routing, tool dispatch
-│   ├── channels/                #   9 channel implementations
+│   ├── agent/                   #   Reasoning loop, provider routing
+│   ├── channels/                #   10 channel implementations
+│   │   └── channels-mattermost.ads/adb
+│   ├── config/                  #   Configuration & onboard wizard
+│   │   └── config-provider_aliases.ads/adb
 │   ├── providers/               #   5 LLM provider families
 │   ├── memory/                  #   SQLite WAL + FTS5 + vector RAG
 │   ├── http/                    #   libcurl + gateway server
@@ -190,52 +212,34 @@ Measured via Docker container on linux/amd64 (50 iterations):
 | Dispatch p95 (QEMU)* | 192 ms | 13.4 ms | 14 ms |
 | Throughput (QEMU)* | 7.2 ops/s | 80 ops/s | 78 ops/s |
 
-> \*Timing measured under QEMU x86_64 emulation on ARM host — not directly comparable to
-> competitors' native numbers. Binary size and container size are apples-to-apples.
-> Run `make competitive-regression-gate` for a full comparison.
-> See [docs/benchmarks.md](docs/benchmarks.md) for methodology and native estimates.
+> \*QEMU x86_64 emulation on ARM host — binary/container sizes are
+> apples-to-apples. See [docs/benchmarks.md](docs/benchmarks.md).
 
-**VeriClaw wins on container footprint** (37.1 MB, smallest across all competitors) and
-beats ZeroClaw on binary size (5.3 vs 8.8 MB). Latency and throughput comparisons require
-native x86_64 measurements for fairness.
+**VeriClaw wins on container footprint** (37.1 MB) and binary size (5.3 vs
+8.8 MB). See [docs/benchmarks.md](docs/benchmarks.md) for full methodology.
 
 ---
 
 ## CLI Commands
 
 ```bash
-# Getting started
-vericlaw onboard                        # interactive setup wizard (colored output)
-vericlaw doctor                         # health checks with ✓/✗ status indicators
-vericlaw config validate                # validate config file
-
-# Runtime
-vericlaw chat                           # interactive CLI (type /help for commands)
+vericlaw onboard                        # interactive setup wizard
+vericlaw doctor                         # connectivity checks (✓/✗ + latency)
+vericlaw chat                           # interactive CLI (/help for commands)
 vericlaw agent "..."                    # one-shot agent mode
-vericlaw gateway                        # multi-channel daemon (shows boot panel)
-
-# Utilities
+vericlaw gateway                        # multi-channel daemon (boot panel)
 vericlaw status [--json]                # runtime status summary
-vericlaw export --session <id> --format md|json
-vericlaw channels login --channel whatsapp
-vericlaw update-check                   # check for new releases
-vericlaw version                        # version info
-vericlaw help                           # show all commands
+vericlaw version | help                 # version info / all commands
 ```
 
-> Use `--no-color` or set `NO_COLOR=1` to disable ANSI colors (auto-detected for pipes).
+> Use `--no-color` or `NO_COLOR=1` to disable ANSI colors.
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards, SPARK requirements, and PR process. VeriClaw follows the Ada/SPARK conventions in [docs/ada-coding-practices.md](docs/ada-coding-practices.md).
-
-```bash
-make validate        # build + proofs + tests
-make runtime-tests   # quick feedback loop
-make fuzz-suite      # security boundary fuzz
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards, SPARK requirements,
+and PR process. Run `make validate` to build + prove + test.
 
 ## License
 
