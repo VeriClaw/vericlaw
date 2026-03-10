@@ -33,4 +33,10 @@ is
    --  agent name and channel, then write config to Path.
    procedure Run_Onboard (Path : String);
 
+   --  Interactive config editor: show current settings, let the user
+   --  change individual fields, then regenerate and write the JSON.
+   procedure Run_Config_Edit
+     (Path   : String;
+      Config : Config.Schema.Agent_Config);
+
 end Config.Loader;

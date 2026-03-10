@@ -857,4 +857,347 @@ is
       New_Line;
    end Run_Onboard;
 
+   -----------------------------------------------------------------------
+   --  Run_Config_Edit — interactive editor for an existing config
+   -----------------------------------------------------------------------
+
+   procedure Run_Config_Edit
+     (Path   : String;
+      Config : Config.Schema.Agent_Config)
+   is
+      use Ada.Text_IO;
+      use Config.Schema;
+
+      procedure Prompt
+        (Label    : String;
+         Default  : String;
+         Result   : out String;
+         Last_Out : out Natural)
+      is
+         Buf : String (1 .. 256);
+         L   : Natural;
+      begin
+         if Default'Length > 0 then
+            Put (Label & " [" & Default & "]: ");
+         else
+            Put (Label & ": ");
+         end if;
+         Get_Line (Buf, L);
+         if L = 0 and then Default'Length > 0 then
+            Result (Result'First ..
+              Result'First + Default'Length - 1) := Default;
+            Last_Out := Default'Length;
+         else
+            Result (Result'First ..
+              Result'First + L - 1) := Buf (1 .. L);
+            Last_Out := L;
+         end if;
+      end Prompt;
+
+      P            : Provider_Config renames Config.Providers (1);
+      Ch           : Channel_Config  renames Config.Channels (1);
+      Kind_Img     : constant String :=
+        Provider_Kind'Image (P.Kind);
+      Model_Str    : constant String :=
+        To_String (P.Model);
+      Key_Str      : constant String :=
+        To_String (P.API_Key);
+      Chan_Img     : constant String :=
+        Channel_Kind'Image (Ch.Kind);
+      Agent_Str    : constant String :=
+        To_String (Config.Agent_Name);
+
+      --  Mutable copies used while editing.
+      Provider_Buf   : String (1 .. 256);
+      PL             : Natural := Kind_Img'Length;
+      API_Key_Buf    : String (1 .. 256);
+      KL             : Natural := Key_Str'Length;
+      Model_Buf      : String (1 .. 256);
+      ML             : Natural := Model_Str'Length;
+      Agent_Name_Buf : String (1 .. 256);
+      NL             : Natural := Agent_Str'Length;
+      Channel_Buf    : String (1 .. 256);
+      CL             : Natural := Chan_Img'Length;
+      Base_URL_Buf   : String (1 .. 256);
+      UL             : Natural := 0;
+
+      --  Placeholders for channel credentials
+      Token_Buf      : String (1 .. 256);
+      TL             : Natural := 0;
+      Bridge_Buf     : String (1 .. 256);
+      BL             : Natural := 0;
+
+      Choice_Buf     : String (1 .. 256);
+      Choice_Len     : Natural;
+      Done           : Boolean := False;
+
+      Is_Ollama      : Boolean := False;
+
+      function Lower (S : String) return String is
+         R : String := S;
+      begin
+         for I in R'Range loop
+            if R (I) in 'A' .. 'Z' then
+               R (I) :=
+                 Character'Val
+                   (Character'Pos (R (I)) + 32);
+            end if;
+         end loop;
+         return R;
+      end Lower;
+
+      Dir : constant String :=
+        Ada.Directories.Containing_Directory (Path);
+
+      Tok_Str : constant String :=
+        To_String (Ch.Token);
+      Br_Str  : constant String :=
+        To_String (Ch.Bridge_URL);
+      BU_Str  : constant String :=
+        To_String (P.Base_URL);
+   begin
+      --  Seed mutable buffers from the loaded config.
+      Provider_Buf (1 .. PL) := Lower (Kind_Img);
+      API_Key_Buf  (1 .. KL) := Key_Str;
+      Model_Buf    (1 .. ML) := Model_Str;
+      Agent_Name_Buf (1 .. NL) := Agent_Str;
+      Channel_Buf  (1 .. CL) := Lower (Chan_Img);
+      if BU_Str'Length > 0 then
+         Base_URL_Buf (1 .. BU_Str'Length) := BU_Str;
+         UL := BU_Str'Length;
+      end if;
+      if Tok_Str'Length > 0 then
+         Token_Buf (1 .. Tok_Str'Length) := Tok_Str;
+         TL := Tok_Str'Length;
+      end if;
+      if Br_Str'Length > 0 then
+         Bridge_Buf (1 .. Br_Str'Length) := Br_Str;
+         BL := Br_Str'Length;
+      end if;
+
+      Is_Ollama := PL >= 6
+        and then Provider_Buf (1 .. 6) = "ollama";
+
+      New_Line;
+      Put_Line
+        (Terminal.Style.Heading ("Current configuration:"));
+      Put_Line ("  provider : "
+        & Provider_Buf (1 .. PL)
+        & " (" & Model_Buf (1 .. ML) & ")");
+      Put_Line ("  channels : "
+        & Channel_Index'Image (Config.Num_Channels)
+        & " (" & Channel_Buf (1 .. CL) & ")");
+      Put_Line ("  agent    : "
+        & Agent_Name_Buf (1 .. NL));
+      New_Line;
+
+      while not Done loop
+         Put_Line
+           (Terminal.Style.Heading
+              ("What would you like to change?"));
+         Put_Line ("  1  provider"
+           & "    Change LLM provider or model");
+         Put_Line ("  2  api-key"
+           & "     Update API key");
+         Put_Line ("  3  model"
+           & "       Change model");
+         Put_Line ("  4  channels"
+           & "    Add or change channels");
+         Put_Line ("  5  agent-name"
+           & "  Change agent name");
+         Put_Line ("  6  done"
+           & "        Save and exit");
+         New_Line;
+
+         Prompt ("Choice", "6", Choice_Buf, Choice_Len);
+
+         if Choice_Len = 1 and then Choice_Buf (1) = '1' then
+            Prompt ("Provider", Provider_Buf (1 .. PL),
+              Provider_Buf, PL);
+            Is_Ollama := PL >= 6
+              and then Provider_Buf (1 .. 6) = "ollama";
+            Put_Line ("  " & Terminal.Style.Check
+              & " Provider: " & Provider_Buf (1 .. PL));
+
+         elsif Choice_Len = 1
+           and then Choice_Buf (1) = '2'
+         then
+            Prompt ("API key", "", API_Key_Buf, KL);
+            Put_Line ("  " & Terminal.Style.Check
+              & " API key updated");
+
+         elsif Choice_Len = 1
+           and then Choice_Buf (1) = '3'
+         then
+            Prompt ("Model", Model_Buf (1 .. ML),
+              Model_Buf, ML);
+            Put_Line ("  " & Terminal.Style.Check
+              & " Model: " & Model_Buf (1 .. ML));
+
+         elsif Choice_Len = 1
+           and then Choice_Buf (1) = '4'
+         then
+            Prompt ("Channel", Channel_Buf (1 .. CL),
+              Channel_Buf, CL);
+            Put_Line ("  " & Terminal.Style.Check
+              & " Channel: " & Channel_Buf (1 .. CL));
+
+         elsif Choice_Len = 1
+           and then Choice_Buf (1) = '5'
+         then
+            Prompt ("Agent name",
+              Agent_Name_Buf (1 .. NL),
+              Agent_Name_Buf, NL);
+            Put_Line ("  " & Terminal.Style.Check
+              & " Agent: "
+              & Agent_Name_Buf (1 .. NL));
+
+         elsif Choice_Len = 1
+           and then Choice_Buf (1) = '6'
+         then
+            Done := True;
+
+         elsif Choice_Len >= 4
+           and then Choice_Buf (1 .. 4) = "done"
+         then
+            Done := True;
+
+         else
+            Put_Line
+              (Terminal.Style.Warn ("Invalid choice"));
+         end if;
+
+         New_Line;
+      end loop;
+
+      --  Create directory if needed.
+      if not Ada.Directories.Exists (Dir) then
+         Ada.Directories.Create_Directory (Dir);
+      end if;
+
+      --  Write config (same format as Run_Onboard).
+      declare
+         File : Ada.Text_IO.File_Type;
+         function Q (S : String; L : Natural)
+           return String
+         is ("""" & S (S'First .. S'First + L - 1)
+             & """");
+      begin
+         Ada.Text_IO.Create
+           (File, Ada.Text_IO.Out_File, Path);
+         Put_Line (File, "{");
+         Put_Line (File,
+           "  ""agent_name"": "
+           & Q (Agent_Name_Buf, NL) & ",");
+         Put_Line (File,
+           "  ""system_prompt"": ""You are "
+           & Agent_Name_Buf (1 .. NL)
+           & ", a helpful AI assistant."",");
+         Put_Line (File, "  ""providers"": [");
+         Put_Line (File, "    {");
+         if Is_Ollama then
+            Put_Line (File,
+              "      ""kind"": ""openai_compatible"",");
+            Put_Line (File,
+              "      ""base_url"":"
+              & " ""http://localhost:11434"",");
+            Put_Line (File,
+              "      ""api_key"": """",");
+            Put_Line (File,
+              "      ""model"": "
+              & Q (Model_Buf, ML));
+         elsif PL >= 17
+           and then Provider_Buf (1 .. 17)
+                    = "openai_compatible"
+         then
+            Put_Line (File,
+              "      ""kind"":"
+              & " ""openai_compatible"",");
+            if UL > 0 then
+               Put_Line (File,
+                 "      ""base_url"": "
+                 & Q (Base_URL_Buf, UL) & ",");
+            end if;
+            if KL > 0 then
+               Put_Line (File,
+                 "      ""api_key"": "
+                 & Q (API_Key_Buf, KL) & ",");
+            end if;
+            Put_Line (File,
+              "      ""model"": "
+              & Q (Model_Buf, ML));
+         else
+            Put_Line (File,
+              "      ""kind"": """
+              & Provider_Buf (1 .. PL) & """,");
+            Put_Line (File,
+              "      ""api_key"": "
+              & Q (API_Key_Buf, KL) & ",");
+            Put_Line (File,
+              "      ""model"": "
+              & Q (Model_Buf, ML));
+         end if;
+         Put_Line (File, "    }");
+         Put_Line (File, "  ],");
+         Put_Line (File, "  ""channels"": [");
+         Put_Line (File, "    {");
+         Put_Line (File,
+           "      ""kind"": """
+           & Channel_Buf (1 .. CL) & """,");
+         declare
+            Has_Fields : constant Boolean :=
+              TL > 0 or BL > 0;
+         begin
+            Put_Line (File,
+              "      ""enabled"": true"
+              & (if Has_Fields then "," else ""));
+            if TL > 0 then
+               Put_Line (File,
+                 "      ""token"": "
+                 & Q (Token_Buf, TL)
+                 & (if BL > 0 then "," else ""));
+            end if;
+            if BL > 0 then
+               Put_Line (File,
+                 "      ""bridge_url"": "
+                 & Q (Bridge_Buf, BL));
+            end if;
+         end;
+         Put_Line (File, "    }");
+         Put_Line (File, "  ],");
+         Put_Line (File, "  ""tools"": {");
+         Put_Line (File, "    ""file"": true,");
+         Put_Line (File,
+           "    ""shell"": false,");
+         Put_Line (File,
+           "    ""web_fetch"": false,");
+         Put_Line (File,
+           "    ""brave_search"": false");
+         Put_Line (File, "  },");
+         Put_Line (File, "  ""memory"": {");
+         Put_Line (File,
+           "    ""max_history"": 50,");
+         Put_Line (File,
+           "    ""facts_enabled"": true,");
+         Put_Line (File,
+           "    ""session_retention_days"": 30");
+         Put_Line (File, "  },");
+         Put_Line (File, "  ""gateway"": {");
+         Put_Line (File,
+           "    ""bind_host"":"
+           & " ""127.0.0.1"",");
+         Put_Line (File,
+           "    ""bind_port"": 8787");
+         Put_Line (File, "  }");
+         Put_Line (File, "}");
+         Ada.Text_IO.Close (File);
+      end;
+
+      New_Line;
+      Put_Line (Terminal.Style.Check
+        & " Config updated at "
+        & Terminal.Style.Brand (Path));
+      New_Line;
+   end Run_Config_Edit;
+
 end Config.Loader;

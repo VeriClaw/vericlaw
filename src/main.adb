@@ -56,6 +56,10 @@ is
       Put_Line ("  " & Terminal.Style.Cmd ("onboard") & "                          Interactive setup wizard");
       Put_Line ("  " & Terminal.Style.Cmd ("doctor") & "                           Check configuration and health");
       Put_Line ("  " & Terminal.Style.Cmd ("config validate") & "                  Validate config without starting");
+      Put_Line ("  " & Terminal.Style.Cmd ("config edit")
+        & "                     Edit configuration interactively");
+      Put_Line ("  " & Terminal.Style.Cmd ("reset")
+        & "                            Reset config and re-run onboard");
       New_Line;
       Put_Line (Terminal.Style.Heading ("Runtime"));
       Put_Line ("  " & Terminal.Style.Cmd ("chat")
@@ -737,6 +741,36 @@ begin
       return;
    end if;
 
+   if To_String (Cmd) = "reset" then
+      declare
+         Default_Path : constant String :=
+           Ada.Environment_Variables.Value ("HOME", ".")
+           & "/.vericlaw/config.json";
+         Env_Path : constant String :=
+           Ada.Environment_Variables.Value
+             ("VERICLAW_CONFIG", "");
+         Path : constant String :=
+           (if Env_Path'Length > 0
+            then Env_Path else Default_Path);
+      begin
+         if Ada.Directories.Exists (Path) then
+            Ada.Directories.Delete_File (Path);
+            Put_Line (Terminal.Style.Check
+              & " Removed "
+              & Terminal.Style.Muted (Path));
+         else
+            Put_Line (Terminal.Style.Warn
+              ("No config file found at " & Path));
+         end if;
+         New_Line;
+         Put_Line (Terminal.Style.Heading
+           ("Re-running setup wizard..."));
+         New_Line;
+         Config.Loader.Run_Onboard (Path);
+      end;
+      return;
+   end if;
+
    if To_String (Cmd) = "onboard" then
       declare
          Default_Path : constant String :=
@@ -1386,7 +1420,7 @@ begin
          end;
 
       elsif C = "config" then
-         --  Sub-commands: config validate
+         --  Sub-commands: config validate | config edit
          if Argument_Count >= 2
            and then Argument (2) = "validate"
          then
@@ -1407,8 +1441,27 @@ begin
                           then "web_fetch " else "")
                        & (if CR.Config.Tools.RAG_Enabled
                           then "rag " else ""));
+         elsif Argument_Count >= 2
+           and then Argument (2) = "edit"
+         then
+            declare
+               Default_Path : constant String :=
+                 Ada.Environment_Variables.Value
+                   ("HOME", ".")
+                 & "/.vericlaw/config.json";
+               Env_Path : constant String :=
+                 Ada.Environment_Variables.Value
+                   ("VERICLAW_CONFIG", "");
+               Path : constant String :=
+                 (if Env_Path'Length > 0
+                  then Env_Path else Default_Path);
+            begin
+               Config.Loader.Run_Config_Edit
+                 (Path, CR.Config);
+            end;
          else
-            Put_Line ("Usage: vericlaw config validate");
+            Put_Line
+              ("Usage: vericlaw config <validate|edit>");
             Set_Exit_Status (Failure);
          end if;
 
