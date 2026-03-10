@@ -21,22 +21,15 @@ is
    --  Any Name not in this set (and not starting with "mcp__") is rejected.
    --  Defined here for documentation and used in Is_Allowed_Tool_Name below.
    subtype Tool_Name_String is String;
-   Known_Tool_Names : constant array (1 .. 15) of access constant String :=
+   Known_Tool_Names : constant array (1 .. 8) of access constant String :=
       (new String'("shell"),
        new String'("file_read"),
        new String'("file_write"),
        new String'("file_list"),
-       new String'("brave_search"),
       new String'("cron_add"),
       new String'("cron_list"),
       new String'("cron_remove"),
-      new String'("git_operations"),
-       new String'("spawn"),
-       new String'("delegate"),
-       new String'("plugin_registry"),
-       new String'("browser_browse"),
-       new String'("browser_screenshot"),
-       new String'("memory_search"));
+       new String'("delegate"));
 
    --  Return True if Name is a known built-in tool name OR starts with "mcp__".
    --  Enforced via Pre on Dispatch; also callable for proactive validation.

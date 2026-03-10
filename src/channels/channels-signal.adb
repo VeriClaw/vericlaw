@@ -8,7 +8,6 @@ with Agent.Context;
 with Agent.Loop_Pkg;
 with Ada.Strings.Fixed;  use Ada.Strings.Fixed;
 with Channels.Rate_Limit;
-with Metrics;
 
 package body Channels.Signal
   with SPARK_Mode => Off
@@ -103,8 +102,6 @@ is
                  (Mem, Sess, Cfg.Memory.Max_History, Conv);
             end if;
 
-            Metrics.Increment ("requests_total", "signal");
-
             if Is_Operator then
                Reply := Agent.Loop_Pkg.Process_Message
                  (User_Input => Text,
@@ -130,8 +127,6 @@ is
 
             if Reply.Success then
                return To_String (Reply.Content);
-            else
-               Metrics.Increment ("errors_total", "signal");
             end if;
          end;
       end;

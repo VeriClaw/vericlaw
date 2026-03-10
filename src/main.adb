@@ -2,11 +2,9 @@ with Ada.Text_IO;           use Ada.Text_IO;
 with Ada.Command_Line;      use Ada.Command_Line;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Strings.Fixed;
-with Ada.Strings.Maps.Constants;
 with Ada.Directories;
 with Ada.Environment_Variables;
 with Ada.Calendar;
-with Ada.Calendar.Formatting;
 with Logging;
 with Build_Info;
 
@@ -23,30 +21,12 @@ with Memory.SQLite;
 with Agent.Context;
 with Agent.Loop_Pkg;
 with Channels.CLI;
-with Channels.Telegram;
-with Channels.Signal;
-with Channels.WhatsApp;
-with Channels.Discord;
-with Channels.Slack;
-with Channels.Email;
-with Channels.IRC;
-with Channels.Matrix;
-with Channels.Mattermost;
-with HTTP.Server;
-with Tools.Cron;
 with Audit.Syslog;
-with Metrics.Cost;
-with Observability.Tracing;
-with Sandbox;
-with Plugins.Loader;
-with Plugins.Capabilities;
 with Terminal.Style;
 
 procedure Main
   with SPARK_Mode => Off
 is
-
-   use type Config.Schema.Channel_Kind;
 
    procedure Print_Usage is
    begin
@@ -66,7 +46,6 @@ is
                 & "                             Interactive CLI chat "
                 & Terminal.Style.Muted ("(default)"));
       Put_Line ("  " & Terminal.Style.Cmd ("agent <message>") & "                  Send a message and print reply");
-      Put_Line ("  " & Terminal.Style.Cmd ("gateway") & "                          Run HTTP gateway + all channels");
       New_Line;
       Put_Line (Terminal.Style.Heading ("Utilities"));
       Put_Line ("  " & Terminal.Style.Cmd ("channels login --channel <name>") & "  Link a messaging channel");
@@ -90,7 +69,7 @@ is
                   (" (" & Build_Info.Git_Commit & " "
                    & Build_Info.Build_Date & " "
                    & Build_Info.Target_Triple & ")"));
-      Put_Line (Terminal.Style.Muted ("Built with Ada 2022 + GNAT  |  https://github.com/vericlaw"));
+      Put_Line (Terminal.Style.Muted ("Built with Ada 2012 + GNAT  |  https://github.com/vericlaw"));
    end Cmd_Version;
 
    procedure Cmd_Update_Check is
@@ -230,28 +209,6 @@ is
       end if;
    end Open_Memory_Or_Warn;
 
-   function Plugin_Tool_List
-     (Info : Plugins.Loader.Plugin_Info) return String
-   is
-      Summary : Unbounded_String;
-      First   : Boolean := True;
-   begin
-      for Tool in Plugins.Capabilities.Tool_Kind loop
-         if Info.Manifest.Granted_Tools (Tool) then
-            if not First then
-               Append (Summary, ",");
-            end if;
-            Append (Summary, Plugins.Loader.Tool_Kind_Name (Tool));
-            First := False;
-         end if;
-      end loop;
-
-      if First then
-         return "-";
-      end if;
-      return To_String (Summary);
-   end Plugin_Tool_List;
-
    procedure Cmd_Doctor (Cfg : Config.Schema.Agent_Config) is
       Home : constant String :=
         Ada.Environment_Variables.Value ("HOME", ".");
@@ -387,75 +344,6 @@ is
            & Workspace_Path & ")");
       end if;
       New_Line;
-
-      declare
-         Registry   : constant Plugins.Loader.Plugin_Registry :=
-           Plugins.Loader.Runtime_Registry;
-         Plugin_Dir : constant String :=
-           Plugins.Loader.Runtime_Plugin_Directory;
-      begin
-         Put_Line (Terminal.Style.Brand ("Extensibility:"));
-         Put_Line ("  model       : MCP-first");
-         Put_Line ("  mcp bridge  : "
-           & (if Length (Cfg.Tools.MCP_Bridge_URL) > 0
-              then "configured"
-              else "disabled"));
-         Put_Line ("  local mode  : manifest discovery only");
-         Put_Line ("  load policy : "
-           & Plugins.Loader.Local_Load_Policy);
-         Put_Line ("  plugins dir : "
-           & Plugin_Dir
-           & (if Ada.Directories.Exists (Plugin_Dir)
-              then ""
-              else " (missing; discovery idle)"));
-         Put_Line ("  plugins     : "
-           & Natural'Image (Registry.Num_Loaded) & " discovered /"
-           & Natural'Image (Plugins.Loader.Loaded_Plugin_Count (Registry))
-           & " loaded /"
-           & Natural'Image (Plugins.Loader.Denied_Plugin_Count (Registry))
-           & " denied /"
-           & Natural'Image (Plugins.Loader.Error_Plugin_Count (Registry))
-           & " errors");
-         for I in 1 .. Registry.Num_Loaded loop
-            declare
-               Info : constant Plugins.Loader.Plugin_Info :=
-                 Registry.Plugins (I);
-               Name : constant String :=
-                 (if Length (Info.Name) > 0
-                  then To_String (Info.Name)
-                  else "<unnamed>");
-            begin
-               declare
-                  Status_Str : constant String :=
-                    Plugins.Loader.Plugin_Status_Name (Info.Status);
-                  Colored_Status : constant String :=
-                    (if Status_Str = "loaded"
-                     then Terminal.Style.Success (Status_Str)
-                     elsif Status_Str = "denied"
-                     then Terminal.Style.Warn (Status_Str)
-                     else Terminal.Style.Error (Status_Str));
-               begin
-                  Put_Line
-                    ("    " & Terminal.Style.Bullet & " " & Name
-                     & " [" & Colored_Status & "]"
-                     & " signature="
-                     & Plugins.Loader.Signature_State_Name
-                         (Info.Manifest.Signature)
-                     & " tools=" & Plugin_Tool_List (Info));
-               end;
-               if Length (Info.Version) > 0 then
-                  Put_Line ("      version: " & To_String (Info.Version));
-               end if;
-               if Length (Info.Entry_Point) > 0 then
-                  Put_Line ("      entry  : " & To_String (Info.Entry_Point));
-               end if;
-               if Length (Info.Deny_Reason) > 0 then
-                  Put_Line ("      reason : " & To_String (Info.Deny_Reason));
-               end if;
-            end;
-         end loop;
-         New_Line;
-      end;
 
       --  6. Provider connectivity
       Put_Line (Terminal.Style.Brand ("Provider:"));
@@ -872,7 +760,7 @@ begin
                                  New_Line;
                                  Put_Line ("Paired successfully!");
                                  Put_Line
-                                   ("Run 'vericlaw gateway' to start the agent.");
+                                   ("Run 'vericlaw chat' to start the agent.");
                                  return;
                               end if;
                            end;
@@ -904,24 +792,8 @@ begin
       return;
    end if;
 
-   Plugins.Loader.Load_Runtime_Registry
-     (To_String (CR.Config.Tools.Plugin_Directory));
-
-   --  Initialize OpenTelemetry tracing (no-ops if endpoint is empty).
-   Observability.Tracing.Initialize
-     (To_String (CR.Config.Observability.OTLP_Endpoint));
-
    --  Open memory database.
    Open_Memory_Or_Warn (CR.Config, Mem, Mem_OK);
-
-   --  Apply runtime sandbox before processing any commands.
-   declare
-      Policy : Sandbox.Sandbox_Policy;
-   begin
-      Policy.Allow_Network := True;  -- Agent needs HTTP
-      Policy.Allow_Subprocess := CR.Config.Tools.Shell_Enabled;
-      Sandbox.Enforce (Policy);
-   end;
 
    --  Load sqlite-vec extension if RAG is enabled.
    if Mem_OK and then CR.Config.Tools.RAG_Enabled then
@@ -995,348 +867,16 @@ begin
          end if;
 
       elsif C = "gateway" then
-         --  Run all enabled channels concurrently via Ada tasks.
-         --  Each task opens its own memory handle (WAL mode allows safe concurrency).
-         declare
-            Home    : constant String :=
-              Ada.Environment_Variables.Value ("HOME", ".");
-            DB_Path : constant String :=
-              (if Length (CR.Config.Memory.DB_Path) > 0
-               then To_String (CR.Config.Memory.DB_Path)
-               else Home & "/.vericlaw/memory.db");
-            Has_Any : Boolean := False;
-         begin
-            for I in 1 .. CR.Config.Num_Channels loop
-               if CR.Config.Channels (I).Enabled
-                 and then CR.Config.Channels (I).Kind /= Config.Schema.CLI
-               then
-                  Has_Any := True;
-                  exit;
-               end if;
-            end loop;
-
-            --  Boot status panel
-            Put_Line (Terminal.Style.Banner);
-            New_Line;
-
-            --  Gather active channel list
-            declare
-               Chan_List : Unbounded_String;
-               Active_Count : Natural := 0;
-            begin
-               for I in 1 .. CR.Config.Num_Channels loop
-                  if CR.Config.Channels (I).Enabled then
-                     Active_Count := Active_Count + 1;
-                     if Length (Chan_List) > 0 then
-                        Append (Chan_List, ", ");
-                     end if;
-                     Append (Chan_List,
-                       Ada.Strings.Fixed.Translate
-                         (Config.Schema.Channel_Kind'Image
-                            (CR.Config.Channels (I).Kind),
-                          Ada.Strings.Maps.Constants.Lower_Case_Map));
-                  end if;
-               end loop;
-
-               declare
-                  Kind_Img : constant String :=
-                    Config.Schema.Provider_Kind'Image
-                      (CR.Config.Providers (1).Kind);
-               begin
-                  Put_Line ("  " & Terminal.Style.Muted ("model")
-                    & "     "
-                    & Terminal.Style.Success
-                        (To_String (CR.Config.Providers (1).Model))
-                    & Terminal.Style.Muted
-                        (" (" & Kind_Img & ")"));
-               end;
-               Put_Line ("  " & Terminal.Style.Muted ("memory")
-                 & "    "
-                 & (if Mem_OK
-                    then Terminal.Style.Success ("ok")
-                       & Terminal.Style.Muted (" (sqlite)")
-                    else Terminal.Style.Warn ("unavailable")));
-               Put_Line ("  " & Terminal.Style.Muted ("channels") & "  "
-                 & Terminal.Style.Success (To_String (Chan_List))
-                 & Terminal.Style.Muted (" (" & Natural'Image (Active_Count) & " active)"));
-               declare
-                  Port_Img : constant String :=
-                    Ada.Strings.Fixed.Trim
-                      (Positive'Image
-                         (CR.Config.Gateway.Bind_Port),
-                       Ada.Strings.Left);
-                  GW_URL : constant String :=
-                    "http://"
-                    & To_String (CR.Config.Gateway.Bind_Host)
-                    & ":" & Port_Img;
-               begin
-                  Put_Line ("  "
-                    & Terminal.Style.Muted ("gateway")
-                    & "   "
-                    & Terminal.Style.Brand (GW_URL));
-               end;
-               New_Line;
-               Put_Line ("  " & Terminal.Style.Muted ("Press Ctrl+C to stop."));
-               New_Line;
-            end;
-
-            if Has_Any then
-               declare
-                  task Telegram_Poller;
-                  task body Telegram_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Telegram.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[Telegram]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end Telegram_Poller;
-
-                  task Signal_Poller;
-                  task body Signal_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Signal.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[Signal]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end Signal_Poller;
-
-                  task WhatsApp_Poller;
-                  task body WhatsApp_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.WhatsApp.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[WhatsApp]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end WhatsApp_Poller;
-
-                  task Discord_Poller;
-                  task body Discord_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Discord.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[Discord]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end Discord_Poller;
-
-                  task Slack_Poller;
-                  task body Slack_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Slack.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[Slack]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end Slack_Poller;
-
-                  task Email_Poller;
-                  task body Email_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Email.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[Email]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end Email_Poller;
-
-                  task IRC_Poller;
-                  task body IRC_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.IRC.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[IRC]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end IRC_Poller;
-
-                  task Matrix_Poller;
-                  task body Matrix_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Matrix.Run_Polling (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);  --  explicit close; Finalize is the safety-net on exception
-                     else
-                        Put_Line ("Gateway[Matrix]: memory open failed: "
-                                  & To_String (T_Err));
-                     end if;
-                  end Matrix_Poller;
-
-                  task Mattermost_Poller;
-                  task body Mattermost_Poller is
-                     T_Mem : Memory.SQLite.Memory_Handle;
-                     T_Err : Unbounded_String;
-                     T_OK  : Boolean;
-                  begin
-                     T_OK := Memory.SQLite.Open
-                       (T_Mem, DB_Path, T_Err,
-                        CR.Config.Memory.Session_Retention_Days);
-                     if T_OK then
-                        Channels.Mattermost.Run_Polling
-                          (CR.Config, T_Mem);
-                        Memory.SQLite.Close (T_Mem);
-                     else
-                        Put_Line
-                          ("Gateway[Mattermost]: memory open failed: "
-                           & To_String (T_Err));
-                     end if;
-                  end Mattermost_Poller;
-
-                  --  Background task: fire due cron jobs every 60 seconds.
-                  task Cron_Heartbeat;
-                  task body Cron_Heartbeat is
-                     use Ada.Calendar;
-                     use Ada.Calendar.Formatting;
-                  begin
-                     loop
-                        delay 60.0;
-                        if Memory.SQLite.Is_Open (Mem) then
-                           declare
-                              Due : constant Memory.SQLite.Cron_List_Result :=
-                                Memory.SQLite.Cron_Due_Jobs (Mem);
-                           begin
-                              for I in 1 .. Due.Count loop
-                                 declare
-                                    Job   : constant Memory.SQLite.Cron_Job_Info :=
-                                      Due.Jobs (I);
-                                    Conv  : Agent.Context.Conversation;
-                                    Reply : Agent.Loop_Pkg.Agent_Reply;
-                                    Nxt   : constant String :=
-                                      Image (Clock
-                                        + Tools.Cron.Parse_Interval_Seconds
-                                            (To_String (Job.Schedule)));
-                                 begin
-                                    Set_Unbounded_String
-                                      (Conv.Session_ID, To_String (Job.Session_ID));
-                                    Reply := Agent.Loop_Pkg.Process_Message
-                                      (To_String (Job.Prompt), Conv,
-                                       CR.Config, Mem);
-                                    Memory.SQLite.Cron_Update_Run
-                                      (Mem, To_String (Job.Name), Nxt);
-                                    if Reply.Success then
-                                       Put_Line
-                                         ("[cron:" & To_String (Job.Name) & "] "
-                                          & To_String (Reply.Content));
-                                    end if;
-                                 end;
-                              end loop;
-                           end;
-                        end if;
-                     end loop;
-                  end Cron_Heartbeat;
-               begin
-                  loop
-                     delay 1.0;
-                     exit when Shutdown_Requested;
-                  end loop;
-                  Logging.Info ("Shutdown signal received, stopping gateway...");
-                  abort Telegram_Poller, Signal_Poller, WhatsApp_Poller,
-                        Discord_Poller, Slack_Poller, Email_Poller,
-                        IRC_Poller, Matrix_Poller, Cron_Heartbeat;
-               end;
-            else
-               --  No channels configured: run HTTP server for webhooks.
-               declare
-                  task HTTP_Runner;
-                  task body HTTP_Runner is
-                  begin
-                     HTTP.Server.Run (CR.Config, Mem);
-                  end HTTP_Runner;
-               begin
-                  loop
-                     delay 1.0;
-                     exit when Shutdown_Requested;
-                  end loop;
-                  Logging.Info ("Shutdown signal received, stopping gateway...");
-                  HTTP.Server.Stop;
-                  abort HTTP_Runner;
-               end;
-            end if;
-         end;
+         Put_Line ("Gateway mode is not available in v1.0-minimal. See future/ for roadmap.");
+         return;
 
       elsif C = "doctor" then
          Cmd_Doctor (CR.Config);
 
       elsif C = "status" then
-         --  Show runtime status: version, active channels, provider, memory, cost.
+         --  Show runtime status: version, active channels, provider, memory.
          declare
-            Active         : Natural := 0;
-            Tok_In         : constant Natural := Metrics.Cost.Total_Tokens_In;
-            Tok_Out        : constant Natural := Metrics.Cost.Total_Tokens_Out;
-            Tot_Cost       : constant Float   := Metrics.Cost.Total_Cost;
-            Cost_Img       : constant String  := Float'Image (Tot_Cost);
-            Registry       : constant Plugins.Loader.Plugin_Registry :=
-              Plugins.Loader.Runtime_Registry;
-            Plugins_Loaded : constant Natural :=
-              Plugins.Loader.Loaded_Plugin_Count (Registry);
-            Plugins_Denied : constant Natural :=
-              Plugins.Loader.Denied_Plugin_Count (Registry);
-            Plugins_Errors : constant Natural :=
-              Plugins.Loader.Error_Plugin_Count (Registry);
+            Active : Natural := 0;
          begin
             for I in 1 .. CR.Config.Num_Channels loop
                if CR.Config.Channels (I).Enabled then
@@ -1346,7 +886,8 @@ begin
             if JSON_Mode then
                Put_Line ("{""version"":""" & Build_Info.Version & """"
                  & ",""channels_active"":" & Natural'Image (Active)
-                 & ",""channels_total"":" & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels)
+                 & ",""channels_total"":"
+                 & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels)
                  & ",""provider"":"
                  & Config.JSON_Parser.Escape_JSON_String
                      (Config.Schema.Provider_Kind'Image
@@ -1356,66 +897,24 @@ begin
                      (To_String (CR.Config.Providers (1).Model))
                  & ",""memory"":"
                  & (if Mem_OK then """ok""" else """unavailable""")
-                 & ",""gateway"":"
-                 & Config.JSON_Parser.Escape_JSON_String
-                     (To_String (CR.Config.Gateway.Bind_Host) & ":"
-                      & Positive'Image (CR.Config.Gateway.Bind_Port))
-                 & ",""extensibility_model"":"
-                 & Config.JSON_Parser.Escape_JSON_String
-                     (Plugins.Loader.Extensibility_Model)
-                 & ",""local_plugin_mode"":"
-                 & Config.JSON_Parser.Escape_JSON_String
-                     (Plugins.Loader.Local_Plugin_Mode)
-                 & ",""local_plugin_load_policy"":"
-                 & Config.JSON_Parser.Escape_JSON_String
-                     (Plugins.Loader.Local_Load_Policy)
-                 & ",""mcp_bridge_configured"":"
-                 & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
-                    then "true"
-                    else "false")
-                 & ",""plugins_discovered"":" & Natural'Image (Registry.Num_Loaded)
-                 & ",""plugins_loaded"":" & Natural'Image (Plugins_Loaded)
-                 & ",""plugins_denied"":" & Natural'Image (Plugins_Denied)
-                 & ",""plugins_errors"":" & Natural'Image (Plugins_Errors)
-                 & ",""tokens_in"":" & Natural'Image (Tok_In)
-                 & ",""tokens_out"":" & Natural'Image (Tok_Out)
-                 & ",""total_cost"":" & Cost_Img
                  & "}");
             else
                Put_Line (Terminal.Style.Brand ("VeriClaw") & " status");
-               Put_Line ("  " & Terminal.Style.Muted ("version") & "   " & Build_Info.Version);
+               Put_Line ("  " & Terminal.Style.Muted ("version") & "   "
+                         & Build_Info.Version);
                Put_Line ("  " & Terminal.Style.Muted ("channels") & "  "
                          & Natural'Image (Active) & " active /"
-                         & Config.Schema.Channel_Index'Image (CR.Config.Num_Channels) & " configured");
+                         & Config.Schema.Channel_Index'Image
+                             (CR.Config.Num_Channels) & " configured");
                Put_Line ("  " & Terminal.Style.Muted ("provider") & "  "
                          & Config.Schema.Provider_Kind'Image
                              (CR.Config.Providers (1).Kind));
                Put_Line ("  " & Terminal.Style.Muted ("model") & "     "
                          & To_String (CR.Config.Providers (1).Model));
                Put_Line ("  " & Terminal.Style.Muted ("memory") & "    "
-                         & (if Mem_OK then Terminal.Style.Success ("ok") else Terminal.Style.Warn ("unavailable")));
-               Put_Line ("  " & Terminal.Style.Muted ("gateway") & "   "
-                         & To_String (CR.Config.Gateway.Bind_Host) & ":"
-                         & Positive'Image (CR.Config.Gateway.Bind_Port));
-               Put_Line ("  " & Terminal.Style.Muted ("ext model") & " MCP-first ("
-                         & (if Length (CR.Config.Tools.MCP_Bridge_URL) > 0
-                            then Terminal.Style.Success ("MCP bridge configured")
-                            else Terminal.Style.Muted ("MCP bridge disabled"))
-                         & ")");
-               Put_Line ("  " & Terminal.Style.Muted ("load rule") & " " & Plugins.Loader.Local_Load_Policy);
-               Put_Line ("  " & Terminal.Style.Muted ("plugins") & "   "
-                         & Natural'Image (Registry.Num_Loaded)
-                         & " discovered /"
-                         & Natural'Image (Plugins_Loaded)
-                         & " loaded /"
-                         & Natural'Image (Plugins_Denied)
-                         & " denied /"
-                         & Natural'Image (Plugins_Errors)
-                         & " errors");
-               Put_Line ("  " & Terminal.Style.Muted ("tokens") & "    "
-                         & Natural'Image (Tok_In) & " in /"
-                         & Natural'Image (Tok_Out) & " out");
-               Put_Line ("  " & Terminal.Style.Muted ("cost") & "      $" & Cost_Img);
+                         & (if Mem_OK
+                            then Terminal.Style.Success ("ok")
+                            else Terminal.Style.Warn ("unavailable")));
             end if;
          end;
 

@@ -2,7 +2,6 @@ with Ada.Exceptions;     use Ada.Exceptions;
 with Ada.Text_IO;
 with HTTP.Client;
 with Logging;
-with Metrics;
 with Config.JSON_Parser; use Config.JSON_Parser;
 
 package body Providers.Anthropic
@@ -100,7 +99,6 @@ is
       when E : others =>
          --  Cannot propagate Ada exceptions through C (libcurl) stack frames.
          --  Discard malformed SSE chunk; streaming continues on next callback.
-         Metrics.Increment ("provider_stream_errors", "anthropic");
          Logging.Warning ("anthropic: SSE parse error ("
            & Exception_Name (E) & "): " & Exception_Message (E));
    end Anthropic_SSE_Parse;

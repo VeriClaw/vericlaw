@@ -7,7 +7,6 @@ with Interfaces.C.Strings;    use Interfaces.C.Strings;
 with System.Storage_Elements;
 with Ada.Calendar;
 with Ada.Calendar.Formatting;
-with Observability.Tracing;
 
 package body Memory.SQLite
   with SPARK_Mode => Off
@@ -379,8 +378,6 @@ is
       Content    : String;
       Name       : String := "")
    is
-      Mem_Span : constant Observability.Tracing.Span_ID :=
-        Observability.Tracing.Start_Span ("memory.query");
       SQL  : constant String :=
         "INSERT INTO messages (session_id, channel, role, name, content,"
         & " created_at) VALUES (?, ?, ?, ?, ?, ?)";
@@ -416,8 +413,6 @@ is
             Step_Finalize (FStmt);
          end if;
       end;
-      Observability.Tracing.Set_Attribute (Mem_Span, "operation", "save_message");
-      Observability.Tracing.End_Span (Mem_Span);
    end Save_Message;
 
    procedure Load_History
@@ -426,8 +421,6 @@ is
       Max_Msgs   : Config.Schema.History_Limit;
       Conv       : out Agent.Context.Conversation)
    is
-      Mem_Span : constant Observability.Tracing.Span_ID :=
-        Observability.Tracing.Start_Span ("memory.query");
       SQL  : constant String :=
         "SELECT role, name, content FROM messages"
         & " WHERE session_id = ? ORDER BY id DESC LIMIT ?";
@@ -472,8 +465,6 @@ is
             Name  => To_String (Names (I)),
             Limit => Max_Msgs);
       end loop;
-      Observability.Tracing.Set_Attribute (Mem_Span, "operation", "load_history");
-      Observability.Tracing.End_Span (Mem_Span);
    end Load_History;
 
    procedure Export_Session
@@ -545,8 +536,6 @@ is
       Query  : String;
       Limit  : Positive := 5) return Search_Results
    is
-      Mem_Span : constant Observability.Tracing.Span_ID :=
-        Observability.Tracing.Start_Span ("memory.query");
       SQL  : constant String :=
         "SELECT m.session_id, m.role, m.content, rank"
         & " FROM messages_fts f"
@@ -576,8 +565,6 @@ is
       end loop;
       Rc := c_finalize (Stmt);
       pragma Unreferenced (Rc);
-      Observability.Tracing.Set_Attribute (Mem_Span, "operation", "search");
-      Observability.Tracing.End_Span (Mem_Span);
       return Tmp (1 .. Count);
    end Search;
 

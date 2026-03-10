@@ -3,7 +3,6 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Agent.Context;       use type Agent.Context.Role;
 with Agent.Loop_Pkg;
-with Metrics;
 with Terminal.Style;
 
 package body Channels.CLI
@@ -171,16 +170,12 @@ is
                                       Cfg  => Cfg,
                                       Mem  => Mem);
                               begin
-                                 Metrics.Increment
-                                   ("requests_total", "cli");
                                  New_Line;
                                  Put (Agent_Prompt);
                                  Flush;
                                  if Reply.Success then
                                     New_Line;
                                  else
-                                    Metrics.Increment
-                                      ("errors_total", "cli");
                                     Put_Line ("[Error] "
                                       & To_String (Reply.Error));
                                  end if;
@@ -267,7 +262,6 @@ is
                        Cfg        => Cfg,
                        Mem        => Mem);
                begin
-                  Metrics.Increment ("requests_total", "cli");
                   New_Line;
                   Put (Agent_Prompt);
                   Flush;
@@ -276,7 +270,6 @@ is
                   if Reply.Success then
                      New_Line;
                   else
-                     Metrics.Increment ("errors_total", "cli");
                      Put_Line ("[Error] " & To_String (Reply.Error));
                   end if;
                   New_Line;
@@ -305,8 +298,6 @@ is
          Conv       => Conv,
          Cfg        => Cfg,
          Mem        => Mem);
-
-      Metrics.Increment ("requests_total", "cli");
 
       --  Tokens were already streamed; print newline and any error.
       New_Line;

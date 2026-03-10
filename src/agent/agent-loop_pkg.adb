@@ -1,15 +1,8 @@
 with Ada.Environment_Variables;
 with Providers.Interface_Pkg;       use Providers.Interface_Pkg;
-with Providers.OpenAI;
 with Providers.Anthropic;
 with Providers.OpenAI_Compatible;
-with Providers.Gemini;
 with Agent.Tools;
-with Gateway.Provider.Routing;
-with Gateway.Provider.Runtime_Routing;
-with Metrics;
-with Metrics.Cost;
-with Observability.Tracing;
 
 package body Agent.Loop_Pkg
   with SPARK_Mode => Off
@@ -34,32 +27,14 @@ is
       pragma Warnings (Off, "anonymous access");
    begin
       case Cfg.Kind is
-         when OpenAI =>
-            return new Providers.OpenAI.OpenAI_Provider'
-              (Providers.OpenAI.Create (Cfg));
          when Anthropic =>
             return new Providers.Anthropic.Anthropic_Provider'
               (Providers.Anthropic.Create (Cfg));
-         when Azure_Foundry | OpenAI_Compatible =>
+         when OpenAI | Azure_Foundry | OpenAI_Compatible | Gemini =>
             return new Providers.OpenAI_Compatible.OpenAI_Compat_Provider'
               (Providers.OpenAI_Compatible.Create (Cfg));
-         when Gemini =>
-            return new Providers.Gemini.Gemini_Provider'
-              (Providers.Gemini.Create (Cfg));
       end case;
    end Make_Provider;
-
-   --  Map Provider_Kind to a Prometheus label string.
-   function Provider_Label (Kind : Provider_Kind) return String is
-   begin
-      case Kind is
-         when OpenAI             => return "openai";
-         when Anthropic          => return "anthropic";
-         when Azure_Foundry      => return "azure_foundry";
-         when OpenAI_Compatible  => return "openai_compatible";
-         when Gemini             => return "gemini";
-      end case;
-   end Provider_Label;
 
    function Call_Provider_With_Routing
      (Conv         : Agent.Context.Conversation;
@@ -68,74 +43,37 @@ is
       Num_Tools    : Natural;
       Streaming    : Boolean) return Provider_Response
    is
-      Routing_State : Gateway.Provider.Runtime_Routing.Attempt_State;
-      Attempt       : Gateway.Provider.Runtime_Routing.Provider_Attempt;
-      Response      : Provider_Response;
-      First_Error   : Unbounded_String;
-      Error_Set     : Boolean := False;
+      Response    : Provider_Response;
+      First_Error : Unbounded_String;
+      Error_Set   : Boolean := False;
    begin
-      --  Runtime config is still ordered. Route providers[1], [2], and [3..]
-      --  through the existing primary/failover/long-tail tiers.
+      for Attempt_Index in
+        Config.Schema.Provider_Index'First .. Cfg.Num_Providers
       loop
-         Attempt :=
-           Gateway.Provider.Runtime_Routing.Next_Attempt
-             (Cfg   => Cfg,
-              State => Routing_State);
-         exit when not Attempt.Allowed;
-
          declare
-            Attempt_Index : constant Config.Schema.Provider_Index :=
-              Config.Schema.Provider_Index (Attempt.Config_Index);
-            Attempt_Cfg   : constant Provider_Config := Cfg.Providers (Attempt_Index);
-            Provider      : constant access Provider_Type'Class :=
+            Attempt_Cfg : constant Provider_Config :=
+              Cfg.Providers (Attempt_Index);
+            Provider    : constant access Provider_Type'Class :=
               Make_Provider (Attempt_Cfg);
-            Prov_Label    : constant String := Provider_Label (Attempt_Cfg.Kind);
-            LLM_Span      : constant Observability.Tracing.Span_ID :=
-              Observability.Tracing.Start_Span ("llm.chat");
-            Prov_Resp     : Provider_Response;
-            Use_Streaming : constant Boolean :=
-              Streaming
-              and then Attempt_Index = Config.Schema.Provider_Index'First
-              and then not Gateway.Provider.Routing.Route_Uses_Fallback
-                (Attempt.Route);
+            Prov_Resp   : Provider_Response;
          begin
-            if Use_Streaming then
-               Prov_Resp := Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
+            if Streaming
+              and then Attempt_Index = Config.Schema.Provider_Index'First
+            then
+               Prov_Resp :=
+                 Provider.Chat_Streaming (Conv, Tool_Schemas, Num_Tools);
             else
                Prov_Resp := Provider.Chat (Conv, Tool_Schemas, Num_Tools);
             end if;
 
-            Observability.Tracing.Set_Attribute
-              (LLM_Span, "provider", Prov_Label);
-            Observability.Tracing.Set_Attribute
-              (LLM_Span, "model", To_String (Attempt_Cfg.Model));
-            if not Prov_Resp.Success then
-               Observability.Tracing.Set_Error
-                 (LLM_Span, To_String (Prov_Resp.Error));
-            end if;
-            Observability.Tracing.End_Span (LLM_Span);
-
-            Metrics.Increment ("provider_calls_total", Prov_Label);
-
             if Prov_Resp.Success then
-               Metrics.Cost.Record_Usage
-                 (Prov_Label,
-                  Prov_Resp.Input_Tokens,
-                  Prov_Resp.Output_Tokens,
-                  Attempt_Cfg.Price_Per_1K_Input,
-                  Attempt_Cfg.Price_Per_1K_Output);
                return Prov_Resp;
             end if;
 
-            Metrics.Increment ("provider_errors_total", Prov_Label);
             if not Error_Set then
                First_Error := Prov_Resp.Error;
-               Error_Set := True;
+               Error_Set   := True;
             end if;
-
-            Gateway.Provider.Runtime_Routing.Mark_Failed
-              (State   => Routing_State,
-               Attempt => Attempt);
          end;
       end loop;
 
@@ -388,8 +326,6 @@ is
                         TC    : constant Tool_Call :=
                           Prov_Resp.Tool_Calls (I);
                         TName : constant String := To_String (TC.Name);
-                        Tool_Span : constant Observability.Tracing.Span_ID :=
-                          Observability.Tracing.Start_Span ("tool.execute");
                         TRes  : constant Agent.Tools.Tool_Result :=
                           Agent.Tools.Safe_Dispatch
                             (Name      => TName,
@@ -398,13 +334,6 @@ is
                              Mem       => Mem,
                              Workspace => Home_Workspace);
                      begin
-                        Observability.Tracing.Set_Attribute
-                          (Tool_Span, "tool_name", TName);
-                        if not TRes.Success then
-                           Observability.Tracing.Set_Error
-                             (Tool_Span, To_String (TRes.Error));
-                        end if;
-                        Observability.Tracing.End_Span (Tool_Span);
                         Outputs (I) :=
                           To_Unbounded_String
                             (if TRes.Success
@@ -537,8 +466,6 @@ is
                declare
                   TC    : constant Tool_Call := Prov_Resp.Tool_Calls (I);
                   TName : constant String    := To_String (TC.Name);
-                  Tool_Span_S : constant Observability.Tracing.Span_ID :=
-                    Observability.Tracing.Start_Span ("tool.execute");
                   TRes  : constant Agent.Tools.Tool_Result :=
                     Agent.Tools.Safe_Dispatch
                       (Name      => TName,
@@ -551,13 +478,6 @@ is
                      then To_String (TRes.Output)
                      else "ERROR: " & To_String (TRes.Error));
                begin
-                  Observability.Tracing.Set_Attribute
-                    (Tool_Span_S, "tool_name", TName);
-                  if not TRes.Success then
-                     Observability.Tracing.Set_Error
-                       (Tool_Span_S, To_String (TRes.Error));
-                  end if;
-                  Observability.Tracing.End_Span (Tool_Span_S);
                   Agent.Context.Append_Message
                     (Conv, Agent.Context.Tool_Result,
                      Output,
